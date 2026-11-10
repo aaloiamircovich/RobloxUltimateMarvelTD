@@ -25,3 +25,9 @@ Ejemplo (arquero): `<PELO>` = `spiky blond anime hair`; `<TRAJE>` = `black tacti
 Plantillas en `ServerStorage.Plantillas.Enemigos/<id del enemigo>` (se guardan en el lugar, no en Git). Proceso: `generate_mesh` con "blocky Roblox-style …" describiendo el aspecto sin nombres de Marvel, escalar a su altura (normales ~3.5 studs, voladores ~2, tanques ~5.5) y comprobar que el frente mire a −Z. Si una malla sale sin textura (gris), regenerarla. El juego mueve el modelo con `PivotTo`; no hace falta esqueleto.
 
 Hechos (facción Base Avengers): `ultron_drone`, `doombot`, `aim_scientist`, `chitauri_warrior`, `skrull_infiltrator`, `sentinel`.
+
+## Héroes en el juego
+
+Plantillas en `ServerStorage.Plantillas.Heroes/<id del héroe>` (en el lugar, no en Git): el R15 de `auto_setup_avatar` con atributos opcionales `AnimacionAtaque` (rbxassetid) y `VelocidadAtaque`. El servidor posiciona por la `HumanoidRootPart`, no por el pivote del modelo (están desfasados ~2 studs). Sin plantilla, el héroe aparece como bloque.
+
+Hechos: `hawkeye` (arco y disparo), `black_widow` (ojos verdes, bastones en la espalda), `korg` (roca con cara anime).

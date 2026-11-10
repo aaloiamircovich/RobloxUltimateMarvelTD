@@ -12,7 +12,6 @@ local Oleadas = require(Shared.Oleadas)
 local Despliegue = require(Shared.Despliegue)
 local Progresion = require(Shared.Progresion)
 local Mapa = require(Shared.Mapa)
-local Arco = require(Shared.Modelos.Arco)
 
 local heroes = require(Data.heroes)
 local enemigosDatos = require(Data.enemies)
@@ -188,7 +187,7 @@ end
 --------------------------------------------------------------------------------
 -- Unidades (héroes desplegados)
 --------------------------------------------------------------------------------
-local unidades = {} -- { uid, heroe, x, y, config, modelo, raiz, espera, disparo }
+local unidades = {} -- { uid, heroe, x, y, config, nivel, stats, modelo, raiz, espera, ataque, velocidadAtaque }
 local siguienteUid = 1
 local carpetaUnidades = Instance.new("Folder")
 carpetaUnidades.Name = "Unidades"
@@ -208,31 +207,37 @@ local function modeloProvisional(config): Model
 	return m
 end
 
-local function crearModelo(config): (Model, BasePart, AnimationTrack?)
+-- Plantilla de ServerStorage.Plantillas.Heroes/<id>: un R15 con atributos opcionales
+-- AnimacionAtaque (rbxassetid) y VelocidadAtaque (número). Sin plantilla, bloque provisional.
+local function crearModelo(config): (Model, BasePart, AnimationTrack?, number)
 	local plantillas = ServerStorage:FindFirstChild("Plantillas")
-	local plantilla = if config.id == "hawkeye" and plantillas then plantillas:FindFirstChild("Arquero") else nil
+	local carpeta = plantillas and plantillas:FindFirstChild("Heroes")
+	local plantilla = carpeta and carpeta:FindFirstChild(config.id)
 	local modelo = if plantilla then plantilla:Clone() else modeloProvisional(config)
 	local raiz = modelo:FindFirstChild("HumanoidRootPart") :: BasePart
 	raiz.Anchored = true
-	local disparo
+	local ataque
 	local humanoide = modelo:FindFirstChildOfClass("Humanoid")
-	if humanoide then
-		if not modelo:FindFirstChild("Arco") then
-			Arco.equipar(modelo)
-		end
+	local animacion = modelo:GetAttribute("AnimacionAtaque")
+	if humanoide and animacion then
 		local animator = humanoide:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoide)
 		local anim = Instance.new("Animation")
-		anim.AnimationId = Arco.ANIMACION_DISPARO
-		disparo = animator:LoadAnimation(anim)
+		anim.AnimationId = animacion
+		ataque = animator:LoadAnimation(anim)
 	end
 	modelo.Name = config.name
-	return modelo, raiz, disparo
+	return modelo, raiz, ataque, modelo:GetAttribute("VelocidadAtaque") or 1
+end
+
+-- Mueve el modelo para que su raíz quede en `cf`; el pivote de los modelos R15 no coincide con la raíz.
+local function ponerRaiz(u, cf: CFrame)
+	u.modelo:PivotTo(cf * u.raiz.CFrame:ToObjectSpace(u.modelo:GetPivot()))
 end
 
 local function ubicar(u)
 	local alto = if u.modelo:FindFirstChildOfClass("Humanoid") then u.modelo.Humanoid.HipHeight + u.raiz.Size.Y / 2 else u.raiz.Size.Y / 2
 	-- La celda es pavimento/pasto (1 stud) o hangar (1.2): apoyar sobre la baldosa más alta.
-	u.modelo:PivotTo(CFrame.new(Mapa.aMundo(u.x, u.y) + Vector3.new(0, alto + 0.2, 0)))
+	ponerRaiz(u, CFrame.new(Mapa.aMundo(u.x, u.y) + Vector3.new(0, alto + 0.2, 0)))
 end
 
 local function listaUnidades()
@@ -263,9 +268,9 @@ function ACCIONES.colocar(heroeId: string, x: number, y: number)
 	if err then
 		return err
 	end
-	local modelo, raiz, disparo = crearModelo(config)
+	local modelo, raiz, ataque, velocidadAtaque = crearModelo(config)
 	-- shortcut: el nivel vale sólo para esta partida; en el 3D se guarda en el perfil (falta DataStore).
-	local u = { uid = siguienteUid, heroe = heroeId, x = cx, y = cy, config = config, nivel = 1, stats = Progresion.stats(config, 1), modelo = modelo, raiz = raiz, espera = 0, disparo = disparo }
+	local u = { uid = siguienteUid, heroe = heroeId, x = cx, y = cy, config = config, nivel = 1, stats = Progresion.stats(config, 1), modelo = modelo, raiz = raiz, espera = 0, ataque = ataque, velocidadAtaque = velocidadAtaque }
 	siguienteUid += 1
 	modelo:SetAttribute("Uid", u.uid)
 	modelo:SetAttribute("Heroe", heroeId)
@@ -401,9 +406,9 @@ local function actualizarUnidad(u, dt)
 	u.espera = 1 / u.stats.fireRate
 	local destino = objetivo.cuerpo.Position
 	local p = u.raiz.Position
-	u.modelo:PivotTo(CFrame.lookAt(p, Vector3.new(destino.X, p.Y, destino.Z)))
-	if u.disparo then
-		u.disparo:Play(0.05, 1, 2)
+	ponerRaiz(u, CFrame.lookAt(p, Vector3.new(destino.X, p.Y, destino.Z)))
+	if u.ataque then
+		u.ataque:Play(0.05, 1, u.velocidadAtaque)
 	end
 	flecha(p + Vector3.new(0, 1, 0), destino)
 	-- Crítico como Hero.attack del 2D: probabilidad en %, daño ×critDamage.
