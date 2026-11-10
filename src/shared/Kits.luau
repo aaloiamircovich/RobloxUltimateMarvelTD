@@ -9,6 +9,8 @@ local Kits = {}
 Kits.MODOS_HAWKEYE = { "explosive", "cryo", "piercing" }
 Kits.NOMBRE_MODO = { explosive = "Explosiva", cryo = "Criogénica", piercing = "Perforante" }
 
+-- kit.activa = false bloquea la habilidad (se desbloquea con una mejora); kit.potencia la escala.
+-- Sin esos campos el kit se comporta como el 2D.
 function Kits.nuevo(heroeId: string)
 	return {
 		heroe = heroeId,
@@ -113,9 +115,12 @@ function Kits.golpe(kit, config, objetivo, danoBase: number, stats, objeto, dist
 		factorSplash = perfil.splashFactor,
 		efectos = {},
 	}
-	if kit.heroe == "hawkeye" then
+	local activa = kit.activa ~= false
+	if not activa then
+		-- Sin la habilidad: disparo simple, sin efectos del kit ni especiales del héroe.
+	elseif kit.heroe == "hawkeye" then
 		local preparada = flechaPreparada(kit)
-		golpe.dano *= if preparada then 1.35 else 1
+		golpe.dano *= if preparada then 1 + 0.35 * (kit.potencia or 1) else 1
 		if kit.modo == "explosive" then
 			golpe.radioSplash, golpe.factorSplash = if preparada then 85 else 68, 0.58
 		elseif kit.modo == "piercing" then
@@ -127,7 +132,7 @@ function Kits.golpe(kit, config, objetivo, danoBase: number, stats, objeto, dist
 		table.insert(golpe.efectos, { type = "armorBreak", duration = 4, power = 0.3, chance = 1 })
 	end
 	-- Orden del 2D: efectos del kit, efectos especiales del héroe y efectos del objeto.
-	for _, e in especial.attackEffects or {} do
+	for _, e in if activa then especial.attackEffects or {} else {} do
 		table.insert(golpe.efectos, e)
 	end
 	if objeto then
@@ -159,9 +164,10 @@ end
 -- enemigos: { { e, x, y } } en píxeles; heroe: { x, y, alcance, ve } con ve = detecta sigilo.
 function Kits.alAtacar(kit, config, stats, nivel: number, objetivo, heroe, enemigos)
 	kit.ataques += 1
-	if kit.heroe ~= "black_widow" or kit.ataques % 4 ~= 0 then
+	if kit.activa == false or kit.heroe ~= "black_widow" or kit.ataques % 4 ~= 0 then
 		return {}
 	end
+	local poder = kit.potencia or Kits.escalaPoder(nivel)
 	local function valido(c)
 		return c.e.vida > 0 and (not Combate.sigilo(c.e) or heroe.ve) and math.sqrt((c.x - heroe.x) ^ 2 + (c.y - heroe.y) ^ 2) <= heroe.alcance
 	end
@@ -186,12 +192,12 @@ function Kits.alAtacar(kit, config, stats, nivel: number, objetivo, heroe, enemi
 		table.insert(if Combate.esApoyo(c.e) then apoyos else resto, c)
 	end
 	-- sabotaje = true: el servidor inhibe curas, invocaciones y órdenes de los apoyos alcanzados.
-	local golpes = { { enemigo = objetivo, sabotaje = true, golpe = { tipo = config.category, dano = stats.damage * 0.55 * Kits.escalaPoder(nivel) } } }
+	local golpes = { { enemigo = objetivo, sabotaje = true, golpe = { tipo = config.category, dano = stats.damage * 0.55 * poder } } }
 	for _, c in table.move(resto, 1, #resto, #apoyos + 1, apoyos) do
 		if #golpes >= 4 then
 			break
 		end
-		table.insert(golpes, { enemigo = c.e, sabotaje = true, golpe = { tipo = config.category, dano = stats.damage * 0.55 * Kits.escalaPoder(nivel) } })
+		table.insert(golpes, { enemigo = c.e, sabotaje = true, golpe = { tipo = config.category, dano = stats.damage * 0.55 * poder } })
 	end
 	return golpes
 end
@@ -200,7 +206,7 @@ end
 -- enemigos: { { e, x, y, avance } }. Devuelve { { enemigo, golpe, efecto } } o nil.
 function Kits.actualizar(kit, dt: number, config, stats, heroe, enemigos)
 	kit.enfriamiento = math.max(0, kit.enfriamiento - dt)
-	if kit.heroe ~= "korg" or kit.enfriamiento > 0 then
+	if kit.activa == false or kit.heroe ~= "korg" or kit.enfriamiento > 0 then
 		return nil
 	end
 	local victimas = {}
@@ -223,7 +229,7 @@ function Kits.actualizar(kit, dt: number, config, stats, heroe, enemigos)
 	for i = 1, math.min(5, #victimas) do
 		table.insert(golpes, {
 			enemigo = victimas[i].e,
-			golpe = { tipo = config.category, dano = stats.damage * 0.5 },
+			golpe = { tipo = config.category, dano = stats.damage * 0.5 * (kit.potencia or 1) },
 			efecto = { type = "slow", duration = 1.5, power = 0.35 },
 		})
 	end

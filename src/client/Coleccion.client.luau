@@ -1,5 +1,5 @@
 -- Paneles de las estaciones del HUB: Invocaciones (elección inicial, banner, unidades, tienda y objetos),
--- Historia e Infinito (explica la regla de créditos antes de entrar, como el 3D).
+-- Historia e Infinito.
 -- Sólo muestra y envía pedidos; el servidor valida y guarda. Reglas en docs/INVOCACIONES.md.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -407,10 +407,9 @@ local function pantallaInfinito(record)
 		TextSize = 18,
 		Text = table.concat({
 			"Oleadas sin límite en la Base Avengers con tu escuadrón.",
-			"Empezás con 750 créditos y 20 vidas; cada cinco oleadas ganás +300.",
+			"Empezás con 600 💰 y 20 vidas. Cada baja y cada oleada superada dan más dinero de partida.",
 			"",
-			"Regla de créditos: si ganás o gastás créditos en Infinito, tu saldo pasa a ser el de esta partida.",
-			"Si salís antes de cualquier movimiento, conservás tu saldo actual.",
+			"Cada 5 oleadas: +15 gemas. Cada 10 oleadas: +1 núcleo.",
 			"",
 			`Tu récord: oleada {r.bestWave} · {r.bestScore} puntos`,
 		}, "\n"),

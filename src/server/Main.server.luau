@@ -24,6 +24,7 @@ local Reclutamiento = require(script.Parent.Reclutamiento)
 local Personajes = require(Shared.Personajes)
 local Unidades = require(Shared.Unidades)
 local Banner = require(Shared.Banner)
+local Mejoras = require(Shared.Mejoras)
 
 local heroes = Personajes.todos -- heroes.json más los personajes evolucionados
 local enemigosDatos = require(Data.enemies)
@@ -32,8 +33,9 @@ local tablaTipos = require(Data.TypeChart)
 
 local NIVEL, INDICE_NIVEL -- mapa de la misión en curso; se fija con cargarNivel()
 local ESTRELLAS_POR_MAPA = 25 -- STARS_PER_LEVEL_UNLOCK del 2D
-local VIDAS_INICIALES = 20 -- ResourceManager del 2D; los créditos de Historia son los del perfil
-local CREDITOS_INFINITO, BONO_HITO = 750, 300 -- GameModeSystem del 2D: supervivencia
+local VIDAS_INICIALES = 20 -- ResourceManager del 2D
+-- El dinero de la partida ("Creditos" en Estado) es aparte del perfil: arranca en Mejoras.DINERO_INICIAL
+-- y se pierde al salir. Los créditos del perfil ya no se ganan jugando (docs/INVOCACIONES.md).
 -- Escuadrón de la misión: { uid, heroId, nivel, limite } por unidad del perfil del dueño.
 local ESCUADRON = {}
 local GEMAS_OLEADA, GEMAS_MAPA, GEMAS_INFINITO = 10, 25, 15 -- docs/INVOCACIONES.md
@@ -47,7 +49,7 @@ local function fijar(nombre, valor)
 	estado:SetAttribute(nombre, valor)
 end
 fijar("Vidas", VIDAS_INICIALES)
-fijar("Creditos", CREDITOS_INICIALES)
+fijar("Creditos", 0)
 fijar("Oleada", 0)
 fijar("Modo", "hub")
 fijar("Fase", "hub")
@@ -58,25 +60,6 @@ local dueno: Player? = nil
 
 -- "campaign" (Historia) o "survival" (Infinito).
 local modoPartida = "campaign"
--- Infinito: hasta el primer movimiento de créditos, el saldo del perfil no se toca (regla del 3D).
-local creditosIntactos = false
-
--- Los créditos de la partida son el saldo del perfil del dueño (como Historia en el 3D).
--- En Infinito, ganar o gastar reemplaza el saldo del perfil por el de la partida.
-estado:GetAttributeChangedSignal("Creditos"):Connect(function()
-	local perfil = dueno and Perfiles.de(dueno)
-	if creditosIntactos then
-		if estado:GetAttribute("Creditos") == CREDITOS_INFINITO then
-			return
-		end
-		creditosIntactos = false
-	end
-	if perfil and estado:GetAttribute("Modo") == "batalla" then
-		perfil.credits = estado:GetAttribute("Creditos")
-		Perfiles.marcar(dueno)
-		dueno:SetAttribute("Creditos", perfil.credits)
-	end
-end)
 
 local accion = Instance.new("RemoteFunction")
 accion.Name = "Accion"
@@ -328,11 +311,16 @@ end
 
 local ACCIONES = {}
 
--- Stats de combate: nivel de la partida (sin evolución, que ahora es por crafteo) y +1 % de daño por
--- nivel de la unidad.
+-- Stats de combate: base del personaje con su objeto, las mejoras compradas en la partida (u.mejora,
+-- 0 a 5) y +1 % de daño por nivel de la unidad. También activa y escala la habilidad del kit.
 local function statsUnidad(u)
-	local s = Progresion.stats(u.config, u.nivel, u.objeto, estado:GetAttribute("Vidas"), true)
-	s.damage *= Unidades.bonoDano(u.nivelUnidad)
+	local s = Progresion.stats(u.config, 1, u.objeto, estado:GetAttribute("Vidas"), true)
+	local m = Mejoras.efecto(u.config, u.mejora)
+	s.damage *= (1 + m.dano) * Unidades.bonoDano(u.nivelUnidad)
+	s.range *= 1 + m.alcance
+	s.fireRate *= 1 + m.cadencia
+	u.kit.activa = m.habilidad
+	u.kit.potencia = m.potencia
 	return s
 end
 
@@ -346,7 +334,7 @@ local function colocadas(ranura: number): number
 	return n
 end
 
--- ranura: uid de la unidad del perfil en el escuadrón. Las mejoras de la partida empiezan en nivel 1.
+-- ranura: uid de la unidad del perfil en el escuadrón. Cuesta dinero de la partida; empieza sin mejoras.
 function ACCIONES.colocar(ranura: number, x: number, y: number)
 	local e
 	for _, entrada in ESCUADRON do
@@ -361,22 +349,27 @@ function ACCIONES.colocar(ranura: number, x: number, y: number)
 		return `Ya colocaste esta unidad {e.limite} {if e.limite == 1 then "vez" else "veces"} (máximo de su rareza)`
 	end
 	local config = heroes[e.heroId]
-	local nivel = 1
+	local costo = Mejoras.costoColocar(config)
+	local dinero = estado:GetAttribute("Creditos")
+	if dinero < costo then
+		return `Faltan {costo - dinero} 💰 para colocar {config.name}`
+	end
 	local perfil = dueno and Perfiles.de(dueno)
 	local objeto = perfil and Objetos.de(perfil, e.heroId)
-	local err, cx, cy = Despliegue.error(Progresion.paraDespliegue(config, nivel, objeto), x, y, NIVEL, rutaPx, listaUnidades(), nil, true)
+	local err, cx, cy = Despliegue.error(Progresion.paraDespliegue(config, 1, objeto), x, y, NIVEL, rutaPx, listaUnidades(), nil, true)
 	if err then
 		return err
 	end
+	fijar("Creditos", dinero - costo)
 	local base = Personajes.base(e.heroId)
 	local modelo, raiz, ataque, velocidadAtaque = crearModelo(config)
-	local u = { uid = siguienteUid, ranura = ranura, heroe = base, x = cx, y = cy, config = config, nivel = nivel, nivelUnidad = e.nivel, objeto = objeto, modelo = modelo, raiz = raiz, espera = 0, ataque = ataque, velocidadAtaque = velocidadAtaque, kit = Kits.nuevo(base) }
+	local u = { uid = siguienteUid, ranura = ranura, heroe = base, x = cx, y = cy, config = config, nivel = 1, mejora = 0, nivelUnidad = e.nivel, objeto = objeto, modelo = modelo, raiz = raiz, espera = 0, ataque = ataque, velocidadAtaque = velocidadAtaque, kit = Kits.nuevo(base) }
 	u.stats = statsUnidad(u)
 	siguienteUid += 1
 	modelo:SetAttribute("Uid", u.uid)
 	modelo:SetAttribute("Heroe", e.heroId)
 	modelo:SetAttribute("Ranura", ranura)
-	modelo:SetAttribute("Nivel", nivel)
+	modelo:SetAttribute("Mejora", 0)
 	modelo:SetAttribute("Municion", if base == "hawkeye" then "explosive" else nil)
 	ubicar(u)
 	modelo.Parent = carpetaUnidades
@@ -413,18 +406,18 @@ function ACCIONES.mejorar(uid: number)
 	if not u then
 		return "Héroe no disponible"
 	end
-	local costo = Progresion.costo(u.nivel)
-	if not costo then
-		return "Nivel máximo"
+	local siguiente = Mejoras.lista(u.config)[u.mejora + 1]
+	if not siguiente then
+		return "Ya tiene todas las mejoras"
 	end
-	local creditos = estado:GetAttribute("Creditos")
-	if creditos < costo then
-		return `Faltan {costo - creditos} créditos`
+	local dinero = estado:GetAttribute("Creditos")
+	if dinero < siguiente.costo then
+		return `Faltan {siguiente.costo - dinero} 💰`
 	end
-	u.nivel += 1
+	u.mejora += 1
 	u.stats = statsUnidad(u)
-	u.modelo:SetAttribute("Nivel", u.nivel) -- antes que los créditos: el cliente refresca al cambiar Estado
-	fijar("Creditos", creditos - costo)
+	u.modelo:SetAttribute("Mejora", u.mejora) -- antes que el dinero: el cliente refresca al cambiar Estado
+	fijar("Creditos", dinero - siguiente.costo)
 	return nil
 end
 
@@ -772,9 +765,12 @@ local function partida(id: number)
 			return
 		end
 		local perfil = dueno and Perfiles.de(dueno)
-		local premios = {}
+		-- Bono de dinero de la partida por oleada superada: +100 y +25 por vida restante.
+		local bono = Mejoras.BONO_OLEADA + Mejoras.BONO_VIDA * estado:GetAttribute("Vidas")
+		fijar("Creditos", estado:GetAttribute("Creditos") + bono)
+		local premios = { `+{bono} 💰` }
 		if infinito then
-			-- onWaveFinished del 2D: puntaje, récord y hito de +300 cada cinco oleadas.
+			-- onWaveFinished del 2D: puntaje y récord.
 			puntaje += math.round(100 * oleada + estado:GetAttribute("Vidas") * 12)
 			if perfil then
 				local r = perfil.modeRecords.survival
@@ -788,10 +784,6 @@ local function partida(id: number)
 					perfil.cores += 1
 					table.insert(premios, "+1 núcleo")
 				end
-			end
-			if oleada % 5 == 0 then
-				fijar("Creditos", estado:GetAttribute("Creditos") + BONO_HITO)
-				aviso:FireAllClients(`Hito {oleada}: +{BONO_HITO} créditos`)
 			end
 		elseif perfil then
 			-- Oleada superada: mejor oleada y estrellas del mapa, como mapProgress del 2D.
@@ -868,10 +860,9 @@ local function iniciarPartida(jugador: Player, modo: string, nivelId: string?): 
 	limpiar()
 	dueno = jugador
 	modoPartida = modo
-	creditosIntactos = modo == "survival"
 	fijar("Vidas", VIDAS_INICIALES)
 	fijar("Modo", "batalla")
-	fijar("Creditos", if modo == "survival" then CREDITOS_INFINITO else perfil.credits)
+	fijar("Creditos", Mejoras.DINERO_INICIAL)
 	task.spawn(partida, partidaActual)
 	return nil
 end

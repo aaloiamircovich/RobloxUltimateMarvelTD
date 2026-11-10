@@ -15,8 +15,22 @@ evolución por nivel del 2D (ShopSystem.recruitHero / EvolutionSystem). El resto
 - Subir del nivel N al N+1 pide **50 × N** XP.
 
 ## Dentro de la partida
-- Las mejoras con créditos de la partida **se reinician en cada partida** (vuelven a nivel 1) y ya no evolucionan al personaje.
+- **Dinero de partida** (💰), aparte del perfil: se empieza con **600**, cada baja da la recompensa del 2D
+  y cada oleada superada da **+100 y +25 por vida restante**. Se pierde al salir. Los créditos del perfil
+  ya no se ganan jugando (quedan para la tienda de objetos con lo que ya tenías).
+- **Colocar cuesta** según la rareza: Común 400, Raro 750, Épico 1.300, Legendario 2.200, Mítico 3.800,
+  Secreto 6.000, ±25 % según el poder del personaje (su costo del 2D dentro de su rareza) y ×1,5 si es evolucionado.
+  Retirar sigue sin reembolso (regla del 3D).
 - Cada unidad se puede colocar varias veces según su rareza: Común 4, Raro 3, Épico 3, Legendario 2, Mítico 1, Secreto 1.
+- **5 mejoras con nombre** por personaje, que se reinician cada partida (reemplazan los 100 niveles del 2D):
+  1. Entrenamiento: +20 % daño.
+  2. «Su habilidad»: **desbloquea la habilidad** y +10 % alcance (antes ataca simple).
+  3. Equipo avanzado: +25 % daño, +10 % cadencia.
+  4. «Habilidad» potenciada: +15 % daño, habilidad ×1,25.
+  5. Poder máximo: +30 % daño, +10 % alcance, +15 % cadencia, habilidad ×1,5.
+- **Precio de cada mejora** = costo de colocar × 0,6 / 0,9 / 1,3 / 1,8 / 2,5, con un recargo ×1,3 en las que
+  desbloquean o potencian la habilidad. Los casos especiales (personajes con mejoras muy fuertes que deban
+  costar mucho más) se fijan en `Mejoras.AJUSTES` cuando el usuario los defina.
 
 ## Invocar (banner)
 - Moneda: **gemas**. **50 por tirada**, x1 o x10 (500). Se empieza con 500.

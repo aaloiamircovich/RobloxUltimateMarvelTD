@@ -8,6 +8,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Mapa = require(Shared.Mapa)
 local Despliegue = require(Shared.Despliegue)
 local Progresion = require(Shared.Progresion)
+local Mejoras = require(Shared.Mejoras)
 local Kits = require(Shared.Kits)
 local heroes = require(Shared.Personajes).todos
 local niveles = require(Shared.Data.levels)
@@ -134,10 +135,11 @@ local unidadDe
 local function refrescar()
 	local seleccion = modo and modo.uid and unidadDe(modo.uid)
 	if seleccion then
-		local nivel = seleccion:GetAttribute("Nivel") or 1
-		local costo = Progresion.costo(nivel)
-		botonMejorar.Text = if costo then `Mejorar Nv {nivel}→{nivel + 1}\n💰 {costo}` else `Nivel {nivel} (máximo)`
-		botonMejorar.AutoButtonColor = costo ~= nil and estado:GetAttribute("Creditos") >= costo
+		local hecho = seleccion:GetAttribute("Mejora") or 0
+		local config = heroes[seleccion:GetAttribute("Heroe")]
+		local siguiente = config and Mejoras.lista(config)[hecho + 1]
+		botonMejorar.Text = if siguiente then `Mejora {hecho + 1}/{Mejoras.MAXIMO}: {siguiente.nombre} · 💰 {siguiente.costo}\n{Mejoras.descripcion(siguiente)}` else `Mejoras completas ({Mejoras.MAXIMO}/{Mejoras.MAXIMO})`
+		botonMejorar.AutoButtonColor = siguiente ~= nil and estado:GetAttribute("Creditos") >= siguiente.costo
 		botonMejorar.BackgroundColor3 = if botonMejorar.AutoButtonColor then Color3.fromRGB(150, 110, 30) else Color3.fromRGB(60, 60, 66)
 	end
 	botonMejorar.Visible = seleccion ~= nil
@@ -152,7 +154,7 @@ local function refrescar()
 				puestas += 1
 			end
 		end
-		b.Text = `{b:GetAttribute("Nombre")}\nNv {b:GetAttribute("NivelUnidad")} · {puestas}/{b:GetAttribute("Limite")}`
+		b.Text = `{b:GetAttribute("Nombre")} · 💰 {b:GetAttribute("Costo")}\nNv {b:GetAttribute("NivelUnidad")} · {puestas}/{b:GetAttribute("Limite")}`
 	end
 	local conUnidad = modo ~= nil and (modo.tipo == "seleccion" or modo.tipo == "mover")
 	botonMover.Visible, botonRetirar.Visible = conUnidad, conUnidad
@@ -183,8 +185,9 @@ local function armarEscuadron()
 			b:SetAttribute("Nombre", config.name)
 			b:SetAttribute("NivelUnidad", tonumber(partes[3]) or 1)
 			b:SetAttribute("Limite", tonumber(partes[4]) or 1)
+			b:SetAttribute("Costo", Mejoras.costoColocar(config))
 			b.LayoutOrder = i - 100 -- antes que Mover, Retirar, Mejorar e Iniciar
-			b.Size = UDim2.fromOffset(130, 44)
+			b.Size = UDim2.fromOffset(150, 44)
 			botonesHeroe[ranura] = b
 		end
 	end
@@ -221,6 +224,8 @@ botonMejorar = boton("Mejorar", barra, function()
 		refrescar()
 	end
 end)
+botonMejorar.Size = UDim2.fromOffset(280, 44) -- nombre, precio y efecto de la próxima mejora
+botonMejorar.TextSize = 13
 botonMunicion = boton("Munición", barra, function()
 	if modo and modo.uid then
 		avisar(accion:InvokeServer("municion", modo.uid))
