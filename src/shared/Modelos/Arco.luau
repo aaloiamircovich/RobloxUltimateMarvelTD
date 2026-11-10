@@ -49,4 +49,30 @@ function Arco.crear(altura: number?, profundidad: number?): Model
 	return modelo
 end
 
+-- Animación de disparo (IA de Roblox): brazo izquierdo extendido, tensa hasta la mejilla y suelta. Dura ~2 s;
+-- reproducir con velocidad 2 para un disparo de ~1 s.
+Arco.ANIMACION_DISPARO = "rbxassetid://108562422887794"
+
+-- Giro del arco respecto de la mano izquierda, medido en la tensión máxima de esa animación
+-- para que el arco quede vertical y curvado hacia donde apunta el brazo.
+local AGARRE = CFrame.new(
+	0, 0, 0,
+	-0.3071, -0.7959, -0.5218,
+	-0.4348, -0.3704, 0.8208,
+	-0.8466, 0.4789, -0.2323
+)
+
+-- Crea un arco y lo suelda a la mano izquierda de un personaje R15.
+function Arco.equipar(personaje: Model): Model
+	local mano = personaje:FindFirstChild("LeftHand") :: BasePart
+	local arco = Arco.crear(2.6, 0.6)
+	arco:PivotTo(mano.CFrame * AGARRE)
+	arco.Parent = personaje
+	local w = Instance.new("Weld")
+	w.Name = "SoldaduraMano"
+	w.Part0, w.Part1, w.C0 = mano, arco.PrimaryPart, AGARRE
+	w.Parent = arco.PrimaryPart
+	return arco
+end
+
 return Arco
