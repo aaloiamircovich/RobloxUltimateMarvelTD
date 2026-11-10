@@ -24,4 +24,4 @@ En Studio: plugin Rojo → Connect. Al darle Play, la salida debe mostrar `[UMTD
 | `src/server` | ServerScriptService.Server | Simulación del combate (autoritativa) |
 | `src/client` | StarterPlayerScripts.Client | UI, cámara, efectos |
 
-`src/shared/Data/*.json` son copias sin modificar de `src/legacy/data/` de UltimateMarvelTD_3D (commit `eb823fe`); Rojo los convierte en ModuleScripts. `TypeChart.json` sale de `TypeChart.js`.
+`src/shared/Data/*.json` son copias sin modificar de `src/legacy/data/` de UltimateMarvelTD_3D (commit `eb823fe`); Rojo los convierte en ModuleScripts. `TypeChart.json` sale de `TypeChart.js`. Las oleadas no se copian: la campaña de 100 oleadas la genera el código (`WaveManager.js`, `EncounterDirector.js`) y se porta a Luau.
