@@ -141,6 +141,122 @@
       "moderation": "approved",
       "studio_path": "ServerStorage.Plantillas.Hub.daily_bugle",
       "notas": "WorldPivot girado 180° para mirar a -Z"
+    },
+    {
+      "id": "tex_pasto",
+      "kind": "image_texture",
+      "request_id": "umtd-hub-tex-pasto-v1",
+      "job_id": "aec76777-2f3d-4330-938d-27d391069e91",
+      "status": "inserted",
+      "roblox_asset_id": "117788957932584",
+      "moderation": "approved",
+      "preparacion": "recorte a periodo entero + 1024x1024",
+      "uso": "MaterialVariant Hub_pasto creado en Hub.luau"
+    },
+    {
+      "id": "tex_marmol",
+      "kind": "image_texture",
+      "request_id": "umtd-hub-tex-marmol-v1",
+      "job_id": "e9cbeaa9-e08d-4bc7-a9e7-305a824ebab0",
+      "status": "inserted",
+      "roblox_asset_id": "134083532323760",
+      "moderation": "approved",
+      "preparacion": "recorte a periodo entero + 1024x1024",
+      "uso": "MaterialVariant Hub_marmol creado en Hub.luau"
+    },
+    {
+      "id": "tex_selva",
+      "kind": "image_texture",
+      "request_id": "umtd-hub-tex-selva-v1",
+      "job_id": "e4fc5ecf-6ac3-439c-a625-12573c098bbe",
+      "status": "inserted",
+      "roblox_asset_id": "137987464329079",
+      "moderation": "approved",
+      "preparacion": "recorte a periodo entero + 1024x1024",
+      "uso": "MaterialVariant Hub_selva creado en Hub.luau"
+    },
+    {
+      "id": "tex_vereda",
+      "kind": "image_texture",
+      "request_id": "umtd-hub-tex-vereda-v1",
+      "job_id": "347bc2fe-b6ef-497e-8ef3-94627877f7ec",
+      "status": "inserted",
+      "roblox_asset_id": "96049066085127",
+      "moderation": "approved",
+      "preparacion": "recorte a periodo entero + 1024x1024",
+      "uso": "MaterialVariant Hub_vereda creado en Hub.luau"
+    },
+    {
+      "id": "tex_metal",
+      "kind": "image_texture",
+      "request_id": "umtd-hub-tex-metal-v1",
+      "job_id": "5e801f39-8990-44bf-8fd0-cbb875a6ad5b",
+      "status": "inserted",
+      "roblox_asset_id": "76077020809858",
+      "moderation": "approved",
+      "preparacion": "recorte a periodo entero + 1024x1024",
+      "uso": "MaterialVariant Hub_metal creado en Hub.luau"
+    },
+    {
+      "id": "tex_madera",
+      "kind": "image_texture",
+      "request_id": "umtd-hub-tex-madera-v1",
+      "job_id": "26d1614c-2326-4277-896d-a2501b791323",
+      "status": "inserted",
+      "roblox_asset_id": "90645111155656",
+      "moderation": "approved",
+      "preparacion": "recorte a periodo entero + 1024x1024",
+      "uso": "MaterialVariant Hub_madera creado en Hub.luau"
+    },
+    {
+      "id": "tex_roca",
+      "kind": "image_texture",
+      "request_id": "umtd-hub-tex-roca-v1",
+      "job_id": "cad8042a-ae88-4147-b48b-a999c2be142d",
+      "status": "inserted",
+      "roblox_asset_id": "106184400863615",
+      "moderation": "approved",
+      "preparacion": "recorte a periodo entero + 1024x1024",
+      "uso": "MaterialVariant Hub_roca creado en Hub.luau"
+    },
+    {
+      "id": "cielo",
+      "kind": "image_panorama",
+      "request_id": "umtd-hub-cielo-v1",
+      "job_id": "7ad191b0-9ad3-4fa5-afd8-6782745cc434",
+      "status": "replaced",
+      "preparacion": "stretch 2048x1024 + skybox 1024",
+      "caras": {
+        "Bk": "93288397447052",
+        "Dn": "130889307001616",
+        "Ft": "112010812274769",
+        "Lf": "123757411822837",
+        "Rt": "75076867560757",
+        "Up": "130757006500376"
+      },
+      "moderation": "approved",
+      "advertencia": "costura de longitud (ratio 47) no reparada",
+      "uso": "Sky CieloHub creado en Hub.luau",
+      "reemplazado_por": "cielo_v2"
+    },
+    {
+      "id": "cielo_v2",
+      "kind": "image_panorama",
+      "request_id": "umtd-hub-cielo-v2",
+      "job_id": "965315b7-456d-474b-ab0c-7628799ea974",
+      "preparacion": "recorte central 1000x768 (sin el recuadro) + stretch 2048x1024 + skybox 1024",
+      "costura": "ratio 7.73",
+      "caras": {
+        "Bk": "100762723591606",
+        "Dn": "83631052228499",
+        "Ft": "97687357399973",
+        "Lf": "119663534279596",
+        "Rt": "131553877257439",
+        "Up": "102386796755504"
+      },
+      "moderation": "approved",
+      "status": "inserted",
+      "notas": "Lf y Rt intercambiados al asignarlos al Sky (Hub.luau)"
     }
   ]
 }

@@ -10,14 +10,69 @@ local Hub = {}
 
 local ALTO = 1 -- altura del piso de las islas
 
-local ISLAS = {
-	central = { pos = Vector3.new(0, ALTO, 0), radio = 40, color = "5f9e57", material = Enum.Material.Grass },
-	asgard = { pos = Vector3.new(0, ALTO + 8, -125), radio = 30, color = "c9b37a", material = Enum.Material.Marble },
-	wakanda = { pos = Vector3.new(-125, ALTO, -15), radio = 30, color = "3f8a3c", material = Enum.Material.Grass },
-	nuevaYork = { pos = Vector3.new(125, ALTO, -15), radio = 32, color = "6b6f78", material = Enum.Material.Asphalt },
-	baxter = { pos = Vector3.new(-85, ALTO, 110), radio = 24, color = "8fa3b8", material = Enum.Material.Concrete },
-	sanctum = { pos = Vector3.new(85, ALTO, 110), radio = 24, color = "6b4a35", material = Enum.Material.WoodPlanks },
+-- Texturas generadas con ForgeGUI (ids en forgegui-project.json): MaterialVariant por superficie.
+local TEXTURAS = {
+	pasto = { id = "117788957932584", base = Enum.Material.Grass, tile = 16 },
+	marmol = { id = "134083532323760", base = Enum.Material.Marble, tile = 16 },
+	selva = { id = "137987464329079", base = Enum.Material.Grass, tile = 16 },
+	vereda = { id = "96049066085127", base = Enum.Material.Concrete, tile = 12 },
+	metal = { id = "76077020809858", base = Enum.Material.Metal, tile = 12 },
+	madera = { id = "90645111155656", base = Enum.Material.WoodPlanks, tile = 12 },
+	roca = { id = "106184400863615", base = Enum.Material.Rock, tile = 12 },
 }
+local CIELO = { Bk = "100762723591606", Dn = "83631052228499", Ft = "97687357399973", Lf = "119663534279596", Rt = "131553877257439", Up = "102386796755504" }
+
+local ISLAS = {
+	central = { pos = Vector3.new(0, ALTO, 0), radio = 40, color = "ffffff", textura = "pasto" },
+	asgard = { pos = Vector3.new(0, ALTO + 8, -125), radio = 30, color = "ffffff", textura = "marmol" },
+	wakanda = { pos = Vector3.new(-125, ALTO, -15), radio = 30, color = "ffffff", textura = "selva" },
+	nuevaYork = { pos = Vector3.new(125, ALTO, -15), radio = 32, color = "ffffff", textura = "vereda" },
+	baxter = { pos = Vector3.new(-85, ALTO, 110), radio = 24, color = "ffffff", textura = "metal" },
+	sanctum = { pos = Vector3.new(85, ALTO, 110), radio = 24, color = "ffffff", textura = "madera" },
+}
+
+-- Los MaterialVariants sólo se pueden crear en edición (los scripts del juego no tienen permiso):
+-- correr una vez en Studio con `require(game.ServerScriptService.Server.Hub).crearMateriales()` y guardar el lugar.
+function Hub.crearMateriales()
+	local servicio = game:GetService("MaterialService")
+	for nombre, t in TEXTURAS do
+		local v = servicio:FindFirstChild("Hub_" .. nombre) or Instance.new("MaterialVariant")
+		v.Name = "Hub_" .. nombre
+		v.BaseMaterial = t.base
+		v.ColorMap = "rbxassetid://" .. t.id
+		v.StudsPerTile = t.tile
+		v.Parent = servicio
+	end
+end
+
+-- Cielo del HUB; avisa si faltan los materiales en el lugar.
+local function ambientar()
+	for nombre in TEXTURAS do
+		if not game:GetService("MaterialService"):FindFirstChild("Hub_" .. nombre) then
+			warn(`Falta el MaterialVariant Hub_{nombre}: correr Hub.crearMateriales() en Studio y guardar.`)
+		end
+	end
+	local Lighting = game:GetService("Lighting")
+	for _, s in Lighting:GetChildren() do
+		if s:IsA("Sky") then
+			s:Destroy()
+		end
+	end
+	local cielo = Instance.new("Sky")
+	cielo.Name = "CieloHub"
+	-- El perfil de ForgeGUI deja Lf y Rt invertidos respecto de Roblox (comprobado en Play).
+	local destino = { Lf = "Rt", Rt = "Lf" }
+	for cara, id in CIELO do
+		cielo["Skybox" .. (destino[cara] or cara)] = "rbxassetid://" .. id
+	end
+	cielo.Parent = Lighting
+end
+
+-- Aplica la textura de la tabla a una parte (material base + variante).
+local function texturar(p: BasePart, nombre: string)
+	p.Material = TEXTURAS[nombre].base
+	p.MaterialVariant = "Hub_" .. nombre
+end
 
 -- Estaciones: isla, ángulo (grados, 0 = +X, 90 = +Z) y distancia al centro de la isla. Miran al centro de su isla.
 Hub.ESTACIONES = {
@@ -109,10 +164,10 @@ end
 -- Isla: tapa de terreno, borde y una raíz de roca que se afina hacia abajo.
 local function isla(padre, datos)
 	local m = Instance.new("Model")
-	disco(m, datos.color, datos.pos, datos.radio * 2, 3, datos.material)
-	disco(m, "6d5a48", datos.pos - Vector3.new(0, 3, 0), datos.radio * 2 - 1, 3, Enum.Material.Ground)
+	texturar(disco(m, datos.color, datos.pos, datos.radio * 2, 3), datos.textura)
+	texturar(disco(m, "ffffff", datos.pos - Vector3.new(0, 3, 0), datos.radio * 2 - 1, 3), "roca")
 	for i, f in { 0.82, 0.62, 0.42, 0.24 } do
-		disco(m, if i % 2 == 0 then "5b5249" else "675c50", datos.pos - Vector3.new(0, 2 + i * 5, 0), datos.radio * 2 * f, 5.5, Enum.Material.Rock)
+		texturar(disco(m, if i % 2 == 0 then "d9d2c8" else "ffffff", datos.pos - Vector3.new(0, 2 + i * 5, 0), datos.radio * 2 * f, 5.5), "roca")
 	end
 	m.Parent = padre
 end
@@ -318,6 +373,7 @@ function Hub.construir(alUsar: (Player, string) -> ())
 	end
 	local hub = Instance.new("Model")
 	hub.Name = "Hub"
+	ambientar()
 
 	for _, datos in ISLAS do
 		isla(hub, datos)
