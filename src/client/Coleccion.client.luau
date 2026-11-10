@@ -332,7 +332,39 @@ local function pantallaInfinito(record)
 	end)
 end
 
+-- Historia: los mapas jugables con su requisito de estrellas (getLevelUnlockRequirement del 2D).
+local function pantallaHistoria(datos)
+	vaciar()
+	titulo.Text = "Historia"
+	saldo.Text = `⭐ {datos.estrellas}`
+	mensaje.Text = ""
+	texto({ Size = UDim2.new(1, 0, 0, 24), TextXAlignment = Enum.TextXAlignment.Left, TextSize = 14, Text = "Cada oleada superada da una estrella en su mapa. Cada mapa nuevo pide 25 estrellas más." }, cuerpo)
+	local fila = crear("Frame", { Position = UDim2.fromOffset(0, 36), Size = UDim2.new(1, 0, 1, -36), BackgroundTransparency = 1 }, cuerpo)
+	crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 12), HorizontalAlignment = Enum.HorizontalAlignment.Center }, fila)
+	for _, m in datos.mapas do
+		local abierto = datos.estrellas >= m.requisito
+		local f = crear("Frame", { Size = UDim2.fromOffset(170, 300), BackgroundColor3 = BOTON, BackgroundTransparency = if abierto then 0 else 0.4 }, fila)
+		texto({ Position = UDim2.fromOffset(8, 10), Size = UDim2.new(1, -16, 0, 50), Font = Enum.Font.GothamBold, TextSize = 18, Text = m.nombre }, f)
+		texto({ Position = UDim2.fromOffset(8, 64), Size = UDim2.new(1, -16, 0, 20), TextSize = 14, TextColor3 = ACENTO, Text = m.dificultad }, f)
+		texto({ Position = UDim2.fromOffset(8, 92), Size = UDim2.new(1, -16, 0, 40), TextSize = 14, Text = if abierto then `Mejor oleada: {m.mejor}` else `🔒 Requiere {m.requisito} ⭐` }, f)
+		if abierto then
+			boton("JUGAR", { Position = UDim2.new(0, 8, 1, -50), Size = UDim2.new(1, -16, 0, 42), BackgroundColor3 = Color3.fromRGB(40, 140, 70) }, f, function()
+				local err = entrar:InvokeServer("campaign", m.id)
+				mensaje.Text = err or ""
+				if not err then
+					gui.Enabled = false
+				end
+			end)
+		end
+	end
+end
+
 abrirPanel.OnClientEvent:Connect(function(panel, datos)
+	if panel == "historia" then
+		pantallaHistoria(datos)
+		gui.Enabled = true
+		return
+	end
 	if panel == "infinito" then
 		pantallaInfinito(datos)
 		gui.Enabled = true

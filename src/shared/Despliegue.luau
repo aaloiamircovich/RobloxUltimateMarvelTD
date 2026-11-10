@@ -1,9 +1,10 @@
 -- Reglas de despliegue del 2D/3D (TerrainRules.js, RangePattern.js y placementError de combat.js).
 -- Módulo puro en píxeles del 2D: el servidor valida con él y el cliente lo usa para la vista previa.
+local Mapa = require(script.Parent.Mapa)
+
 local Despliegue = {}
 
 local AGUA, PASTO, CAMINO, MONTANA, BOSQUE, BLOQUEADO, VEREDA, DETALLE = 0, 1, 2, 3, 4, 5, 11, 12
-local LEYENDA = { W = AGUA, G = PASTO, S = VEREDA, P = CAMINO, M = MONTANA, B = BLOQUEADO, X = BLOQUEADO }
 local NOMBRES = {
 	[AGUA] = "Agua",
 	[PASTO] = "Pasto",
@@ -26,13 +27,32 @@ function Despliegue.celda(x: number, y: number, lado: number): (number, number)
 end
 
 function Despliegue.terreno(nivel, x: number, y: number): number?
-	local lado = nivel.rendering.tileSize
-	local fila = nivel.rendering.terrainRows[math.floor(y / lado) + 1]
-	local col = math.floor(x / lado) + 1
-	if not fila or x < 0 or col > #fila then
+	local grilla, lado = Mapa.terreno(nivel)
+	local fila = grilla[math.floor(y / lado) + 1]
+	if not fila or x < 0 then
 		return nil
 	end
-	return LEYENDA[fila:sub(col, col)] or PASTO
+	return fila[math.floor(x / lado) + 1]
+end
+
+-- getPlacementBlock del 2D: celdas a menos de (radio o 34) + 16 px de una zona de la misión.
+function Despliegue.reservada(nivel, x: number, y: number): boolean
+	local m = nivel.mission and nivel.mission.mechanic
+	if not m then
+		return false
+	end
+	local zonas = { m.zone }
+	for _, lista in { m.nodes, m.landmarks, m.portals } do
+		for _, z in lista or {} do
+			table.insert(zonas, z)
+		end
+	end
+	for _, z in zonas do
+		if math.sqrt((x - z.x) ^ 2 + (y - z.y) ^ 2) < (z.radius or 34) + 16 then
+			return true
+		end
+	end
+	return false
 end
 
 function Despliegue.puedeEnTerreno(config, t: number?): boolean
@@ -79,11 +99,14 @@ end
 -- placementError del 3D. unidades: { { uid, heroe, x, y } } en píxeles.
 -- Devuelve nil si se puede, o el mensaje de error y la celda ajustada.
 function Despliegue.error(config, x: number, y: number, nivel, ruta, unidades, moviendoUid: number?): (string?, number, number)
-	local lado = nivel.rendering.tileSize
+	local _, lado = Mapa.terreno(nivel)
 	local cx, cy = Despliegue.celda(x, y, lado)
 	local t = Despliegue.terreno(nivel, cx, cy)
 	if t == nil then
 		return "Fuera del mapa", cx, cy
+	end
+	if Despliegue.reservada(nivel, cx, cy) then
+		return "Celda reservada para una defensa de la misión.", cx, cy
 	end
 	if not Despliegue.puedeEnTerreno(config, t) then
 		local permitidos = {}

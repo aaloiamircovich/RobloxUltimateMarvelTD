@@ -13,8 +13,8 @@ return function()
 		for _, id in caso.equipo do
 			table.insert(equipo, heroes[id])
 		end
-		local cola, mod = Oleadas.preparar(caso.oleada, enemigos, niveles[1], 0, equipo, caso.modo)
-		local etiqueta = `{caso.modo} oleada {caso.oleada} equipo [{table.concat(caso.equipo, ",")}]`
+		local cola, mod = Oleadas.preparar(caso.oleada, enemigos, niveles[caso.nivel], caso.nivel - 1, equipo, caso.modo)
+		local etiqueta = `mapa {caso.nivel} {caso.modo} oleada {caso.oleada} equipo [{table.concat(caso.equipo, ",")}]`
 		if mod.id ~= caso.modificador then
 			table.insert(fallos, `{etiqueta}: modificador {mod.id} ≠ {caso.modificador}`)
 		end

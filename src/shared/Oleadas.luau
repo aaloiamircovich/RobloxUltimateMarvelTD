@@ -69,6 +69,22 @@ local MODIFICADORES = {
 	{ id = "elite", nombre = "Escuadrón élite", vida = 1.25, armadura = 0.1 },
 }
 
+-- DIFFICULTIES del 2D; el 3D fija la dificultad según el mapa (getFixedDifficultyKey).
+local DIFICULTADES = {
+	easy = { hp = 0.85, speed = 0.95, count = 0.9, reward = 0.9 },
+	normal = { hp = 1, speed = 1, count = 1, reward = 1 },
+	hard = { hp = 1.3, speed = 1.1, count = 1.15, reward = 1.25 },
+}
+
+local function sinTildes(t: string): string
+	return (string.lower(t or ""):gsub("á", "a"):gsub("é", "e"):gsub("í", "i"):gsub("ó", "o"):gsub("ú", "u"))
+end
+
+function Oleadas.dificultad(nivel): string
+	local d = sinTildes(nivel.difficulty)
+	return if d:find("facil") then "easy" elseif d:find("normal") or d:find("media") then "normal" else "hard"
+end
+
 local AFIJOS = { "regenerator", "reflector", "commander", "unstable", "hunter" }
 
 local APERTURAS = {
@@ -193,6 +209,7 @@ function Oleadas.preparar(oleada: number, datos, nivel, indiceNivel: number, equ
 	local faccion = FACCIONES[tema] or FACCIONES["new-york"]
 	local cap = Oleadas.capacidades(equipo)
 	local factorNivel = Oleadas.factorNivel(nivel.difficulty, indiceNivel)
+	local dif = DIFICULTADES[Oleadas.dificultad(nivel)]
 
 	local function pool()
 		local p = {}
@@ -245,12 +262,12 @@ function Oleadas.preparar(oleada: number, datos, nivel, indiceNivel: number, equ
 			tope = if config.isFinalBoss then 0.65 elseif oleada <= 25 then 0.34 elseif oleada <= 50 then 0.46 elseif oleada <= 75 then 0.56 else 0.62
 		end
 		local e = copiar(config)
-		e.hp = redondear(config.hp * mult * vidaOleada * factorNivel * (m.vida or 1))
-		e.speed = redondear(config.speed * (m.velocidad or 1))
+		e.hp = redondear(config.hp * mult * vidaOleada * factorNivel * (m.vida or 1) * dif.hp)
+		e.speed = redondear(config.speed * (m.velocidad or 1) * dif.speed)
 		e.armor = math.min(tope, (config.armor or 0) + (m.armadura or 0))
 		e.barrierRatio = math.max(config.barrierRatio or 0, m.barrera or 0)
 		e.stealth = m.sigilo or config.stealth or false
-		e.reward = redondear((config.reward or 10) * (if jefe then 1 else 1 + oleada * 0.02))
+		e.reward = redondear((config.reward or 10) * (if jefe then 1 else 1 + oleada * 0.02) * dif.reward)
 		e.isBoss = jefe or config.isBoss or false
 		return e
 	end
@@ -278,7 +295,7 @@ function Oleadas.preparar(oleada: number, datos, nivel, indiceNivel: number, equ
 		for _, par in guion.enemigos do
 			local base = seguro(par[1])
 			if base then
-				for i = 1, math.max(1, redondear(par[2])) do
+				for i = 1, math.max(1, redondear(par[2] * dif.count)) do
 					table.insert(cola, {
 						enemigo = escalar(base, 0.88 + oleada * 0.035, false),
 						espera = if i == 1 and #cola == 0 then 0.2 else math.max(0.52, 1.08 - oleada * 0.04),
@@ -359,7 +376,7 @@ function Oleadas.preparar(oleada: number, datos, nivel, indiceNivel: number, equ
 		end
 
 		local ajustado = table.clone(encuentro)
-		local factorCantidad = mod.cantidad or 1
+		local factorCantidad = (mod.cantidad or 1) * dif.count
 		if factorCantidad > 1 then
 			for k = 1, redondear(#encuentro * (factorCantidad - 1)) do
 				table.insert(ajustado, encuentro[k])

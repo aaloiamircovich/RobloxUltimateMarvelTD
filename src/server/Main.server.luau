@@ -26,7 +26,8 @@ local enemigosDatos = require(Data.enemies)
 local niveles = require(Data.levels)
 local tablaTipos = require(Data.TypeChart)
 
-local NIVEL, INDICE_NIVEL = niveles[1], 0
+local NIVEL, INDICE_NIVEL -- mapa de la misión en curso; se fija con cargarNivel()
+local ESTRELLAS_POR_MAPA = 25 -- STARS_PER_LEVEL_UNLOCK del 2D
 local VIDAS_INICIALES = 20 -- ResourceManager del 2D; los créditos de Historia son los del perfil
 local CREDITOS_INFINITO, BONO_HITO = 750, 300 -- GameModeSystem del 2D: supervivencia
 local ESCUADRON = {} -- el escuadrón del perfil del dueño, fijado al iniciar la misión
@@ -80,12 +81,28 @@ local abrirPanel = Instance.new("RemoteEvent")
 abrirPanel.Name = "AbrirPanel"
 abrirPanel.Parent = ReplicatedStorage
 
-local rutaPx = Mapa.rutaPixeles(NIVEL)
-local ruta = Mapa.construir(NIVEL)
-local largoTramo, largoTotal = {}, 0
-for i = 1, #ruta - 1 do
-	largoTramo[i] = (ruta[i + 1] - ruta[i]).Magnitude
-	largoTotal += largoTramo[i]
+local rutaPx, ruta, largoTramo, largoTotal
+
+local function cargarNivel(indice: number)
+	NIVEL, INDICE_NIVEL = niveles[indice], indice - 1
+	rutaPx = Mapa.rutaPixeles(NIVEL)
+	ruta = Mapa.construir(NIVEL)
+	largoTramo, largoTotal = {}, 0
+	for i = 1, #ruta - 1 do
+		largoTramo[i] = (ruta[i + 1] - ruta[i]).Magnitude
+		largoTotal += largoTramo[i]
+	end
+	fijar("Nivel", NIVEL.id)
+end
+cargarNivel(1)
+
+-- Estrellas totales (getTotalStars): una por oleada superada en cada mapa de Historia.
+local function estrellas(perfil): number
+	local total = 0
+	for _, p in perfil.mapProgress do
+		total += p.stars
+	end
+	return total
 end
 
 local function puntoEnRuta(distancia: number): Vector3
@@ -654,6 +671,17 @@ RunService.Heartbeat:Connect(function(dt)
 		end
 	end
 	actualizarPixeles()
+	-- updateLandmarks del 2D (Sanctum): las runas marcan a los enemigos cercanos, +12% de daño recibido.
+	local mecanica = NIVEL.mission and NIVEL.mission.mechanic
+	if mecanica and mecanica.type == "ward" then
+		for _, zona in mecanica.landmarks or {} do
+			for _, c in enPixeles do
+				if vivo(c.e) and math.sqrt((c.x - zona.x) ^ 2 + (c.y - zona.y) ^ 2) <= (zona.radius or 54) then
+					Combate.aplicarEstado(c.e, { type = "mark", duration = 0.4, power = 0.12 })
+				end
+			end
+		end
+	end
 	for _, u in unidades do
 		actualizarUnidad(u, dt)
 	end
@@ -748,15 +776,27 @@ local function partida(id: number)
 	fijar("Mensaje", "¡Victoria! Base Avengers defendida")
 end
 
-local function iniciarPartida(jugador: Player, modo: string)
+-- Infinito se juega siempre en Base Avengers, como el 3D.
+local function iniciarPartida(jugador: Player, modo: string, nivelId: string?): string?
 	local perfil = Perfiles.de(jugador)
 	if not perfil then
-		return
+		return "Tu perfil todavía no cargó"
 	end
 	if #perfil.activeTeamIds == 0 then
-		aviso:FireClient(jugador, "Elegí tu héroe inicial en Invocaciones")
-		return
+		return "Elegí tu héroe inicial en Invocaciones"
 	end
+	local indice = 1
+	if modo == "campaign" then
+		indice = table.find(Mapa.JUGABLES, nivelId or "level_1")
+		if not indice then
+			return "Esta misión todavía no está integrada."
+		end
+		local requisito = (indice - 1) * ESTRELLAS_POR_MAPA
+		if estrellas(perfil) < requisito then
+			return `Requiere {requisito} estrellas totales. Tenés {estrellas(perfil)}.`
+		end
+	end
+	cargarNivel(indice)
 	ESCUADRON = table.clone(perfil.activeTeamIds)
 	fijar("Escuadron", table.concat(ESCUADRON, ","))
 	partidaActual += 1
@@ -768,6 +808,7 @@ local function iniciarPartida(jugador: Player, modo: string)
 	fijar("Modo", "batalla")
 	fijar("Creditos", if modo == "survival" then CREDITOS_INFINITO else perfil.credits)
 	task.spawn(partida, partidaActual)
+	return nil
 end
 
 function ACCIONES.volver()
@@ -787,11 +828,18 @@ end
 --------------------------------------------------------------------------------
 local hub = Hub.construir(function(jugador, estacion)
 	if estacion == "story" then
-		if estado:GetAttribute("Modo") == "hub" then
-			iniciarPartida(jugador, "campaign")
-		elseif dueno ~= jugador then
-			aviso:FireClient(jugador, `{dueno and dueno.DisplayName or "Otro jugador"} está en una misión`)
+		-- El cliente muestra los mapas con su requisito de estrellas y elige.
+		local perfil = Perfiles.de(jugador)
+		if not perfil then
+			return
 		end
+		local mapas = {}
+		for i, id in Mapa.JUGABLES do
+			local n = niveles[i]
+			local p = perfil.mapProgress[id] or { bestWave = 0, stars = 0 }
+			table.insert(mapas, { id = id, nombre = n.name, dificultad = n.difficulty, requisito = (i - 1) * ESTRELLAS_POR_MAPA, mejor = p.bestWave })
+		end
+		abrirPanel:FireClient(jugador, "historia", { estrellas = estrellas(perfil), mapas = mapas })
 	elseif estacion == "summon" then
 		abrirPanel:FireClient(jugador, "invocaciones")
 	elseif estacion == "infinite" then
@@ -866,15 +914,17 @@ end
 local entrar = Instance.new("RemoteFunction")
 entrar.Name = "Entrar"
 entrar.Parent = ReplicatedStorage
-entrar.OnServerInvoke = function(jugador, modo)
-	if modo ~= "survival" then
+entrar.OnServerInvoke = function(jugador, modo, nivelId)
+	if modo ~= "survival" and modo ~= "campaign" then
 		return "Modo desconocido"
+	end
+	if nivelId ~= nil and type(nivelId) ~= "string" then
+		return "Datos inválidos"
 	end
 	if estado:GetAttribute("Modo") ~= "hub" then
 		return `{dueno and dueno.DisplayName or "Otro jugador"} está en una misión`
 	end
-	iniciarPartida(jugador, modo)
-	return nil
+	return iniciarPartida(jugador, modo, nivelId)
 end
 
 local coleccion = Instance.new("RemoteFunction")

@@ -10,10 +10,21 @@ local Despliegue = require(Shared.Despliegue)
 local Progresion = require(Shared.Progresion)
 local Kits = require(Shared.Kits)
 local heroes = require(Shared.Data.heroes)
-local NIVEL = require(Shared.Data.levels)[1]
-local rutaPx = Mapa.rutaPixeles(NIVEL)
+local niveles = require(Shared.Data.levels)
 
 local estado = ReplicatedStorage:WaitForChild("Estado")
+
+-- Mapa de la misión en curso (el servidor lo publica en Estado.Nivel).
+local NIVEL, rutaPx
+local function leerNivel()
+	for _, n in niveles do
+		if n.id == estado:GetAttribute("Nivel") then
+			NIVEL, rutaPx = n, Mapa.rutaPixeles(n)
+		end
+	end
+end
+leerNivel()
+estado:GetAttributeChangedSignal("Nivel"):Connect(leerNivel)
 local accion = ReplicatedStorage:WaitForChild("Accion")
 local jugador = Players.LocalPlayer
 local mouse = jugador:GetMouse()
@@ -238,7 +249,7 @@ local function unidadesActuales()
 	local l = {}
 	for _, m in workspace:WaitForChild("Unidades"):GetChildren() do
 		local x, y = Mapa.aPixeles(m:GetPivot().Position)
-		x, y = Despliegue.celda(x, y, NIVEL.rendering.tileSize)
+		x, y = Despliegue.celda(x, y, select(2, Mapa.terreno(NIVEL)))
 		table.insert(l, { uid = m:GetAttribute("Uid"), heroe = m:GetAttribute("Heroe"), x = x, y = y })
 	end
 	return l

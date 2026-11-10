@@ -51,9 +51,10 @@ function Combate.recibir(e, cantidad: number, op): (number, boolean)
 	return aplicado + absorbido, e.vida <= 0
 end
 
--- applyDamage del 2D: tabla de tipos × factor, después recibir().
+-- applyDamage del 2D: tabla de tipos × marca × factor, después recibir().
 function Combate.danar(e, golpe, factor: number, tablaTipos): (number, boolean)
-	local mult = (tablaTipos[golpe.tipo] or {})[e.config.category] or 1
+	local marca = e.estados.mark and e.estados.mark.power or 0 -- getDamageTakenMultiplier
+	local mult = ((tablaTipos[golpe.tipo] or {})[e.config.category] or 1) * (1 + marca)
 	return Combate.recibir(e, golpe.dano * factor * mult, { tipo = golpe.tipo, penetracion = golpe.penetracion })
 end
 
@@ -196,7 +197,7 @@ function Combate.actualizar(e, dt: number): (number, boolean)
 			end
 		end
 	end
-	for _, tipo in { "slow", "armorBreak", "haste", "stun", "burn", "curse", "bleed" } do
+	for _, tipo in { "slow", "armorBreak", "haste", "stun", "mark", "burn", "curse", "bleed" } do
 		local s = e.estados[tipo]
 		if s then
 			s.duration -= dt
