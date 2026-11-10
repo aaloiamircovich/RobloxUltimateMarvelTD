@@ -23,6 +23,7 @@ local TEXTURAS = {
 	techo = { id = "96343710388043", base = Enum.Material.Metal, tile = 8 },
 	fachada = { id = "99733207278881", base = Enum.Material.Concrete, tile = 10 },
 	hangar = { id = "78292620747020", base = Enum.Material.Metal, tile = 16 },
+	asfalto = { id = "129856472115723", base = Enum.Material.Asphalt, tile = 12 },
 }
 local SELLO = "132807365750031" -- imagen del sello del portal (ForgeGUI)
 Hub.sellos = {}

@@ -51,6 +51,18 @@
       "date": "2026-11-10",
       "by": "user",
       "value": "Usar el generador de Roblox (generate_mesh) para los 8 modelos de decoración y el portón"
+    },
+    {
+      "topic": "mapas_restantes",
+      "date": "2026-11-10",
+      "by": "user",
+      "value": "Uno por vez. Nueva York: túnel de subte, avenida de asfalto con cordones y alcantarillas, azoteas. Wakanda: mina de vibranium, tierra roja, mesetas violetas. Sanctum: portal de la Dimensión Oscura, adoquines con runas naranjas, azoteas de ladrillo, faroles antiguos."
+    },
+    {
+      "topic": "creditos_imagenes",
+      "date": "2026-11-10",
+      "by": "system",
+      "value": "ForgeGUI también sin créditos para imágenes (1600 req, 1024 disp.): ladrillo y azotea con generate_material de Roblox"
     }
   ],
   "publishing_destination": {
@@ -695,6 +707,137 @@
       "source": "roblox_generate_mesh",
       "status": "inserted",
       "studio_path": "ServerStorage.Plantillas.Deco.banco"
+    },
+    {
+      "id": "tex_mapa_asfalto",
+      "kind": "texture",
+      "request_id": "umtd-ny-tex-asfalto-v1",
+      "job_id": "77f69f38-2cf0-44fc-97d9-857b452ad3d4",
+      "prepare_job_id": "c445b204-00ab-4c52-b121-dcd652cad0ff",
+      "publication_id": "beb0b6bb-16b8-41fd-b09c-730a999c98c9",
+      "status": "inserted",
+      "roblox_asset_id": "129856472115723",
+      "moderation": "approved",
+      "studio_path": "MaterialService.Hub_asfalto"
+    },
+    {
+      "id": "mat_Mapa_ladrillo1",
+      "kind": "material",
+      "source": "roblox_generate_material",
+      "status": "inserted",
+      "studio_path": "MaterialService.AssistantMaterials.*.Mapa_ladrillo1"
+    },
+    {
+      "id": "mat_Mapa_ladrillo2",
+      "kind": "material",
+      "source": "roblox_generate_material",
+      "status": "inserted",
+      "studio_path": "MaterialService.AssistantMaterials.*.Mapa_ladrillo2"
+    },
+    {
+      "id": "mat_Mapa_azotea",
+      "kind": "material",
+      "source": "roblox_generate_material",
+      "status": "inserted",
+      "studio_path": "MaterialService.AssistantMaterials.*.Mapa_azotea"
+    },
+    {
+      "id": "ny_porton",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.new-york.porton"
+    },
+    {
+      "id": "ny_vehiculo",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.new-york.vehiculo"
+    },
+    {
+      "id": "ny_barrera",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.new-york.barrera"
+    },
+    {
+      "id": "ny_farol",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.new-york.farol"
+    },
+    {
+      "id": "ny_hidrante",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.new-york.hidrante"
+    },
+    {
+      "id": "ny_basurero",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.new-york.basurero"
+    },
+    {
+      "id": "ny_arbol",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.new-york.arbol"
+    },
+    {
+      "id": "ny_base",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.new-york.base"
+    },
+    {
+      "id": "ny_estructura_1",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.new-york.estructura_1"
+    },
+    {
+      "id": "ny_estructura_2",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.new-york.estructura_2"
+    },
+    {
+      "id": "ny_estructura_3",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.new-york.estructura_3"
+    },
+    {
+      "id": "ny_borde_1",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.new-york.borde_1"
+    },
+    {
+      "id": "ny_borde_2",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.new-york.borde_2"
+    },
+    {
+      "id": "ny_borde_3",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.new-york.borde_3"
     }
   ],
   "notas_importacion": "Los modelos de ForgeGUI llegan con un giro de ~10° alrededor de Y; enderezar al múltiplo de 90° más cercano antes de guardarlos como plantilla."
