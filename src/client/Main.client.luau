@@ -18,13 +18,21 @@ local jugador = Players.LocalPlayer
 local mouse = jugador:GetMouse()
 
 --------------------------------------------------------------------------------
--- Cámara táctica fija sobre el mapa
+-- Cámara: tercera persona en el HUB, táctica fija sobre el mapa en batalla
 --------------------------------------------------------------------------------
 local centro = Mapa.aMundo(Mapa.ANCHO / 2, 304)
 local camara = workspace.CurrentCamera
+local function enBatalla()
+	return estado:GetAttribute("Modo") == "batalla"
+end
 local function fijarCamara()
-	camara.CameraType = Enum.CameraType.Scriptable
-	camara.CFrame = CFrame.lookAt(centro + Vector3.new(0, 62, 34), centro + Vector3.new(0, 0, 4))
+	if enBatalla() then
+		camara.CameraType = Enum.CameraType.Scriptable
+		camara.CFrame = CFrame.lookAt(centro + Vector3.new(0, 62, 34), centro + Vector3.new(0, 0, 4))
+	else
+		camara.CameraType = Enum.CameraType.Custom
+		camara.CameraSubject = jugador.Character and jugador.Character:FindFirstChildOfClass("Humanoid")
+	end
 end
 fijarCamara()
 jugador.CharacterAdded:Connect(function()
@@ -81,7 +89,7 @@ local aviso = etiqueta({
 local barra = Instance.new("Frame")
 barra.AnchorPoint = Vector2.new(0.5, 1)
 barra.Position = UDim2.new(0.5, 0, 1, -12)
-barra.Size = UDim2.fromOffset(820, 44)
+barra.Size = UDim2.fromOffset(1240, 44)
 barra.BackgroundTransparency = 1
 local lista = Instance.new("UIListLayout")
 lista.FillDirection = Enum.FillDirection.Horizontal
@@ -104,7 +112,7 @@ end
 --------------------------------------------------------------------------------
 local modo = nil
 local botonesHeroe = {}
-local botonMover, botonRetirar, botonMejorar, botonIniciar
+local botonMover, botonRetirar, botonMejorar, botonIniciar, botonVolver
 local unidadDe
 
 local function refrescar()
@@ -124,6 +132,7 @@ local function refrescar()
 	botonMover.Visible, botonRetirar.Visible = conUnidad, conUnidad
 	botonMover.BackgroundColor3 = if modo and modo.tipo == "mover" then Color3.fromRGB(60, 120, 200) else Color3.fromRGB(40, 44, 60)
 	botonIniciar.Visible = estado:GetAttribute("Fase") == "preparacion"
+	panel.Visible, barra.Visible = enBatalla(), enBatalla()
 	panel.Text = `Oleada {estado:GetAttribute("Oleada")}   ·   ❤ {estado:GetAttribute("Vidas")}   ·   💰 {estado:GetAttribute("Creditos")}\n{estado:GetAttribute("Mensaje")}`
 end
 
@@ -170,6 +179,15 @@ botonIniciar = boton("▶ Iniciar oleada", barra, function()
 	avisar(accion:InvokeServer("iniciar"))
 end)
 botonIniciar.BackgroundColor3 = Color3.fromRGB(40, 140, 70)
+botonVolver = boton("⌂ Volver al HUB", barra, function()
+	avisar(accion:InvokeServer("volver"))
+end)
+
+ReplicatedStorage:WaitForChild("Aviso").OnClientEvent:Connect(avisar)
+estado:GetAttributeChangedSignal("Modo"):Connect(function()
+	modo = nil
+	fijarCamara()
+end)
 
 estado.AttributeChanged:Connect(refrescar)
 refrescar()
@@ -197,10 +215,14 @@ local function unidadesActuales()
 end
 
 RunService.RenderStepped:Connect(function()
+	-- El script de cámara de Roblox puede volver a Custom después del cambio de modo.
+	if enBatalla() and camara.CameraType ~= Enum.CameraType.Scriptable then
+		fijarCamara()
+	end
 	if aviso.Visible and os.clock() > avisoHasta then
 		aviso.Visible = false
 	end
-	local heroeId = modo and (modo.tipo == "colocar" or modo.tipo == "mover") and modo.heroe
+	local heroeId = enBatalla() and modo and (modo.tipo == "colocar" or modo.tipo == "mover") and modo.heroe
 	previa.Transparency = if heroeId then 0.4 else 1
 	if not heroeId then
 		return
@@ -219,7 +241,7 @@ UserInputService.InputBegan:Connect(function(input, procesado)
 		refrescar()
 		return
 	end
-	if procesado or input.UserInputType ~= Enum.UserInputType.MouseButton1 then
+	if procesado or not enBatalla() or input.UserInputType ~= Enum.UserInputType.MouseButton1 then
 		return
 	end
 	local x, y = Mapa.aPixeles(mouse.Hit.Position)

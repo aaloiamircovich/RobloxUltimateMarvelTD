@@ -1,4 +1,4 @@
--- Partida de campaña en Base Avengers: mapa, oleadas del 2D y héroes que el jugador despliega.
+-- HUB y partida de campaña en Base Avengers: mapa, oleadas del 2D y héroes que el jugador despliega.
 -- Reglas del 3D: despliegue y movimiento gratis, una unidad por héroe, retiro sin reembolso.
 -- shortcut: un escuadrón compartido por todos los jugadores; con multijugador, una partida por jugador.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,6 +12,7 @@ local Oleadas = require(Shared.Oleadas)
 local Despliegue = require(Shared.Despliegue)
 local Progresion = require(Shared.Progresion)
 local Mapa = require(Shared.Mapa)
+local Hub = require(script.Parent.Hub)
 
 local heroes = require(Data.heroes)
 local enemigosDatos = require(Data.enemies)
@@ -33,8 +34,9 @@ end
 fijar("Vidas", VIDAS_INICIALES)
 fijar("Creditos", CREDITOS_INICIALES)
 fijar("Oleada", 0)
-fijar("Fase", "preparacion")
-fijar("Mensaje", "Desplegá héroes y apretá «Iniciar oleada»")
+fijar("Modo", "hub")
+fijar("Fase", "hub")
+fijar("Mensaje", "")
 
 local accion = Instance.new("RemoteFunction")
 accion.Name = "Accion"
@@ -348,7 +350,10 @@ accion.OnServerInvoke = function(_jugador, nombre, a, b, c)
 	if type(nombre) ~= "string" or not f then
 		return "Acción desconocida"
 	end
-	if estado:GetAttribute("Fase") == "fin" then
+	if nombre ~= "volver" and estado:GetAttribute("Modo") ~= "batalla" then
+		return "No hay una misión en curso"
+	end
+	if nombre ~= "volver" and estado:GetAttribute("Fase") == "fin" then
 		return "La misión ya terminó"
 	end
 	if nombre == "colocar" and not (type(a) == "string" and type(b) == "number" and type(c) == "number") then
@@ -465,37 +470,99 @@ end)
 --------------------------------------------------------------------------------
 -- Oleadas
 --------------------------------------------------------------------------------
-for oleada = 1, Oleadas.MAX_OLEADAS do
-	fijar("Oleada", oleada)
-	fijar("Fase", "preparacion")
-	fijar("Mensaje", `Oleada {oleada}: desplegá héroes y apretá «Iniciar oleada»`)
-	iniciarPedido = false
-	repeat
-		task.wait(0.1)
-	until iniciarPedido
+-- Cada partida tiene un número; volver al HUB lo cambia y corta el bucle de la anterior.
+local partidaActual = 0
 
-	local equipo = {}
+local function limpiar()
+	for i = #enemigos, 1, -1 do
+		quitarEnemigo(enemigos[i])
+	end
 	for _, u in unidades do
-		table.insert(equipo, u.config)
+		u.modelo:Destroy()
 	end
-	local cola, mod = Oleadas.preparar(oleada, enemigosDatos, NIVEL, INDICE_NIVEL, equipo)
-	fijar("Fase", "combate")
-	fijar("Mensaje", `Oleada {oleada}: {mod.nombre}`)
-	for _, entrada in cola do
-		task.wait(entrada.espera)
-		if estado:GetAttribute("Vidas") <= 0 then
-			break
-		end
-		crearEnemigo(entrada.enemigo)
-	end
-	while #enemigos > 0 and estado:GetAttribute("Vidas") > 0 do
-		task.wait(0.2)
-	end
-	if estado:GetAttribute("Vidas") <= 0 then
-		fijar("Fase", "fin")
-		fijar("Mensaje", `Derrota en la oleada {oleada}`)
-		return
-	end
+	table.clear(unidades)
 end
-fijar("Fase", "fin")
-fijar("Mensaje", "¡Victoria! Base Avengers defendida")
+
+local function partida(id: number)
+	local function sigue()
+		return id == partidaActual
+	end
+	for oleada = 1, Oleadas.MAX_OLEADAS do
+		fijar("Oleada", oleada)
+		fijar("Fase", "preparacion")
+		fijar("Mensaje", `Oleada {oleada}: desplegá héroes y apretá «Iniciar oleada»`)
+		iniciarPedido = false
+		repeat
+			task.wait(0.1)
+		until iniciarPedido or not sigue()
+		if not sigue() then
+			return
+		end
+
+		local equipo = {}
+		for _, u in unidades do
+			table.insert(equipo, u.config)
+		end
+		local cola, mod = Oleadas.preparar(oleada, enemigosDatos, NIVEL, INDICE_NIVEL, equipo)
+		fijar("Fase", "combate")
+		fijar("Mensaje", `Oleada {oleada}: {mod.nombre}`)
+		for _, entrada in cola do
+			task.wait(entrada.espera)
+			if not sigue() or estado:GetAttribute("Vidas") <= 0 then
+				break
+			end
+			crearEnemigo(entrada.enemigo)
+		end
+		while sigue() and #enemigos > 0 and estado:GetAttribute("Vidas") > 0 do
+			task.wait(0.2)
+		end
+		if not sigue() then
+			return
+		end
+		if estado:GetAttribute("Vidas") <= 0 then
+			fijar("Fase", "fin")
+			fijar("Mensaje", `Derrota en la oleada {oleada}`)
+			return
+		end
+	end
+	fijar("Fase", "fin")
+	fijar("Mensaje", "¡Victoria! Base Avengers defendida")
+end
+
+local function iniciarPartida()
+	partidaActual += 1
+	limpiar()
+	fijar("Vidas", VIDAS_INICIALES)
+	fijar("Creditos", CREDITOS_INICIALES)
+	fijar("Modo", "batalla")
+	task.spawn(partida, partidaActual)
+end
+
+function ACCIONES.volver()
+	partidaActual += 1
+	limpiar()
+	fijar("Modo", "hub")
+	fijar("Fase", "hub")
+	return nil
+end
+
+--------------------------------------------------------------------------------
+-- HUB
+--------------------------------------------------------------------------------
+local aviso = Instance.new("RemoteEvent")
+aviso.Name = "Aviso"
+aviso.Parent = ReplicatedStorage
+
+local hub = Hub.construir(function(jugador, estacion)
+	if estacion == "story" then
+		if estado:GetAttribute("Modo") == "hub" then
+			iniciarPartida()
+		end
+	else
+		-- Infinito y reclutamiento esperan su port; traits y grades, las reglas del usuario.
+		aviso:FireClient(jugador, "Próximamente")
+	end
+end)
+RunService.Heartbeat:Connect(function(dt)
+	Hub.animar(hub, dt)
+end)

@@ -3,7 +3,7 @@
 local Mapa = {}
 
 Mapa.ESCALA = 1 / 8 -- studs por píxel del 2D: una baldosa de 32 px mide 4 studs
-Mapa.ORIGEN = Vector3.new(20, 0, -40)
+Mapa.ORIGEN = Vector3.new(300, 0, -40) -- lejos del HUB, que está en el centro
 Mapa.ANCHO, Mapa.ALTO = 800, 600 -- tamaño lógico del 2D (combat-data.js)
 
 -- W agua, B edificio, P pavimento, G pasto, M hangar (Montaña en las reglas).
