@@ -5,7 +5,7 @@ local heroesBase = require(Data.heroes)
 
 local Mejoras = {}
 
-Mejoras.DINERO_INICIAL = 600
+Mejoras.DINERO_INICIAL = 1200
 Mejoras.BONO_OLEADA, Mejoras.BONO_VIDA = 100, 25 -- al superar una oleada: +100 y +25 por vida restante
 Mejoras.MAXIMO = 5
 Mejoras.MEJORA_HABILIDAD = 2 -- la habilidad del personaje se desbloquea con esta mejora

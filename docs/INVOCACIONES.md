@@ -15,7 +15,7 @@ evolución por nivel del 2D (ShopSystem.recruitHero / EvolutionSystem). El resto
 - Subir del nivel N al N+1 pide **50 × N** XP.
 
 ## Dentro de la partida
-- **Dinero de partida** (💰), aparte del perfil: se empieza con **600**, cada baja da la recompensa del 2D
+- **Dinero de partida** (💰), aparte del perfil: se empieza con **1.200**, cada baja da la recompensa del 2D
   y cada oleada superada da **+100 y +25 por vida restante**. Se pierde al salir. Los créditos del perfil
   ya no se ganan jugando (quedan para la tienda de objetos con lo que ya tenías).
 - **Colocar cuesta** según la rareza: Común 400, Raro 750, Épico 1.300, Legendario 2.200, Mítico 3.800,

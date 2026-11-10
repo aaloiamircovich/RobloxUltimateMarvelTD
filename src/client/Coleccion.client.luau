@@ -407,7 +407,7 @@ local function pantallaInfinito(record)
 		TextSize = 18,
 		Text = table.concat({
 			"Oleadas sin límite en la Base Avengers con tu escuadrón.",
-			"Empezás con 600 💰 y 20 vidas. Cada baja y cada oleada superada dan más dinero de partida.",
+			"Empezás con 1.200 💰 y 20 vidas. Cada baja y cada oleada superada dan más dinero de partida.",
 			"",
 			"Cada 5 oleadas: +15 gemas. Cada 10 oleadas: +1 núcleo.",
 			"",
