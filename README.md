@@ -25,3 +25,7 @@ En Studio: plugin Rojo → Connect. Al darle Play, la salida debe mostrar `[UMTD
 | `src/client` | StarterPlayerScripts.Client | UI, cámara, efectos |
 
 `src/shared/Data/*.json` son copias sin modificar de `src/legacy/data/` de UltimateMarvelTD_3D (commit `eb823fe`); Rojo los convierte en ModuleScripts. `TypeChart.json` sale de `TypeChart.js`. Las oleadas no se copian: la campaña de 100 oleadas la genera el código (`WaveManager.js`, `EncounterDirector.js`) y se porta a Luau.
+
+## Pruebas
+
+Las pruebas están en `src/server/Pruebas/*.spec.luau` y comparan con números generados por el código original del 2D (`scripts/referencia-*.mjs`). Para correrlas, en Studio en modo edición, pegar el contenido de `scripts/correr-pruebas.luau` en la barra de comandos.

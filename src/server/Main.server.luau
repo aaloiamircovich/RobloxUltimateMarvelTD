@@ -12,6 +12,8 @@ local Data = Shared.Data
 local Oleadas = require(Shared.Oleadas)
 local Despliegue = require(Shared.Despliegue)
 local Progresion = require(Shared.Progresion)
+local Combate = require(Shared.Combate)
+local Kits = require(Shared.Kits)
 local Mapa = require(Shared.Mapa)
 local Hub = require(script.Parent.Hub)
 local Perfiles = require(script.Parent.Perfiles)
@@ -181,16 +183,12 @@ local function crearEnemigo(config)
 	cuerpo.Material = if config.stealth then Enum.Material.ForceField else Enum.Material.SmoothPlastic
 	local modelo
 	tam, modelo = vestir(cuerpo, config)
-	local e = {
-		modelo = modelo,
-		config = config,
-		vida = config.hp,
-		barrera = math.floor(config.hp * (config.barrierRatio or 0) + 0.5),
-		avance = 0,
-		altura = if config.flying then 4 else tam / 2,
-		cuerpo = cuerpo,
-		barra = cartel(cuerpo, config.name, tam / 2 + 1),
-	}
+	local e = Combate.nuevoEnemigo(config)
+	e.modelo = modelo
+	e.avance = 0
+	e.altura = if config.flying then 4 else tam / 2
+	e.cuerpo = cuerpo
+	e.barra = cartel(cuerpo, config.name, tam / 2 + 1)
 	moverEnemigo(e, CFrame.new(puntoEnRuta(0) + Vector3.new(0, e.altura, 0)))
 	cuerpo.Parent = carpetaEnemigos
 	table.insert(enemigos, e)
@@ -204,19 +202,26 @@ local function quitarEnemigo(e)
 	e.cuerpo:Destroy()
 end
 
--- Daño como Enemy.takeDamage del 2D: armadura (tope 0.85) y después barrera.
--- shortcut: sin resistencias de estado, penetración ni recarga de barrera de escudos.
-local function danar(e, cantidad: number, tipoAtacante: string)
-	local mult = (tablaTipos[tipoAtacante] or {})[e.config.category] or 1
-	local armadura = math.clamp(e.config.armor or 0, 0, 0.85)
-	local dano = math.max(1, cantidad * mult * (1 - armadura))
-	local absorbido = math.min(e.barrera, dano)
-	e.barrera -= absorbido
-	e.vida -= dano - absorbido
-	e.barra.Size = UDim2.fromScale(math.max(0, e.vida / e.config.hp), 1)
+-- Refleja la vida en la barra; si murió, paga la recompensa y lo saca (una sola vez).
+-- shortcut: sin recarga de barrera de escudos ni conductas de enemigos (curas, invocaciones).
+local function revisar(e)
+	if not table.find(enemigos, e) then
+		return
+	end
+	e.barra.Size = UDim2.fromScale(math.max(0, e.vida / e.vidaMax), 1)
 	if e.vida <= 0 then
 		fijar("Creditos", estado:GetAttribute("Creditos") + (e.config.reward or 0))
 		quitarEnemigo(e)
+	end
+end
+
+-- Enemigos con su posición en píxeles del 2D, para kits y splash (se arma una vez por cuadro).
+local enPixeles = {}
+local function actualizarPixeles()
+	table.clear(enPixeles)
+	for _, e in enemigos do
+		local x, y = Mapa.aPixeles(e.cuerpo.Position)
+		table.insert(enPixeles, { e = e, x = x, y = y, avance = e.avance })
 	end
 end
 
@@ -313,11 +318,12 @@ function ACCIONES.colocar(heroeId: string, x: number, y: number)
 		return err
 	end
 	local modelo, raiz, ataque, velocidadAtaque = crearModelo(config)
-	local u = { uid = siguienteUid, heroe = heroeId, x = cx, y = cy, config = config, nivel = nivel, stats = Progresion.stats(config, nivel), modelo = modelo, raiz = raiz, espera = 0, ataque = ataque, velocidadAtaque = velocidadAtaque }
+	local u = { uid = siguienteUid, heroe = heroeId, x = cx, y = cy, config = config, nivel = nivel, stats = Progresion.stats(config, nivel), modelo = modelo, raiz = raiz, espera = 0, ataque = ataque, velocidadAtaque = velocidadAtaque, kit = Kits.nuevo(heroeId) }
 	siguienteUid += 1
 	modelo:SetAttribute("Uid", u.uid)
 	modelo:SetAttribute("Heroe", heroeId)
 	modelo:SetAttribute("Nivel", nivel)
+	modelo:SetAttribute("Municion", if heroeId == "hawkeye" then "explosive" else nil)
 	ubicar(u)
 	modelo.Parent = carpetaUnidades
 	table.insert(unidades, u)
@@ -377,6 +383,18 @@ function ACCIONES.mejorar(uid: number)
 	return nil
 end
 
+-- Carcaj de Hawkeye: cambia de munición; conserva la carga, como setMode del 2D.
+function ACCIONES.municion(uid: number)
+	local u = buscarUnidad(uid)
+	if not u or not u.kit.modo then
+		return "Ese héroe no cambia de munición"
+	end
+	local i = table.find(Kits.MODOS_HAWKEYE, u.kit.modo)
+	u.kit.modo = Kits.MODOS_HAWKEYE[i % #Kits.MODOS_HAWKEYE + 1]
+	u.modelo:SetAttribute("Municion", u.kit.modo)
+	return nil
+end
+
 local iniciarPedido = false
 function ACCIONES.iniciar()
 	if estado:GetAttribute("Fase") ~= "preparacion" then
@@ -410,7 +428,7 @@ accion.OnServerInvoke = function(jugador, nombre, a, b, c)
 	if nombre == "mover" and not (type(a) == "number" and type(b) == "number" and type(c) == "number") then
 		return "Datos inválidos"
 	end
-	if (nombre == "retirar" or nombre == "mejorar") and type(a) ~= "number" then
+	if (nombre == "retirar" or nombre == "mejorar" or nombre == "municion") and type(a) ~= "number" then
 		return "Datos inválidos"
 	end
 	for _, v in { a, b, c } do
@@ -445,8 +463,8 @@ end
 
 -- Efecto visual del ataque según el atributo Efecto de la plantilla del héroe.
 local EFECTOS = {
-	flecha = function(desde: Vector3, hasta: Vector3)
-		local f = pieza(Vector3.new(0.15, 0.15, 1.6), Color3.fromRGB(150, 80, 230), CFrame.lookAt(desde, hasta))
+	flecha = function(desde: Vector3, hasta: Vector3, color: Color3?)
+		local f = pieza(Vector3.new(0.15, 0.15, 1.6), color or Color3.fromRGB(150, 80, 230), CFrame.lookAt(desde, hasta))
 		animarYBorrar(f, 0.12, { CFrame = CFrame.lookAt(hasta, hasta + (hasta - desde)) })
 	end,
 	rayo = function(desde: Vector3, hasta: Vector3)
@@ -454,49 +472,109 @@ local EFECTOS = {
 		local f = pieza(Vector3.new(0.2, 0.2, largo), Color3.fromRGB(90, 190, 255), CFrame.lookAt(desde, hasta) * CFrame.new(0, 0, -largo / 2))
 		animarYBorrar(f, 0.15, { Transparency = 1, Size = Vector3.new(0.05, 0.05, largo) })
 	end,
-	impacto = function(_desde: Vector3, hasta: Vector3)
-		local f = pieza(Vector3.new(1, 1, 1), Color3.fromRGB(190, 130, 80), CFrame.new(hasta))
+	impacto = function(_desde: Vector3, hasta: Vector3, color: Color3?, radio: number?)
+		local d = (radio or 2) * 2
+		local f = pieza(Vector3.new(1, 1, 1), color or Color3.fromRGB(190, 130, 80), CFrame.new(hasta))
 		f.Shape = Enum.PartType.Ball
 		f.Material = Enum.Material.Slate
-		animarYBorrar(f, 0.25, { Transparency = 1, Size = Vector3.new(4, 4, 4) })
+		f.Transparency = 0.3
+		animarYBorrar(f, 0.25, { Transparency = 1, Size = Vector3.new(d, d, d) })
 	end,
 }
 
+-- Colores del 2D (getProjectileColor) para la munición de Hawkeye.
+local COLOR_MUNICION = {
+	explosive = Color3.fromHex("ff9d3d"),
+	cryo = Color3.fromHex("7ce7ff"),
+	piercing = Color3.fromHex("d8f0ff"),
+}
+
+local function vivo(e)
+	return e.vida > 0 and e.cuerpo.Parent ~= nil
+end
+
 local function actualizarUnidad(u, dt)
+	local heroe = { x = u.x, y = u.y, alcance = u.stats.range, ve = u.stats.canSeeStealth }
+
+	-- Habilidades por tiempo: pisotón de Korg.
+	local pisoton = Kits.actualizar(u.kit, dt, u.config, u.stats, heroe, enPixeles)
+	if pisoton then
+		for _, g in pisoton do
+			Combate.danar(g.enemigo, g.golpe, 1, tablaTipos)
+			if g.enemigo.vida > 0 then
+				Combate.aplicarEstado(g.enemigo, g.efecto)
+			end
+			revisar(g.enemigo)
+		end
+		EFECTOS.impacto(nil, u.raiz.Position - Vector3.new(0, 2, 0), Color3.fromHex("a3a3a3"), 65 * Mapa.ESCALA)
+	end
+
 	u.espera -= dt
 	if u.espera > 0 then
 		return
 	end
 	-- Prioridad "Primero": el enemigo más avanzado dentro de la forma de alcance.
 	local objetivo
-	for _, e in enemigos do
-		local ex, ey = Mapa.aPixeles(e.cuerpo.Position)
-		local visible = not e.config.stealth or u.stats.canSeeStealth
-		if visible and Despliegue.enAlcance(u.x, u.y, ex, ey, u.stats.range, u.config.rangePattern) and (not objetivo or e.avance > objetivo.avance) then
-			objetivo = e
+	for _, c in enPixeles do
+		local visible = not c.e.config.stealth or u.stats.canSeeStealth
+		if vivo(c.e) and visible and Despliegue.enAlcance(u.x, u.y, c.x, c.y, u.stats.range, u.config.rangePattern) and (not objetivo or c.avance > objetivo.avance) then
+			objetivo = c
 		end
 	end
 	if not objetivo then
 		return
 	end
 	u.espera = 1 / u.stats.fireRate
-	local destino = objetivo.cuerpo.Position
+	local destino = objetivo.e.cuerpo.Position
 	local p = u.raiz.Position
 	ponerRaiz(u, CFrame.lookAt(p, Vector3.new(destino.X, p.Y, destino.Z)))
 	if u.ataque then
 		u.ataque:Play(0.05, 1, u.velocidadAtaque)
 	end
-	local efecto = EFECTOS[u.modelo:GetAttribute("Efecto")] or EFECTOS.flecha
-	efecto(p + Vector3.new(0, 1, 0), destino)
-	-- Crítico como Hero.attack del 2D: probabilidad en %, daño ×critDamage.
+
+	-- Crítico como Hero.shoot del 2D: probabilidad en %, daño ×critDamage; después el kit arma el golpe.
 	local critico = math.random() * 100 < u.stats.critChance
-	danar(objetivo, if critico then u.stats.damage * u.stats.critDamage else u.stats.damage, u.config.category)
+	local golpe = Kits.golpe(u.kit, u.config, objetivo.e, if critico then u.stats.damage * u.stats.critDamage else u.stats.damage)
+	local efecto = EFECTOS[u.modelo:GetAttribute("Efecto")] or EFECTOS.flecha
+	efecto(p + Vector3.new(0, 1, 0), destino, COLOR_MUNICION[u.kit.modo])
+
+	local tocados = { objetivo.e }
+	Combate.impacto(objetivo.e, golpe, tablaTipos, math.random, function(radio)
+		local r = {}
+		for _, c in enPixeles do
+			if vivo(c.e) and math.sqrt((c.x - objetivo.x) ^ 2 + (c.y - objetivo.y) ^ 2) <= radio then
+				table.insert(r, c.e)
+				table.insert(tocados, c.e)
+			end
+		end
+		return r
+	end)
+	if (golpe.radioSplash or 0) > 0 then
+		EFECTOS.impacto(nil, destino, COLOR_MUNICION[u.kit.modo], golpe.radioSplash * Mapa.ESCALA)
+	end
+
+	-- onAttack: sabotaje de Black Widow al cuarto ataque (blanco + hasta 3 cercanos).
+	for i, g in Kits.alAtacar(u.kit, u.config, u.stats, u.nivel, objetivo.e, heroe, enPixeles) do
+		Combate.danar(g.enemigo, g.golpe, 1, tablaTipos)
+		table.insert(tocados, g.enemigo)
+		if i > 1 then
+			EFECTOS.rayo(destino, g.enemigo.cuerpo.Position)
+		end
+	end
+	for _, e in tocados do
+		revisar(e)
+	end
 end
 
 RunService.Heartbeat:Connect(function(dt)
 	for i = #enemigos, 1, -1 do
 		local e = enemigos[i]
-		e.avance += e.config.speed * Mapa.ESCALA * dt
+		local velocidad, murio = Combate.actualizar(e, dt)
+		if murio then
+			revisar(e) -- murió por veneno
+			continue
+		end
+		e.avance += e.config.speed * velocidad * Mapa.ESCALA * dt
 		if e.avance >= largoTotal then
 			-- Como el 3D: un jefe que llega al final se lleva todas las vidas.
 			local perdida = if e.config.isBoss then estado:GetAttribute("Vidas") else 1
@@ -510,6 +588,7 @@ RunService.Heartbeat:Connect(function(dt)
 			moverEnemigo(e, if (adelante - aqui).Magnitude > 1e-3 then CFrame.lookAt(aqui + alto, adelante + alto) else CFrame.new(aqui + alto))
 		end
 	end
+	actualizarPixeles()
 	for _, u in unidades do
 		actualizarUnidad(u, dt)
 	end

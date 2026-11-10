@@ -8,6 +8,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Mapa = require(Shared.Mapa)
 local Despliegue = require(Shared.Despliegue)
 local Progresion = require(Shared.Progresion)
+local Kits = require(Shared.Kits)
 local heroes = require(Shared.Data.heroes)
 local NIVEL = require(Shared.Data.levels)[1]
 local rutaPx = Mapa.rutaPixeles(NIVEL)
@@ -116,7 +117,7 @@ end
 --------------------------------------------------------------------------------
 local modo = nil
 local botonesHeroe = {}
-local botonMover, botonRetirar, botonMejorar, botonIniciar, botonVolver
+local botonMover, botonRetirar, botonMejorar, botonMunicion, botonIniciar, botonVolver
 local unidadDe
 
 local function refrescar()
@@ -129,6 +130,9 @@ local function refrescar()
 		botonMejorar.BackgroundColor3 = if botonMejorar.AutoButtonColor then Color3.fromRGB(150, 110, 30) else Color3.fromRGB(60, 60, 66)
 	end
 	botonMejorar.Visible = seleccion ~= nil
+	local municion = seleccion and seleccion:GetAttribute("Municion")
+	botonMunicion.Visible = municion ~= nil
+	botonMunicion.Text = `Munición: {Kits.NOMBRE_MODO[municion] or ""}`
 	for id, b in botonesHeroe do
 		b.BackgroundColor3 = if modo and modo.tipo == "colocar" and modo.heroe == id then Color3.fromRGB(60, 120, 200) else Color3.fromRGB(40, 44, 60)
 	end
@@ -190,6 +194,13 @@ end)
 botonMejorar = boton("Mejorar", barra, function()
 	if modo and modo.uid then
 		avisar(accion:InvokeServer("mejorar", modo.uid))
+		refrescar()
+	end
+end)
+botonMunicion = boton("Munición", barra, function()
+	if modo and modo.uid then
+		avisar(accion:InvokeServer("municion", modo.uid))
+		task.wait(0.1)
 		refrescar()
 	end
 end)
