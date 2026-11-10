@@ -102,6 +102,40 @@ local function cartel(padre: BasePart, texto: string, alto: number): Frame
 	return barra
 end
 
+-- Modelo de ServerStorage.Plantillas.Enemigos/<id> que acompaña al bloque raíz invisible.
+-- Sin plantilla, el bloque de color queda visible.
+local function vestir(cuerpo: Part, config): (number, Model?)
+	local plantillas = ServerStorage:FindFirstChild("Plantillas")
+	local carpeta = plantillas and plantillas:FindFirstChild("Enemigos")
+	local plantilla = carpeta and carpeta:FindFirstChild((config.id:gsub("_elite$", "")))
+	if not plantilla then
+		return cuerpo.Size.Y, nil
+	end
+	local m = plantilla:Clone()
+	m:ScaleTo(m:GetScale() * (if config.isBoss then 1.8 elseif config.isElite then 1.3 else 1))
+	local tam = m:GetExtentsSize()
+	cuerpo.Size = tam
+	cuerpo.Transparency = 1
+	for _, p in m:GetDescendants() do
+		if p:IsA("BasePart") then
+			p.Anchored, p.CanCollide, p.CanQuery = true, false, false
+			if config.stealth then
+				p.Transparency = math.max(p.Transparency, 0.6)
+			end
+		end
+	end
+	m.Parent = cuerpo
+	return tam.Y, m
+end
+
+-- Mueve la raíz y su modelo (las soldaduras no arrastraban un modelo anclado).
+local function moverEnemigo(e, cf: CFrame)
+	e.cuerpo.CFrame = cf
+	if e.modelo then
+		e.modelo:PivotTo(cf)
+	end
+end
+
 local function crearEnemigo(config)
 	local tam = if config.isBoss then 4 elseif config.isElite then 2.6 else 2
 	local cuerpo = Instance.new("Part")
@@ -110,7 +144,10 @@ local function crearEnemigo(config)
 	cuerpo.Size = Vector3.new(tam, tam, tam)
 	cuerpo.Color = COLORES[config.category] or Color3.new(0.5, 0.5, 0.5)
 	cuerpo.Material = if config.stealth then Enum.Material.ForceField else Enum.Material.SmoothPlastic
+	local modelo
+	tam, modelo = vestir(cuerpo, config)
 	local e = {
+		modelo = modelo,
 		config = config,
 		vida = config.hp,
 		barrera = math.floor(config.hp * (config.barrierRatio or 0) + 0.5),
@@ -119,7 +156,7 @@ local function crearEnemigo(config)
 		cuerpo = cuerpo,
 		barra = cartel(cuerpo, config.name, tam / 2 + 1),
 	}
-	cuerpo.Position = puntoEnRuta(0) + Vector3.new(0, e.altura, 0)
+	moverEnemigo(e, CFrame.new(puntoEnRuta(0) + Vector3.new(0, e.altura, 0)))
 	cuerpo.Parent = carpetaEnemigos
 	table.insert(enemigos, e)
 end
@@ -384,7 +421,11 @@ RunService.Heartbeat:Connect(function(dt)
 			fijar("Vidas", math.max(0, estado:GetAttribute("Vidas") - perdida))
 			quitarEnemigo(e)
 		else
-			e.cuerpo.Position = puntoEnRuta(e.avance) + Vector3.new(0, e.altura, 0)
+			-- Mirar hacia donde avanza (el -Z de la raíz es el frente).
+			local aqui = puntoEnRuta(e.avance)
+			local adelante = puntoEnRuta(e.avance + 0.5)
+			local alto = Vector3.new(0, e.altura, 0)
+			moverEnemigo(e, if (adelante - aqui).Magnitude > 1e-3 then CFrame.lookAt(aqui + alto, adelante + alto) else CFrame.new(aqui + alto))
 		end
 	end
 	for _, u in unidades do
