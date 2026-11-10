@@ -842,13 +842,15 @@ local hub = Hub.construir(function(jugador, estacion)
 		abrirPanel:FireClient(jugador, "historia", { estrellas = estrellas(perfil), mapas = mapas })
 	elseif estacion == "summon" then
 		abrirPanel:FireClient(jugador, "invocaciones")
+	elseif estacion == "tienda" then
+		abrirPanel:FireClient(jugador, "invocaciones", { pestana = "tienda" })
 	elseif estacion == "infinite" then
 		-- Antes de entrar, el cliente explica la regla de créditos y pide confirmar.
 		local perfil = Perfiles.de(jugador)
 		abrirPanel:FireClient(jugador, "infinito", perfil and perfil.modeRecords.survival)
 	else
-		-- Traits y grades esperan las reglas del usuario.
-		aviso:FireClient(jugador, "Próximamente")
+		-- Traits, grades, pets, bailes, monturas, raids, banners 2 y 3, salas, etc. esperan sus reglas.
+		aviso:FireClient(jugador, if estacion:sub(1, 5) == "sala_" then "Próximamente: salas con amigos" else "Próximamente")
 	end
 end)
 RunService.Heartbeat:Connect(function(dt)

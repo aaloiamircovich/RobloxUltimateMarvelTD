@@ -375,6 +375,9 @@ abrirPanel.OnClientEvent:Connect(function(panel, datos)
 	end
 	mensaje.Text = ""
 	ultimo = nil
+	if datos and datos.pestana then
+		pestana = datos.pestana
+	end
 	if pedir("estado").estado then
 		gui.Enabled = true
 		mostrar()
