@@ -80,6 +80,13 @@ local function sinTildes(t: string): string
 	return (string.lower(t or ""):gsub("á", "a"):gsub("é", "e"):gsub("í", "i"):gsub("ó", "o"):gsub("ú", "u"))
 end
 
+-- Jefe del acto (Historia por actos): el que Oleadas.preparar pone con jefeActo = acto.
+function Oleadas.jefeDeActo(nivel, acto: number): string
+	local tema = nivel.theme and nivel.theme.id or "new-york"
+	local faccion = FACCIONES[tema] or FACCIONES["new-york"]
+	return faccion.jefes[(acto - 1) % #faccion.jefes + 1]
+end
+
 function Oleadas.dificultad(nivel): string
 	local d = sinTildes(nivel.difficulty)
 	return if d:find("facil") then "easy" elseif d:find("normal") or d:find("media") then "normal" else "hard"
@@ -189,8 +196,10 @@ end
 --------------------------------------------------------------------------------
 -- datos: enemies.json ({ normal, bosses }); nivel: entrada de levels.json; equipo: configs de héroes.
 -- modo: "campaign" (por defecto) o "survival" (Infinito: sin límite, sin aperturas ni jefe final).
+-- jefeActo (opcional, Historia por actos): un número fuerza un jefe de la facción en esta oleada (acto 1 =
+-- el primero de la facción); false impide jefes. Sin él (nil) se comporta como el 2D.
 -- Devuelve cola { { enemigo = config escalada, espera = segundos } } y el modificador.
-function Oleadas.preparar(oleada: number, datos, nivel, indiceNivel: number, equipo, modo: string?)
+function Oleadas.preparar(oleada: number, datos, nivel, indiceNivel: number, equipo, modo: string?, jefeActo: (number | boolean)?)
 	local supervivencia = modo == "survival"
 	local maximo = if supervivencia then math.huge else Oleadas.MAX_OLEADAS
 	if oleada > maximo then
@@ -200,6 +209,9 @@ function Oleadas.preparar(oleada: number, datos, nivel, indiceNivel: number, equ
 		return w == maximo
 	end
 	local function esMiniJefe(w)
+		if jefeActo ~= nil then
+			return jefeActo ~= false and w == oleada
+		end
 		return w < maximo and w % INTERVALO_MINI_JEFE == 0
 	end
 	local function esJefe(w)
@@ -313,7 +325,7 @@ function Oleadas.preparar(oleada: number, datos, nivel, indiceNivel: number, equ
 	elseif esFinal(oleada) then
 		table.insert(cola, { enemigo = escalar(datos.bosses.thanos_final, 1.25, true), espera = 0 })
 	elseif esMiniJefe(oleada) then
-		local indice = math.max(0, oleada // INTERVALO_MINI_JEFE - 1)
+		local indice = if jefeActo then jefeActo - 1 else math.max(0, oleada // INTERVALO_MINI_JEFE - 1)
 		local id = faccion.jefes[indice % #faccion.jefes + 1]
 		local jefe = datos.bosses[id] or datos.bosses.loki
 		local mult = if oleada <= 25 then 0.9 elseif oleada <= 50 then 1 elseif oleada <= 75 then 1.1 else 1.18 + (oleada - 75) * 0.004

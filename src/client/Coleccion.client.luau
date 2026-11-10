@@ -12,7 +12,6 @@ local heroes = Personajes.todos
 local items = require(ReplicatedStorage.Shared.Data.items)
 local coleccion = ReplicatedStorage:WaitForChild("Coleccion")
 local abrirPanel = ReplicatedStorage:WaitForChild("AbrirPanel")
-local entrar = ReplicatedStorage:WaitForChild("Entrar")
 
 local RAREZAS = {
 	{ "Common", "Común", Color3.fromRGB(170, 175, 185) },
@@ -406,76 +405,185 @@ function mostrar()
 	end
 end
 
-local function pantallaInfinito(record)
+-- Historia y salas (docs/PARTIDA.md): mapas a la izquierda, actos en el centro, sala a la derecha.
+local salaRemota = ReplicatedStorage:WaitForChild("Sala")
+local sel = { mapa = nil, acto = 1, pesadilla = false, soloAmigos = false }
+local enHistoria = false
+local ultimaHistoria = nil
+
+local pantallaHistoria
+local function pedirSala(nombre: string, datos)
+	local res = salaRemota:InvokeServer(nombre, datos)
+	mensaje.Text = res.error or ""
+	if res.historia then
+		ultimaHistoria = res
+	end
+	return res
+end
+
+function pantallaHistoria()
+	local res = ultimaHistoria
+	if not res then
+		return
+	end
 	vaciar()
-	titulo.Text = "Infinito"
+	titulo.Text = "Historia"
 	saldo.Text = ""
-	mensaje.Text = ""
-	local r = record or { bestWave = 0, bestScore = 0 }
-	texto({
-		Size = UDim2.new(1, 0, 1, -70),
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextYAlignment = Enum.TextYAlignment.Top,
-		TextSize = 18,
-		Text = table.concat({
-			"Oleadas sin límite en la Base Avengers con tu escuadrón.",
-			"Empezás con 1.200 💰 y 20 vidas. Cada baja y cada oleada superada dan más dinero de partida.",
-			"",
-			"Cada 5 oleadas: +15 gemas. Cada 10 oleadas: +1 núcleo.",
-			"",
-			`Tu récord: oleada {r.bestWave} · {r.bestScore} puntos`,
-		}, "\n"),
-	}, cuerpo)
-	boton("ENTRAR", { Position = UDim2.new(1, -220, 1, -50), Size = UDim2.fromOffset(220, 50), TextSize = 20, BackgroundColor3 = Color3.fromRGB(120, 80, 210) }, cuerpo, function()
-		local err = entrar:InvokeServer("survival")
-		mensaje.Text = err or ""
-		if not err then
-			gui.Enabled = false
+	-- Mapa elegido: el primero abierto si todavía no hay uno.
+	local mapa
+	for _, m in res.historia do
+		if m.id == sel.mapa then
+			mapa = m
 		end
+	end
+	if not mapa then
+		mapa = res.historia[1]
+		sel.mapa = mapa.id
+	end
+
+	-- Izquierda: mapas.
+	local izq = crear("Frame", { Size = UDim2.new(0, 170, 1, 0), BackgroundTransparency = 1 }, cuerpo)
+	crear("UIListLayout", { Padding = UDim.new(0, 8) }, izq)
+	for _, m in res.historia do
+		local b = boton(if m.abierto then `{m.nombre}\nActos {m.ganados}/5` else `🔒 {m.nombre}`, { Size = UDim2.new(1, 0, 0, 64), TextSize = 16, BackgroundColor3 = if m.id == sel.mapa then Color3.fromRGB(60, 110, 190) else BOTON }, izq, function()
+			sel.mapa, sel.acto, sel.pesadilla = m.id, 1, false
+			pantallaHistoria()
+		end)
+		b.AutoButtonColor = m.abierto
+	end
+
+	-- Centro: actos del mapa (y su Infinito).
+	local centro = crear("Frame", { Position = UDim2.fromOffset(182, 0), Size = UDim2.new(0, 300, 1, 0), BackgroundTransparency = 1 }, cuerpo)
+	texto({ Size = UDim2.new(1, 0, 0, 26), Font = Enum.Font.Bangers, TextSize = 26, TextColor3 = ACENTO, TextStrokeTransparency = 0, TextXAlignment = Enum.TextXAlignment.Left, Text = mapa.nombre }, centro)
+	texto({ Position = UDim2.fromOffset(0, 26), Size = UDim2.new(1, 0, 0, 18), TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, Text = `{mapa.dificultad} · 5 actos de 10 oleadas, jefe en la 10` }, centro)
+	local actos = crear("Frame", { Position = UDim2.fromOffset(0, 50), Size = UDim2.new(1, 0, 1, -50), BackgroundTransparency = 1 }, centro)
+	crear("UIListLayout", { Padding = UDim.new(0, 6) }, actos)
+	local filas = table.clone(mapa.actos)
+	table.insert(filas, { numero = "infinito", jefe = "Oleadas sin fin", abierto = mapa.infinito })
+	for _, a in filas do
+		local esInfinito = a.numero == "infinito"
+		local estadoActo = if not a.abierto then "🔒" elseif a.ganado then "✔" else `+{a.premio} 💎 1.ª vez`
+		local b = boton(`{if esInfinito then "INFINITO" else "Acto " .. a.numero}  ·  {a.jefe}\n{if esInfinito then (if a.abierto then "Cada 5 oleadas: +15 💎" else "🔒 Ganá el acto 5") else estadoActo}{if a.pesadilla then "  ·  Pesadilla ✔" else ""}`, {
+			Size = UDim2.new(1, 0, 0, 46),
+			TextSize = 15,
+			BackgroundColor3 = if sel.acto == a.numero then Color3.fromRGB(60, 110, 190) elseif a.abierto then BOTON else Color3.fromRGB(60, 40, 44),
+		}, actos, function()
+			if a.abierto then
+				sel.acto = a.numero
+				sel.pesadilla = sel.pesadilla and not esInfinito and a.ganado
+				pantallaHistoria()
+			end
+		end)
+		b.AutoButtonColor = a.abierto
+	end
+
+	-- Derecha: la sala.
+	local der = crear("Frame", { Position = UDim2.fromOffset(494, 0), Size = UDim2.new(1, -494, 1, 0), BackgroundColor3 = Color3.fromRGB(45, 12, 18) }, cuerpo)
+	local function linea(y: number, txt: string, color: Color3?)
+		texto({ Position = UDim2.fromOffset(10, y), Size = UDim2.new(1, -20, 0, 20), TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = color or Color3.new(1, 1, 1), Text = txt }, der)
+	end
+	local sala = res.sala
+	if sala then
+		texto({ Position = UDim2.fromOffset(10, 6), Size = UDim2.new(1, -20, 0, 26), Font = Enum.Font.Bangers, TextSize = 24, TextColor3 = ACENTO, TextStrokeTransparency = 0, TextXAlignment = Enum.TextXAlignment.Left, Text = `Sala · {#sala.miembros}/4` }, der)
+		linea(34, `{sala.nombreMapa} · {if sala.acto == "infinito" then "Infinito" else "Acto " .. sala.acto}{if sala.pesadilla then " · Pesadilla" else ""}`, ACENTO)
+		for i, m in sala.miembros do
+			linea(58 + (i - 1) * 22, (if m.anfitrion then "👑 " else "• ") .. m.nombre)
+		end
+		for i = #sala.miembros + 1, 4 do
+			linea(58 + (i - 1) * 22, "+ Lugar libre", Color3.fromRGB(150, 150, 150))
+		end
+		if sala.anfitrion == Players.LocalPlayer.DisplayName then
+			boton("¡EMPEZAR!", { Position = UDim2.new(0, 10, 1, -100), Size = UDim2.new(1, -20, 0, 42), BackgroundColor3 = Color3.fromRGB(40, 150, 60) }, der, function()
+				pedirSala("iniciar")
+				pantallaHistoria()
+			end)
+		else
+			linea(160, "Esperando al anfitrión…", Color3.fromRGB(200, 200, 200))
+		end
+		boton("Salir de la sala", { Position = UDim2.new(0, 10, 1, -50), Size = UDim2.new(1, -20, 0, 40) }, der, function()
+			pedirSala("salir")
+			pantallaHistoria()
+		end)
+		return
+	end
+	texto({ Position = UDim2.fromOffset(10, 6), Size = UDim2.new(1, -20, 0, 26), Font = Enum.Font.Bangers, TextSize = 24, TextColor3 = ACENTO, TextStrokeTransparency = 0, TextXAlignment = Enum.TextXAlignment.Left, Text = "Sala" }, der)
+	local actoElegido
+	for _, a in filas do
+		if a.numero == sel.acto then
+			actoElegido = a
+		end
+	end
+	local pesadillaPosible = sel.acto ~= "infinito" and actoElegido and actoElegido.ganado
+	boton(`Sólo amigos: {if sel.soloAmigos then "SÍ" else "NO"}`, { Position = UDim2.fromOffset(10, 38), Size = UDim2.new(1, -20, 0, 34), TextSize = 15 }, der, function()
+		sel.soloAmigos = not sel.soloAmigos
+		pantallaHistoria()
+	end)
+	boton(if pesadillaPosible then `Pesadilla: {if sel.pesadilla then "SÍ (premios ×2)" else "NO"}` else "Pesadilla: ganá el acto", { Position = UDim2.fromOffset(10, 78), Size = UDim2.new(1, -20, 0, 34), TextSize = 15, BackgroundColor3 = if sel.pesadilla then Color3.fromRGB(120, 20, 90) else BOTON }, der, function()
+		if pesadillaPosible then
+			sel.pesadilla = not sel.pesadilla
+			pantallaHistoria()
+		end
+	end)
+	-- Salas abiertas de otros jugadores.
+	linea(120, if #res.abiertas > 0 then "Salas abiertas:" else "No hay salas abiertas", Color3.fromRGB(200, 200, 200))
+	for i, s in res.abiertas do
+		if i > 2 then
+			break
+		end
+		boton(`Unirse: {s.anfitrion} · {s.nombreMapa} {if s.acto == "infinito" then "∞" else "A" .. s.acto} ({#s.miembros}/4)`, { Position = UDim2.fromOffset(10, 142 + (i - 1) * 38), Size = UDim2.new(1, -20, 0, 32), TextSize = 13 }, der, function()
+			pedirSala("unirse", s.id)
+			pantallaHistoria()
+		end)
+	end
+	local datos = { mapa = sel.mapa, acto = sel.acto, pesadilla = sel.pesadilla and pesadillaPosible, soloAmigos = sel.soloAmigos }
+	boton("SOLO", { Position = UDim2.new(0, 10, 1, -50), Size = UDim2.new(0.5, -15, 0, 42), BackgroundColor3 = Color3.fromRGB(110, 60, 200) }, der, function()
+		datos.solo = true
+		local r = pedirSala("crear", datos)
+		if r.empezo then
+			gui.Enabled = false
+		else
+			pantallaHistoria()
+		end
+	end)
+	boton("CREAR SALA", { Position = UDim2.new(0.5, 5, 1, -50), Size = UDim2.new(0.5, -15, 0, 42), BackgroundColor3 = Color3.fromRGB(40, 150, 60) }, der, function()
+		datos.solo = false
+		pedirSala("crear", datos)
+		pantallaHistoria()
 	end)
 end
 
--- Historia: los mapas jugables con su requisito de estrellas (getLevelUnlockRequirement del 2D).
-local function pantallaHistoria(datos)
-	vaciar()
-	titulo.Text = "Historia"
-	saldo.Text = `⭐ {datos.estrellas}`
-	mensaje.Text = ""
-	texto({ Size = UDim2.new(1, 0, 0, 24), TextXAlignment = Enum.TextXAlignment.Left, TextSize = 14, Text = "Cada oleada superada da una estrella en su mapa. Cada mapa nuevo pide 25 estrellas más." }, cuerpo)
-	local fila = crear("Frame", { Position = UDim2.fromOffset(0, 36), Size = UDim2.new(1, 0, 1, -36), BackgroundTransparency = 1 }, cuerpo)
-	crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 12), HorizontalAlignment = Enum.HorizontalAlignment.Center }, fila)
-	for _, m in datos.mapas do
-		local abierto = datos.estrellas >= m.requisito
-		local f = crear("Frame", { Size = UDim2.fromOffset(170, 300), BackgroundColor3 = BOTON, BackgroundTransparency = if abierto then 0 else 0.4 }, fila)
-		texto({ Position = UDim2.fromOffset(8, 10), Size = UDim2.new(1, -16, 0, 50), Font = Enum.Font.GothamBold, TextSize = 18, Text = m.nombre }, f)
-		texto({ Position = UDim2.fromOffset(8, 64), Size = UDim2.new(1, -16, 0, 20), TextSize = 14, TextColor3 = ACENTO, Text = m.dificultad }, f)
-		texto({ Position = UDim2.fromOffset(8, 92), Size = UDim2.new(1, -16, 0, 40), TextSize = 14, Text = if abierto then `Mejor oleada: {m.mejor}` else `🔒 Requiere {m.requisito} ⭐` }, f)
-		if abierto then
-			boton("JUGAR", { Position = UDim2.new(0, 8, 1, -50), Size = UDim2.new(1, -16, 0, 42), BackgroundColor3 = Color3.fromRGB(40, 140, 70) }, f, function()
-				local err = entrar:InvokeServer("campaign", m.id)
-				mensaje.Text = err or ""
-				if not err then
-					gui.Enabled = false
-				end
-			end)
+-- Mientras el panel de Historia está abierto, refrescar la sala (para ver quién entra).
+task.spawn(function()
+	while true do
+		task.wait(2)
+		if gui.Enabled and enHistoria and not Players.LocalPlayer:GetAttribute("Partida") then
+			pedirSala("estado")
+			pantallaHistoria()
 		end
 	end
-end
+end)
+-- Al empezar la partida (también para los invitados de una sala), cerrar el panel.
+Players.LocalPlayer:GetAttributeChangedSignal("Partida"):Connect(function()
+	if Players.LocalPlayer:GetAttribute("Partida") then
+		gui.Enabled = false
+	end
+end)
 
 abrirPanel.OnClientEvent:Connect(function(panel, datos)
 	if panel == "historia" then
-		pantallaHistoria(datos)
-		gui.Enabled = true
-		return
-	end
-	if panel == "infinito" then
-		pantallaInfinito(datos)
+		enHistoria = true
+		if datos and datos.infinito then
+			sel.acto = "infinito"
+		end
+		pedirSala("estado")
+		pantallaHistoria()
 		gui.Enabled = true
 		return
 	end
 	if panel ~= "invocaciones" then
 		return
 	end
+	enHistoria = false
 	mensaje.Text = ""
 	ultimas = nil
 	if datos and datos.pestana then

@@ -24,12 +24,13 @@ local ASPECTO = {
 	[DETALLE] = { color = Color3.fromRGB(120, 110, 140), alto = 1.1, material = Enum.Material.Slate },
 }
 
-function Mapa.aMundo(x: number, y: number): Vector3
-	return Mapa.ORIGEN + Vector3.new(x * Mapa.ESCALA, 1, y * Mapa.ESCALA)
+-- origen: esquina del mapa en el mundo (cada partida tiene su copia en otro lugar); por defecto ORIGEN.
+function Mapa.aMundo(x: number, y: number, origen: Vector3?): Vector3
+	return (origen or Mapa.ORIGEN) + Vector3.new(x * Mapa.ESCALA, 1, y * Mapa.ESCALA)
 end
 
-function Mapa.aPixeles(p: Vector3): (number, number)
-	local d = (p - Mapa.ORIGEN) / Mapa.ESCALA
+function Mapa.aPixeles(p: Vector3, origen: Vector3?): (number, number)
+	local d = (p - (origen or Mapa.ORIGEN)) / Mapa.ESCALA
 	return d.X, d.Z
 end
 
@@ -140,12 +141,9 @@ function Mapa.terreno(nivel): ({ { number } }, number)
 	return grilla, lado
 end
 
--- Construye el terreno, las zonas de la misión y la base; devuelve la ruta en el mundo.
-function Mapa.construir(nivel): { Vector3 }
-	local viejo = workspace:FindFirstChild("Mapa")
-	if viejo then
-		viejo:Destroy()
-	end
+-- Construye el terreno, las zonas de la misión y la base en `origen`, dentro de `padre`;
+-- devuelve la ruta en el mundo y el modelo.
+function Mapa.construir(nivel, origen: Vector3, padre: Instance): ({ Vector3 }, Model)
 	local carpeta = Instance.new("Model")
 	carpeta.Name = "Mapa"
 
@@ -157,7 +155,7 @@ function Mapa.construir(nivel): { Vector3 }
 			local p = Instance.new("Part")
 			p.Anchored = true
 			p.Size = Vector3.new(lado, t.alto, lado)
-			p.Position = Mapa.ORIGEN + Vector3.new((c - 0.5) * lado, t.alto / 2, (f - 0.5) * lado)
+			p.Position = origen + Vector3.new((c - 0.5) * lado, t.alto / 2, (f - 0.5) * lado)
 			p.Color = t.color
 			p.Material = t.material
 			p.TopSurface = Enum.SurfaceType.Smooth
@@ -173,7 +171,7 @@ function Mapa.construir(nivel): { Vector3 }
 		d.Anchored, d.CanCollide = true, false
 		d.Shape = Enum.PartType.Cylinder
 		d.Size = Vector3.new(0.2, zona.radius * 2 * Mapa.ESCALA, zona.radius * 2 * Mapa.ESCALA)
-		d.CFrame = CFrame.new(Mapa.aMundo(zona.x, zona.y) + Vector3.new(0, 0.6, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		d.CFrame = CFrame.new(Mapa.aMundo(zona.x, zona.y, origen) + Vector3.new(0, 0.6, 0)) * CFrame.Angles(0, 0, math.rad(90))
 		d.Color = Color3.fromHex(zona.color or "#ffd166")
 		d.Material = Enum.Material.Neon
 		d.Transparency = 0.45
@@ -182,7 +180,7 @@ function Mapa.construir(nivel): { Vector3 }
 
 	local ruta = {}
 	for _, punto in Mapa.rutaPixeles(nivel) do
-		table.insert(ruta, Mapa.aMundo(punto.x, punto.y))
+		table.insert(ruta, Mapa.aMundo(punto.x, punto.y, origen))
 	end
 
 	local base = Instance.new("Part")
@@ -194,8 +192,8 @@ function Mapa.construir(nivel): { Vector3 }
 	base.Material = Enum.Material.Neon
 	base.Parent = carpeta
 
-	carpeta.Parent = workspace
-	return ruta
+	carpeta.Parent = padre
+	return ruta, carpeta
 end
 
 return Mapa

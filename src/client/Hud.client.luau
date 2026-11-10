@@ -10,7 +10,6 @@ local Iconos = require(Shared.Iconos)
 local Personajes = require(Shared.Personajes)
 local Cuenta = require(Shared.Cuenta)
 local Mejoras = require(Shared.Mejoras)
-local estado = ReplicatedStorage:WaitForChild("Estado")
 local coleccion = ReplicatedStorage:WaitForChild("Coleccion")
 local usarHud = ReplicatedStorage:WaitForChild("UsarHud")
 local teletransportar = ReplicatedStorage:WaitForChild("Teletransportar")
@@ -286,12 +285,13 @@ local function pedirEstado()
 	return false
 end
 
+-- Oculto durante una partida (el servidor fija el atributo Partida del jugador).
 local function visible()
-	gui.Enabled = estado:GetAttribute("Modo") ~= "batalla"
+	gui.Enabled = jugador:GetAttribute("Partida") == nil
 end
-estado:GetAttributeChangedSignal("Modo"):Connect(function()
+jugador:GetAttributeChangedSignal("Partida"):Connect(function()
 	visible()
-	if estado:GetAttribute("Modo") == "hub" then
+	if not jugador:GetAttribute("Partida") then
 		pedirEstado()
 	end
 end)

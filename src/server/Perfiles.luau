@@ -40,6 +40,7 @@ function Perfiles.normalizar(crudo)
 		nextUnitUid = 1,
 		squad = {},
 		mapProgress = {},
+		acts = {}, -- [mapa] = { normal = último acto ganado, pesadilla = ídem en Pesadilla } (docs/PARTIDA.md)
 		unlockedHeroIds = {},
 		shop = { heroPity = 0 },
 		modeRecords = { survival = { bestWave = 0, bestScore = 0 } },
@@ -120,6 +121,13 @@ function Perfiles.normalizar(crudo)
 			if type(id) == "string" and items[id] and not vistos[id] then
 				vistos[id] = true
 				table.insert(p.ownedItemIds, id)
+			end
+		end
+	end
+	if type(datos.acts) == "table" then
+		for id, v in datos.acts do
+			if type(id) == "string" and type(v) == "table" then
+				p.acts[id] = { normal = entero(v.normal, 0, 5, 0), pesadilla = entero(v.pesadilla, 0, 5, 0) }
 			end
 		end
 	end
