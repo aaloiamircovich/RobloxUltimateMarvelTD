@@ -86,6 +86,9 @@ local aviso = etiqueta({
 	Visible = false,
 })
 
+-- Saldo del perfil, visible en el HUB.
+local saldo = etiqueta({ Position = UDim2.fromOffset(16, 16), Size = UDim2.fromOffset(170, 44), TextSize = 20 })
+
 local barra = Instance.new("Frame")
 barra.AnchorPoint = Vector2.new(0.5, 1)
 barra.Position = UDim2.new(0.5, 0, 1, -12)
@@ -133,6 +136,8 @@ local function refrescar()
 	botonMover.BackgroundColor3 = if modo and modo.tipo == "mover" then Color3.fromRGB(60, 120, 200) else Color3.fromRGB(40, 44, 60)
 	botonIniciar.Visible = estado:GetAttribute("Fase") == "preparacion"
 	panel.Visible, barra.Visible = enBatalla(), enBatalla()
+	saldo.Visible = not enBatalla()
+	saldo.Text = `💰 {jugador:GetAttribute("Creditos") or "…"}`
 	panel.Text = `Oleada {estado:GetAttribute("Oleada")}   ·   ❤ {estado:GetAttribute("Vidas")}   ·   💰 {estado:GetAttribute("Creditos")}\n{estado:GetAttribute("Mensaje")}`
 end
 
@@ -190,6 +195,7 @@ estado:GetAttributeChangedSignal("Modo"):Connect(function()
 end)
 
 estado.AttributeChanged:Connect(refrescar)
+jugador:GetAttributeChangedSignal("Creditos"):Connect(refrescar)
 refrescar()
 gui.Parent = jugador:WaitForChild("PlayerGui")
 

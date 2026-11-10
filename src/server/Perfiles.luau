@@ -1,0 +1,122 @@
+-- Perfil persistente por jugador (DataStore). Subconjunto del estado de ProgressionManager del 2D,
+-- con los mismos nombres de campo para poder importar perfiles: credits, heroUpgrades, mapProgress.
+local DataStoreService = game:GetService("DataStoreService")
+
+local Perfiles = {}
+
+Perfiles.VERSION = 1
+Perfiles.CREDITOS_INICIALES = 1200 -- createDefaultState del 2D
+local MAX_OLEADAS = 100
+
+local almacen = nil -- se pide al primer uso: falla en Studio sin acceso a API
+local perfiles = {} -- [Player] = { datos, guardable, sucio }
+
+local function nivelValido(n)
+	return math.clamp(math.floor(tonumber(n) or 1), 1, 100)
+end
+
+-- Frontera de confianza: lo que viene del DataStore puede estar viejo o roto.
+function Perfiles.normalizar(crudo)
+	local datos = if type(crudo) == "table" then crudo else {}
+	local p = {
+		version = Perfiles.VERSION,
+		credits = Perfiles.CREDITOS_INICIALES,
+		heroUpgrades = {},
+		mapProgress = {},
+	}
+	local c = tonumber(datos.credits)
+	if c and c == c and c >= 0 and c < math.huge then
+		p.credits = math.floor(c)
+	end
+	if type(datos.heroUpgrades) == "table" then
+		for id, v in datos.heroUpgrades do
+			local nivel = nivelValido(if type(v) == "table" then v.level else v)
+			if type(id) == "string" and nivel > 1 then
+				p.heroUpgrades[id] = { level = nivel }
+			end
+		end
+	end
+	if type(datos.mapProgress) == "table" then
+		for id, v in datos.mapProgress do
+			if type(id) == "string" and type(v) == "table" then
+				local mejor = math.clamp(math.floor(tonumber(v.bestWave) or 0), 0, MAX_OLEADAS)
+				p.mapProgress[id] = { bestWave = mejor, stars = math.max(mejor, math.clamp(math.floor(tonumber(v.stars) or 0), 0, MAX_OLEADAS)) }
+			end
+		end
+	end
+	return p
+end
+
+local function clave(jugador: Player)
+	return "jugador_" .. jugador.UserId
+end
+
+local function conReintentos(f)
+	local ok, res
+	for intento = 1, 3 do
+		ok, res = pcall(f)
+		if ok then
+			return true, res
+		end
+		task.wait(intento)
+	end
+	return false, res
+end
+
+-- Carga el perfil. Si el DataStore falla, el jugador juega con un perfil nuevo que NO se guarda,
+-- para no pisar sus datos reales. Devuelve el perfil y un aviso para mostrar, si corresponde.
+function Perfiles.cargar(jugador: Player): ({ any }, string?)
+	local ok, res = conReintentos(function()
+		almacen = almacen or DataStoreService:GetDataStore("PerfilesUMTD_v1")
+		return almacen:GetAsync(clave(jugador))
+	end)
+	local entrada = { datos = Perfiles.normalizar(if ok then res else nil), guardable = ok, sucio = false }
+	perfiles[jugador] = entrada
+	if not ok then
+		warn(`[UMTD] No se pudo cargar el perfil de {jugador.Name}: {res}`)
+		return entrada.datos, "No se pudo cargar tu progreso: esta sesión no se guardará"
+	end
+	return entrada.datos, nil
+end
+
+function Perfiles.de(jugador: Player)
+	local e = perfiles[jugador]
+	return e and e.datos
+end
+
+function Perfiles.marcar(jugador: Player)
+	local e = perfiles[jugador]
+	if e then
+		e.sucio = true
+	end
+end
+
+-- shortcut: sin bloqueo de sesión; si el mismo jugador entra a dos servidores a la vez gana el último guardado.
+function Perfiles.guardar(jugador: Player)
+	local e = perfiles[jugador]
+	if not e or not e.guardable or not e.sucio then
+		return
+	end
+	local copia = table.clone(e.datos)
+	local ok, err = conReintentos(function()
+		almacen:SetAsync(clave(jugador), copia, { jugador.UserId })
+	end)
+	if ok then
+		e.sucio = false
+	else
+		warn(`[UMTD] No se pudo guardar el perfil de {jugador.Name}: {err}`)
+	end
+end
+
+function Perfiles.soltar(jugador: Player)
+	Perfiles.guardar(jugador)
+	perfiles[jugador] = nil
+end
+
+function Perfiles.guardarTodos()
+	for jugador in perfiles do
+		task.spawn(Perfiles.guardar, jugador)
+	end
+end
+
+return Perfiles

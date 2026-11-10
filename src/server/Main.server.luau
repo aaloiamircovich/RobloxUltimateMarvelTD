@@ -1,6 +1,7 @@
 -- HUB y partida de campaña en Base Avengers: mapa, oleadas del 2D y héroes que el jugador despliega.
 -- Reglas del 3D: despliegue y movimiento gratis, una unidad por héroe, retiro sin reembolso.
 -- shortcut: un escuadrón compartido por todos los jugadores; con multijugador, una partida por jugador.
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local RunService = game:GetService("RunService")
@@ -13,6 +14,7 @@ local Despliegue = require(Shared.Despliegue)
 local Progresion = require(Shared.Progresion)
 local Mapa = require(Shared.Mapa)
 local Hub = require(script.Parent.Hub)
+local Perfiles = require(script.Parent.Perfiles)
 
 local heroes = require(Data.heroes)
 local enemigosDatos = require(Data.enemies)
@@ -20,7 +22,7 @@ local niveles = require(Data.levels)
 local tablaTipos = require(Data.TypeChart)
 
 local NIVEL, INDICE_NIVEL = niveles[1], 0
-local VIDAS_INICIALES, CREDITOS_INICIALES = 20, 650 -- ResourceManager del 2D
+local VIDAS_INICIALES = 20 -- ResourceManager del 2D; los créditos de Historia son los del perfil
 local ESCUADRON = { "black_widow", "hawkeye", "korg" } -- héroes iniciales del 3D
 
 -- Estado visible para los clientes.
@@ -37,6 +39,19 @@ fijar("Oleada", 0)
 fijar("Modo", "hub")
 fijar("Fase", "hub")
 fijar("Mensaje", "")
+
+-- Jugador que inició la partida: juega con su perfil y es el único que puede actuar en ella.
+local dueno: Player? = nil
+
+-- Los créditos de la partida son el saldo del perfil del dueño (como Historia en el 3D).
+estado:GetAttributeChangedSignal("Creditos"):Connect(function()
+	local perfil = dueno and Perfiles.de(dueno)
+	if perfil and estado:GetAttribute("Modo") == "batalla" then
+		perfil.credits = estado:GetAttribute("Creditos")
+		Perfiles.marcar(dueno)
+		dueno:SetAttribute("Creditos", perfil.credits)
+	end
+end)
 
 local accion = Instance.new("RemoteFunction")
 accion.Name = "Accion"
@@ -261,22 +276,29 @@ end
 
 local ACCIONES = {}
 
+-- Nivel del héroe guardado en el perfil del dueño (heroUpgrades del 2D).
+local function nivelGuardado(heroeId: string): number
+	local perfil = dueno and Perfiles.de(dueno)
+	local g = perfil and perfil.heroUpgrades[heroeId]
+	return g and g.level or 1
+end
+
 function ACCIONES.colocar(heroeId: string, x: number, y: number)
 	if not table.find(ESCUADRON, heroeId) then
 		return "Ese héroe no está en tu escuadrón"
 	end
 	local config = heroes[heroeId]
-	local err, cx, cy = Despliegue.error(Progresion.paraDespliegue(config, 1), x, y, NIVEL, rutaPx, listaUnidades())
+	local nivel = nivelGuardado(heroeId)
+	local err, cx, cy = Despliegue.error(Progresion.paraDespliegue(config, nivel), x, y, NIVEL, rutaPx, listaUnidades())
 	if err then
 		return err
 	end
 	local modelo, raiz, ataque, velocidadAtaque = crearModelo(config)
-	-- shortcut: el nivel vale sólo para esta partida; en el 3D se guarda en el perfil (falta DataStore).
-	local u = { uid = siguienteUid, heroe = heroeId, x = cx, y = cy, config = config, nivel = 1, stats = Progresion.stats(config, 1), modelo = modelo, raiz = raiz, espera = 0, ataque = ataque, velocidadAtaque = velocidadAtaque }
+	local u = { uid = siguienteUid, heroe = heroeId, x = cx, y = cy, config = config, nivel = nivel, stats = Progresion.stats(config, nivel), modelo = modelo, raiz = raiz, espera = 0, ataque = ataque, velocidadAtaque = velocidadAtaque }
 	siguienteUid += 1
 	modelo:SetAttribute("Uid", u.uid)
 	modelo:SetAttribute("Heroe", heroeId)
-	modelo:SetAttribute("Nivel", 1)
+	modelo:SetAttribute("Nivel", nivel)
 	ubicar(u)
 	modelo.Parent = carpetaUnidades
 	table.insert(unidades, u)
@@ -324,6 +346,10 @@ function ACCIONES.mejorar(uid: number)
 	u.nivel += 1
 	u.stats = Progresion.stats(u.config, u.nivel)
 	u.modelo:SetAttribute("Nivel", u.nivel) -- antes que los créditos: el cliente refresca al cambiar Estado
+	local perfil = dueno and Perfiles.de(dueno)
+	if perfil then
+		perfil.heroUpgrades[u.heroe] = { level = u.nivel }
+	end
 	fijar("Creditos", creditos - costo)
 	local evo = Progresion.evolucion(u.heroe, u.nivel)
 	if evo and not evolucionaba then
@@ -345,10 +371,13 @@ function ACCIONES.iniciar()
 end
 
 -- Frontera de confianza: validar tipos antes de tocar el estado.
-accion.OnServerInvoke = function(_jugador, nombre, a, b, c)
+accion.OnServerInvoke = function(jugador, nombre, a, b, c)
 	local f = ACCIONES[nombre]
 	if type(nombre) ~= "string" or not f then
 		return "Acción desconocida"
+	end
+	if dueno and jugador ~= dueno then
+		return `La misión es de {dueno.DisplayName}`
 	end
 	if nombre ~= "volver" and estado:GetAttribute("Modo") ~= "batalla" then
 		return "No hay una misión en curso"
@@ -524,17 +553,31 @@ local function partida(id: number)
 			fijar("Mensaje", `Derrota en la oleada {oleada}`)
 			return
 		end
+		-- Oleada superada: mejor oleada y estrellas del mapa, como mapProgress del 2D.
+		local perfil = dueno and Perfiles.de(dueno)
+		if perfil then
+			local p = perfil.mapProgress[NIVEL.id] or { bestWave = 0, stars = 0 }
+			p.bestWave = math.max(p.bestWave, oleada)
+			p.stars = math.max(p.stars, p.bestWave)
+			perfil.mapProgress[NIVEL.id] = p
+			Perfiles.marcar(dueno)
+		end
 	end
 	fijar("Fase", "fin")
 	fijar("Mensaje", "¡Victoria! Base Avengers defendida")
 end
 
-local function iniciarPartida()
+local function iniciarPartida(jugador: Player)
+	local perfil = Perfiles.de(jugador)
+	if not perfil then
+		return
+	end
 	partidaActual += 1
 	limpiar()
+	dueno = jugador
 	fijar("Vidas", VIDAS_INICIALES)
-	fijar("Creditos", CREDITOS_INICIALES)
 	fijar("Modo", "batalla")
+	fijar("Creditos", perfil.credits)
 	task.spawn(partida, partidaActual)
 end
 
@@ -543,6 +586,10 @@ function ACCIONES.volver()
 	limpiar()
 	fijar("Modo", "hub")
 	fijar("Fase", "hub")
+	if dueno then
+		task.spawn(Perfiles.guardar, dueno)
+	end
+	dueno = nil
 	return nil
 end
 
@@ -556,7 +603,9 @@ aviso.Parent = ReplicatedStorage
 local hub = Hub.construir(function(jugador, estacion)
 	if estacion == "story" then
 		if estado:GetAttribute("Modo") == "hub" then
-			iniciarPartida()
+			iniciarPartida(jugador)
+		elseif dueno ~= jugador then
+			aviso:FireClient(jugador, `{dueno and dueno.DisplayName or "Otro jugador"} está en una misión`)
 		end
 	else
 		-- Infinito y reclutamiento esperan su port; traits y grades, las reglas del usuario.
@@ -565,4 +614,35 @@ local hub = Hub.construir(function(jugador, estacion)
 end)
 RunService.Heartbeat:Connect(function(dt)
 	Hub.animar(hub, dt)
+end)
+
+--------------------------------------------------------------------------------
+-- Perfiles: carga al entrar, guardado al salir, al cerrar y cada minuto
+--------------------------------------------------------------------------------
+local function alEntrar(jugador: Player)
+	local perfil, problema = Perfiles.cargar(jugador)
+	jugador:SetAttribute("Creditos", perfil.credits)
+	if problema then
+		aviso:FireClient(jugador, problema)
+	end
+end
+Players.PlayerAdded:Connect(alEntrar)
+for _, j in Players:GetPlayers() do
+	task.spawn(alEntrar, j)
+end
+Players.PlayerRemoving:Connect(function(jugador)
+	if jugador == dueno then
+		ACCIONES.volver()
+	end
+	Perfiles.soltar(jugador)
+end)
+game:BindToClose(function()
+	Perfiles.guardarTodos()
+	task.wait(3)
+end)
+task.spawn(function()
+	while true do
+		task.wait(60)
+		Perfiles.guardarTodos()
+	end
 end)
