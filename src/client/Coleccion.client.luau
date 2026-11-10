@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local heroes = require(ReplicatedStorage:WaitForChild("Shared").Data.heroes)
+local items = require(ReplicatedStorage.Shared.Data.items)
 local coleccion = ReplicatedStorage:WaitForChild("Coleccion")
 local abrirPanel = ReplicatedStorage:WaitForChild("AbrirPanel")
 local entrar = ReplicatedStorage:WaitForChild("Entrar")
@@ -134,8 +135,8 @@ local function pantallaInicial()
 end
 
 local function pestanas()
-	for i, p in { { "reclutar", "Reclutamiento" }, { "escuadron", "Escuadrón" } } do
-		boton(p[2], { Position = UDim2.fromOffset((i - 1) * 190, 0), Size = UDim2.fromOffset(180, 36), BackgroundColor3 = if pestana == p[1] then Color3.fromRGB(60, 110, 190) else BOTON }, cuerpo, function()
+	for i, p in { { "reclutar", "Reclutamiento" }, { "escuadron", "Escuadrón" }, { "tienda", "Tienda" }, { "objetos", "Objetos" } } do
+		boton(p[2], { Position = UDim2.fromOffset((i - 1) * 150, 0), Size = UDim2.fromOffset(140, 36), BackgroundColor3 = if pestana == p[1] then Color3.fromRGB(60, 110, 190) else BOTON }, cuerpo, function()
 			pestana = p[1]
 			mostrar()
 		end)
@@ -209,6 +210,76 @@ local function pantallaEscuadron()
 	end)
 end
 
+local NOMBRE_RANURA = { weapon = "Arma", armor = "Armadura", artifact = "Artefacto" }
+
+local function pantallaTienda()
+	titulo.Text = "Tienda"
+	texto({ Position = UDim2.fromOffset(0, 46), Size = UDim2.new(1, 0, 0, 24), TextXAlignment = Enum.TextXAlignment.Left, TextSize = 14, Text = "Los tres objetos más accesibles que todavía no tenés. Cada héroe usa uno." }, cuerpo)
+	local fila = crear("Frame", { Position = UDim2.fromOffset(0, 80), Size = UDim2.new(1, 0, 1, -80), BackgroundTransparency = 1 }, cuerpo)
+	crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 16), HorizontalAlignment = Enum.HorizontalAlignment.Center }, fila)
+	if #estado.vitrina == 0 then
+		texto({ Size = UDim2.new(1, 0, 0, 40), Text = "Ya tenés todos los objetos." }, fila)
+	end
+	for _, id in estado.vitrina do
+		local it = items[id]
+		local f = crear("Frame", { Size = UDim2.fromOffset(220, 270), BackgroundColor3 = BOTON }, fila)
+		texto({ Position = UDim2.fromOffset(10, 8), Size = UDim2.new(1, -20, 0, 40), Font = Enum.Font.GothamBold, TextSize = 17, Text = it.name }, f)
+		texto({ Position = UDim2.fromOffset(10, 50), Size = UDim2.new(1, -20, 0, 18), TextSize = 13, TextColor3 = ACENTO, Text = `{NOMBRE_RANURA[it.slot] or it.slot} · nivel {it.tier}` }, f)
+		texto({ Position = UDim2.fromOffset(10, 74), Size = UDim2.new(1, -20, 0, 130), TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, Text = it.desc or "" }, f)
+		boton(`Comprar · 💰 {it.price}`, { Position = UDim2.new(0, 10, 1, -48), Size = UDim2.new(1, -20, 0, 38), BackgroundColor3 = Color3.fromRGB(170, 120, 30) }, f, function()
+			if not pedir("comprar", id).error then
+				mensaje.Text = `Compraste {it.name}. Equipalo en la pestaña Objetos.`
+			end
+			mostrar()
+		end)
+	end
+end
+
+local objetoElegido = nil
+local function pantallaObjetos()
+	titulo.Text = "Objetos"
+	-- Izquierda: tus objetos (inventario y equipados). Derecha: tus héroes; clic para equipar el elegido.
+	local duenoDe = {}
+	for heroeId, id in estado.equipados do
+		duenoDe[id] = heroeId
+	end
+	local todos = table.clone(estado.inventario)
+	for id in duenoDe do
+		table.insert(todos, id)
+	end
+	local izq = crear("ScrollingFrame", { Position = UDim2.fromOffset(0, 46), Size = UDim2.new(0.5, -10, 1, -46), BackgroundTransparency = 1, ScrollBarThickness = 6, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new() }, cuerpo)
+	crear("UIListLayout", { Padding = UDim.new(0, 6) }, izq)
+	if #todos == 0 then
+		texto({ Size = UDim2.new(1, 0, 0, 40), Text = "Todavía no tenés objetos: compralos en la Tienda." }, izq)
+	end
+	for _, id in todos do
+		local it = items[id]
+		local quien = duenoDe[id] and heroes[duenoDe[id]].name
+		boton(`{it.name}\n{if quien then "En " .. quien else "Sin equipar"}`, { Size = UDim2.new(1, -10, 0, 50), TextSize = 14, BackgroundColor3 = if objetoElegido == id then Color3.fromRGB(60, 110, 190) else BOTON }, izq, function()
+			objetoElegido = if objetoElegido == id then nil else id
+			mostrar()
+		end)
+	end
+	local der = crear("ScrollingFrame", { Position = UDim2.new(0.5, 10, 0, 46), Size = UDim2.new(0.5, -10, 1, -46), BackgroundTransparency = 1, ScrollBarThickness = 6, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new() }, cuerpo)
+	crear("UIListLayout", { Padding = UDim.new(0, 6) }, der)
+	for _, heroeId in estado.desbloqueados do
+		local actual = estado.equipados[heroeId]
+		boton(`{heroes[heroeId].name}\n{if actual then items[actual].name else "—"}`, { Size = UDim2.new(1, -10, 0, 50), TextSize = 14 }, der, function()
+			if objetoElegido then
+				if not pedir("equipar", { heroe = heroeId, objeto = objetoElegido }).error then
+					objetoElegido = nil
+				end
+			elseif actual then
+				pedir("quitar", heroeId)
+			end
+			mostrar()
+		end)
+	end
+	if not objetoElegido then
+		mensaje.Text = if #todos > 0 then "Elegí un objeto y después un héroe. Clic en un héroe sin elegir objeto: lo quita." else mensaje.Text
+	end
+end
+
 function mostrar()
 	vaciar()
 	saldo.Text = `💰 {estado.creditos}`
@@ -222,6 +293,10 @@ function mostrar()
 	pestanas()
 	if pestana == "reclutar" then
 		pantallaReclutar()
+	elseif pestana == "tienda" then
+		pantallaTienda()
+	elseif pestana == "objetos" then
+		pantallaObjetos()
 	else
 		pantallaEscuadron()
 	end

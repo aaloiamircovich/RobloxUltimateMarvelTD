@@ -27,18 +27,91 @@ local function flechaPreparada(kit)
 	return kit.heroe == "hawkeye" and kit.ataques % 4 == 3
 end
 
+-- getConditionalItemDamageMultiplier del 2D: bonus del objeto según el blanco y la distancia (px).
+local function multiplicadorObjeto(ef, objetivo, distancia: number): number
+	local m = 1
+	local function tiene(tipos)
+		for _, t in tipos do
+			if objetivo.estados[t] then
+				return true
+			end
+		end
+		return false
+	end
+	if ef.bossDamagePct and objetivo.config.isBoss then
+		m *= 1 + ef.bossDamagePct
+	end
+	if ef.armorDamagePct and ((objetivo.config.armor or 0) > 0 or objetivo.barrera > 0) then
+		m *= 1 + ef.armorDamagePct
+	end
+	if ef.damageToControlledPct and tiene({ "slow", "stun", "web" }) then
+		m *= 1 + ef.damageToControlledPct
+	end
+	if ef.damageToBurnedPct and tiene({ "burn" }) then
+		m *= 1 + ef.damageToBurnedPct
+	end
+	if ef.damageToCursedPct and tiene({ "curse" }) then
+		m *= 1 + ef.damageToCursedPct
+	end
+	local estados = Combate.cantidadEstados(objetivo)
+	if ef.statusDamagePct and estados > 0 then
+		m *= 1 + math.min(ef.statusDamageCap or 0.5, ef.statusDamagePct * estados)
+	end
+	if ef.longRangeDamagePct and distancia >= (ef.longRangeThreshold or 150) then
+		m *= 1 + ef.longRangeDamagePct
+	end
+	if ef.closeRangeDamagePenaltyPct and distancia < (ef.closeRangeThreshold or 120) then
+		m *= 1 - ef.closeRangeDamagePenaltyPct
+	end
+	return math.max(0.1, m)
+end
+
+-- Efectos al golpear que agrega el objeto (getProjectileEffects del 2D).
+local function efectosObjeto(ef, stats)
+	local r = {}
+	if ef.slowChance then
+		table.insert(r, { type = "slow", duration = 1.2, power = ef.slowPower or 0.2, chance = ef.slowChance })
+	end
+	if ef.armorBreakChance then
+		table.insert(r, { type = "armorBreak", duration = 3, power = ef.armorBreakPower or 0.15, chance = ef.armorBreakChance })
+	end
+	if ef.burnChance then
+		local escala = ef.burnAttackDamagePct ~= nil
+		table.insert(r, {
+			type = "burn",
+			duration = ef.burnDuration or 4,
+			chance = ef.burnChance,
+			power = if escala then ef.burnAttackDamagePct else (ef.burnPower or 0.018),
+			damageBasis = if escala then "attackDamage" else nil,
+			attackDamageSnapshot = if escala then stats.damage else nil,
+		})
+	end
+	if ef.poisonChance then
+		table.insert(r, { type = "poison", duration = ef.poisonDuration or 4, power = ef.poisonPower or 0.01, stacks = ef.poisonStacks or 1, chance = ef.poisonChance })
+	end
+	if ef.curseChance then
+		table.insert(r, { type = "curse", duration = ef.curseDuration or 4, power = ef.cursePower or 0.01, chance = ef.curseChance })
+	end
+	if ef.stunChance then
+		table.insert(r, { type = "stun", duration = ef.stunDuration or 0.25, power = 1, chance = ef.stunChance })
+	end
+	return r
+end
+
 -- Golpe del disparo principal, armado ANTES de contar el ataque (como Hero.shoot del 2D).
--- danoBase ya incluye el crítico. Devuelve { tipo, dano, penetracion, efectos, radioSplash, factorSplash }.
-function Kits.golpe(kit, config, objetivo, danoBase: number)
+-- danoBase ya incluye el crítico; objeto: items.json o nil; distancia: héroe→blanco en px.
+-- Devuelve { tipo, dano, penetracion, efectos, radioSplash, factorSplash, rebotes, rangoRebote, factorRebote }.
+function Kits.golpe(kit, config, objetivo, danoBase: number, stats, objeto, distancia: number?)
 	local especial = config.special or {}
 	local perfil = especial.projectileProfile or {}
+	local ef = objeto and objeto.effects or {}
 	local golpe = {
 		tipo = config.category,
 		dano = danoBase,
 		penetracion = perfil.armorPenetration,
 		radioSplash = perfil.splashRadius,
 		factorSplash = perfil.splashFactor,
-		efectos = table.clone(especial.attackEffects or {}),
+		efectos = {},
 	}
 	if kit.heroe == "hawkeye" then
 		local preparada = flechaPreparada(kit)
@@ -53,6 +126,32 @@ function Kits.golpe(kit, config, objetivo, danoBase: number)
 	elseif kit.heroe == "black_widow" and Combate.esApoyo(objetivo) then
 		table.insert(golpe.efectos, { type = "armorBreak", duration = 4, power = 0.3, chance = 1 })
 	end
+	-- Orden del 2D: efectos del kit, efectos especiales del héroe y efectos del objeto.
+	for _, e in especial.attackEffects or {} do
+		table.insert(golpe.efectos, e)
+	end
+	if objeto then
+		for _, e in efectosObjeto(ef, stats) do
+			table.insert(golpe.efectos, e)
+		end
+		golpe.dano *= multiplicadorObjeto(ef, objetivo, distancia or 0)
+		-- consecutiveDamagePct: golpes seguidos al mismo blanco.
+		if ef.consecutiveDamagePct then
+			if kit.ultimoBlanco == objetivo then
+				kit.seguidos = (kit.seguidos or 0) + 1
+				golpe.dano *= 1 + kit.seguidos * ef.consecutiveDamagePct
+			else
+				kit.seguidos, kit.ultimoBlanco = 0, objetivo
+			end
+		end
+	end
+	-- getProjectileProfile del 2D: rebotes y splash toman el máximo; la penetración suma con tope 0.85.
+	golpe.rebotes = math.floor((ef.chainCount or 0) + 0.5)
+	golpe.rangoRebote = ef.chainRange or 0
+	golpe.factorRebote = ef.chainFactor or 0
+	golpe.radioSplash = math.max(golpe.radioSplash or 0, ef.splashRadius or 0)
+	golpe.factorSplash = math.max(golpe.factorSplash or 0, ef.splashFactor or 0)
+	golpe.penetracion = math.min(0.85, (golpe.penetracion or 0) + (ef.armorPenetration or 0))
 	return golpe
 end
 

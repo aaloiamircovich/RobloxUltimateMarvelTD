@@ -47,11 +47,13 @@ return function()
 
 	-- Impacto con splash: el principal recibe 100% y efectos; el resto, el factor de splash.
 	local a, b = Combate.nuevoEnemigo(doom), Combate.nuevoEnemigo(doom)
+	local pos = { [a] = { 0, 0 }, [b] = { 30, 0 } }
+	local function posicion(x)
+		return pos[x][1], pos[x][2]
+	end
 	Combate.impacto(a, { tipo = "Urbano", dano = 100, radioSplash = 68, factorSplash = 0.58, efectos = { { type = "slow", duration = 1, power = 0.5 } } }, tipos, function()
 		return 0
-	end, function()
-		return { a, b }
-	end)
+	end, { a, b }, posicion)
 	assert(cerca(200 - a.vida, 100 * 1.5 * 0.65) and a.estados.slow, "Urbano vs Tecnológico ×1.5 y efecto al principal")
 	assert(cerca(200 - b.vida, 100 * 0.58 * 1.5 * 0.65) and not b.estados.slow, "splash sin efectos")
 
@@ -74,7 +76,7 @@ return function()
 	-- Black Widow: veneno de config.special; ruptura sólo contra apoyos; sabotaje al cuarto ataque.
 	local kw = Kits.nuevo("black_widow")
 	local gw = Kits.golpe(kw, heroes.black_widow, a, 10)
-	assert(gw.efectos[1].type == "poison" and gw.efectos[2].type == "armorBreak", "veneno y ruptura contra invocador")
+	assert(gw.efectos[1].type == "armorBreak" and gw.efectos[2].type == "poison", "ruptura (kit) y veneno (especial) contra invocador")
 	local soldado = Combate.nuevoEnemigo({ id = "x", hp = 100, armor = 0 })
 	assert(#Kits.golpe(kw, heroes.black_widow, soldado, 10).efectos == 1, "sin ruptura contra no-apoyos")
 	local lista = { { e = soldado, x = 0, y = 0 } }

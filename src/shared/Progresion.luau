@@ -43,9 +43,10 @@ function Progresion.evolucion(heroeId: string, nivel: number)
 	return nil
 end
 
--- Subconjunto de Hero.getEffectiveStats: nivel, evolución y modificadores especiales.
--- shortcut: sin objetos, maestrías, auras ni sinergias; se suman cuando existan esos sistemas.
-function Progresion.stats(config, nivel: number)
+-- Subconjunto de Hero.getEffectiveStats: nivel, evolución, objeto equipado y modificadores especiales.
+-- objeto: entrada de items.json o nil; vidas: vidas actuales (los bonus "lowLife" valen con 10 o menos).
+-- shortcut: sin maestrías, auras ni sinergias; se suman cuando existan esos sistemas.
+function Progresion.stats(config, nivel: number, objeto, vidas: number?)
 	local s = {
 		damage = math.floor(config.damage * Progresion.multiplicadorDano(nivel, config.rarity)),
 		fireRate = config.fireRate,
@@ -62,19 +63,42 @@ function Progresion.stats(config, nivel: number)
 		s.critChance += evo.stats.critChance or 0
 		s.canSeeStealth = s.canSeeStealth or evo.canSeeStealth or evo.id == "iron_spider"
 	end
+	local ef = objeto and objeto.effects or {}
+	s.damage *= 1 + (ef.damagePct or 0)
+	s.fireRate *= 1 + (ef.fireRatePct or 0)
+	s.range *= 1 + (ef.rangePct or 0)
+	s.critChance += ef.critChance or 0
+	s.critDamage += ef.critDamageBonus or 0
+	s.canSeeStealth = s.canSeeStealth or ef.detectStealth == true
+	s.terrenos = table.clone(config.allowedTerrains or { 1 })
+	for clave, terreno in { allowWater = 0, allowGrass = 1, allowMountain = 3 } do
+		if ef[clave] and not table.find(s.terrenos, terreno) then
+			table.insert(s.terrenos, terreno)
+		end
+	end
+
 	local sp = config.special and config.special.statModifiers or {}
 	s.damage *= 1 + (sp.damagePct or 0)
 	s.fireRate *= 1 + (sp.fireRatePct or 0)
 	s.range *= 1 + (sp.rangePct or 0)
 	s.critChance += sp.critChance or 0
 	s.canSeeStealth = s.canSeeStealth or sp.detectStealth == true
+	if sp.allowWater and not table.find(s.terrenos, 0) then
+		table.insert(s.terrenos, 0)
+	end
+	if (vidas or math.huge) <= 10 then
+		s.damage *= 1 + (ef.lowLifeDamagePct or 0)
+		s.fireRate *= 1 + (ef.lowLifeFireRatePct or 0)
+	end
 	return s
 end
 
--- Config con el alcance efectivo, para validar el despliegue como preview() del 3D.
-function Progresion.paraDespliegue(config, nivel: number)
+-- Config con el alcance y los terrenos efectivos, para validar el despliegue como preview() del 3D.
+function Progresion.paraDespliegue(config, nivel: number, objeto)
 	local c = table.clone(config)
-	c.range = Progresion.stats(config, nivel).range
+	local s = Progresion.stats(config, nivel, objeto)
+	c.range = s.range
+	c.allowedTerrains = s.terrenos
 	return c
 end
 

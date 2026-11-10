@@ -15,6 +15,7 @@ local Progresion = require(Shared.Progresion)
 local Combate = require(Shared.Combate)
 local Kits = require(Shared.Kits)
 local Conductas = require(Shared.Conductas)
+local Objetos = require(Shared.Objetos)
 local Mapa = require(Shared.Mapa)
 local Hub = require(script.Parent.Hub)
 local Perfiles = require(script.Parent.Perfiles)
@@ -316,12 +317,14 @@ function ACCIONES.colocar(heroeId: string, x: number, y: number)
 	end
 	local config = heroes[heroeId]
 	local nivel = nivelGuardado(heroeId)
-	local err, cx, cy = Despliegue.error(Progresion.paraDespliegue(config, nivel), x, y, NIVEL, rutaPx, listaUnidades())
+	local perfil = dueno and Perfiles.de(dueno)
+	local objeto = perfil and Objetos.de(perfil, heroeId)
+	local err, cx, cy = Despliegue.error(Progresion.paraDespliegue(config, nivel, objeto), x, y, NIVEL, rutaPx, listaUnidades())
 	if err then
 		return err
 	end
 	local modelo, raiz, ataque, velocidadAtaque = crearModelo(config)
-	local u = { uid = siguienteUid, heroe = heroeId, x = cx, y = cy, config = config, nivel = nivel, stats = Progresion.stats(config, nivel), modelo = modelo, raiz = raiz, espera = 0, ataque = ataque, velocidadAtaque = velocidadAtaque, kit = Kits.nuevo(heroeId) }
+	local u = { uid = siguienteUid, heroe = heroeId, x = cx, y = cy, config = config, nivel = nivel, objeto = objeto, stats = Progresion.stats(config, nivel, objeto), modelo = modelo, raiz = raiz, espera = 0, ataque = ataque, velocidadAtaque = velocidadAtaque, kit = Kits.nuevo(heroeId) }
 	siguienteUid += 1
 	modelo:SetAttribute("Uid", u.uid)
 	modelo:SetAttribute("Heroe", heroeId)
@@ -338,7 +341,7 @@ function ACCIONES.mover(uid: number, x: number, y: number)
 	if not u then
 		return "Héroe no disponible"
 	end
-	local err, cx, cy = Despliegue.error(Progresion.paraDespliegue(u.config, u.nivel), x, y, NIVEL, rutaPx, listaUnidades(), uid)
+	local err, cx, cy = Despliegue.error(Progresion.paraDespliegue(u.config, u.nivel, u.objeto), x, y, NIVEL, rutaPx, listaUnidades(), uid)
 	if err then
 		return err
 	end
@@ -372,7 +375,7 @@ function ACCIONES.mejorar(uid: number)
 	end
 	local evolucionaba = Progresion.evolucion(u.heroe, u.nivel)
 	u.nivel += 1
-	u.stats = Progresion.stats(u.config, u.nivel)
+	u.stats = Progresion.stats(u.config, u.nivel, u.objeto, estado:GetAttribute("Vidas"))
 	u.modelo:SetAttribute("Nivel", u.nivel) -- antes que los créditos: el cliente refresca al cambiar Estado
 	local perfil = dueno and Perfiles.de(dueno)
 	if perfil then
@@ -534,6 +537,8 @@ local function actualizarUnidad(u, dt)
 	if not objetivo then
 		return
 	end
+	-- Recalcular por los bonus de objeto con 10 vidas o menos ("lowLife").
+	u.stats = Progresion.stats(u.config, u.nivel, u.objeto, estado:GetAttribute("Vidas"))
 	u.espera = 1 / u.stats.fireRate
 	local destino = objetivo.e.cuerpo.Position
 	local p = u.raiz.Position
@@ -544,21 +549,29 @@ local function actualizarUnidad(u, dt)
 
 	-- Crítico como Hero.shoot del 2D: probabilidad en %, daño ×critDamage; después el kit arma el golpe.
 	local critico = math.random() * 100 < u.stats.critChance
-	local golpe = Kits.golpe(u.kit, u.config, objetivo.e, if critico then u.stats.damage * u.stats.critDamage else u.stats.damage)
+	local distancia = math.sqrt((objetivo.x - u.x) ^ 2 + (objetivo.y - u.y) ^ 2)
+	local golpe = Kits.golpe(u.kit, u.config, objetivo.e, if critico then u.stats.damage * u.stats.critDamage else u.stats.damage, u.stats, u.objeto, distancia)
 	local efecto = EFECTOS[u.modelo:GetAttribute("Efecto")] or EFECTOS.flecha
 	efecto(p + Vector3.new(0, 1, 0), destino, COLOR_MUNICION[u.kit.modo])
 
-	local tocados = { objetivo.e }
-	Combate.impacto(objetivo.e, golpe, tablaTipos, math.random, function(radio)
-		local r = {}
-		for _, c in enPixeles do
-			if vivo(c.e) and math.sqrt((c.x - objetivo.x) ^ 2 + (c.y - objetivo.y) ^ 2) <= radio then
-				table.insert(r, c.e)
-				table.insert(tocados, c.e)
-			end
+	local todos, posiciones = {}, {}
+	for _, c in enPixeles do
+		if vivo(c.e) then
+			table.insert(todos, c.e)
+			posiciones[c.e] = c
 		end
-		return r
+	end
+	local tocados, saltos = Combate.impacto(objetivo.e, golpe, tablaTipos, math.random, todos, function(e)
+		return posiciones[e].x, posiciones[e].y
 	end)
+	for _, salto in saltos do
+		EFECTOS.rayo(salto.desde.cuerpo.Position, salto.hasta.cuerpo.Position)
+	end
+	-- applyItemEffects del 2D: créditos por golpe principal según la recompensa del blanco.
+	local pct = u.objeto and u.objeto.effects.onHitCreditPct
+	if pct and (objetivo.e.config.reward or 0) > 0 then
+		fijar("Creditos", estado:GetAttribute("Creditos") + math.max(1, math.ceil(objetivo.e.config.reward * pct)))
+	end
 	if (golpe.radioSplash or 0) > 0 then
 		EFECTOS.impacto(nil, destino, COLOR_MUNICION[u.kit.modo], golpe.radioSplash * Mapa.ESCALA)
 	end
@@ -829,6 +842,13 @@ end)
 -- Colección (estación Invocaciones): acciones por jugador sobre su propio perfil
 --------------------------------------------------------------------------------
 local function resumen(perfil)
+	local vitrina, equipados = {}, {}
+	for _, it in Objetos.vitrina(perfil) do
+		table.insert(vitrina, it.id)
+	end
+	for heroeId in perfil.equippedItems do
+		equipados[heroeId] = Objetos.de(perfil, heroeId).id
+	end
 	return {
 		creditos = perfil.credits,
 		desbloqueados = perfil.unlockedHeroIds,
@@ -837,6 +857,9 @@ local function resumen(perfil)
 		probabilidades = Reclutamiento.probabilidades(perfil, heroes),
 		iniciales = Reclutamiento.INICIALES,
 		garantia = perfil.shop.heroPity >= 4,
+		vitrina = vitrina,
+		inventario = perfil.ownedItemIds,
+		equipados = equipados,
 	}
 end
 
@@ -878,6 +901,12 @@ coleccion.OnServerInvoke = function(jugador, nombre, arg)
 		end
 	elseif nombre == "equipo" and type(arg) == "table" then
 		res.error = Reclutamiento.fijarEquipo(perfil, arg)
+	elseif nombre == "comprar" and type(arg) == "string" then
+		res.error = Objetos.comprar(perfil, arg)
+	elseif nombre == "equipar" and type(arg) == "table" and type(arg.heroe) == "string" and type(arg.objeto) == "string" then
+		res.error = Objetos.equipar(perfil, arg.heroe, arg.objeto)
+	elseif nombre == "quitar" and type(arg) == "string" then
+		res.error = Objetos.quitar(perfil, arg)
 	elseif nombre ~= "estado" then
 		res.error = "Acción desconocida"
 	end

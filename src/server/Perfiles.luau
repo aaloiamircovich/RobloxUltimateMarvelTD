@@ -1,8 +1,9 @@
 -- Perfil persistente por jugador (DataStore). Subconjunto del estado de ProgressionManager del 2D,
 -- con los mismos nombres de campo para poder importar perfiles: credits, heroUpgrades, mapProgress,
--- unlockedHeroIds, activeTeamIds, shop y modeRecords (sólo supervivencia).
+-- unlockedHeroIds, activeTeamIds, shop, modeRecords (sólo supervivencia), ownedItemIds y equippedItems.
 local DataStoreService = game:GetService("DataStoreService")
 local heroes = require(game:GetService("ReplicatedStorage").Shared.Data.heroes)
+local items = require(game:GetService("ReplicatedStorage").Shared.Data.items)
 
 local Perfiles = {}
 
@@ -29,6 +30,8 @@ function Perfiles.normalizar(crudo)
 		activeTeamIds = {},
 		shop = { heroPity = 0, heroBoxCost = 500 },
 		modeRecords = { survival = { bestWave = 0, bestScore = 0 } },
+		ownedItemIds = {},
+		equippedItems = {},
 	}
 	local c = tonumber(datos.credits)
 	if c and c == c and c >= 0 and c < math.huge then
@@ -70,6 +73,29 @@ function Perfiles.normalizar(crudo)
 	end, 6)
 	if #p.activeTeamIds == 0 and #p.unlockedHeroIds > 0 then
 		p.activeTeamIds = { p.unlockedHeroIds[1] }
+	end
+	-- Objetos: cada id existe una sola vez, en el inventario o equipado en un héroe desbloqueado.
+	local vistos = {}
+	if type(datos.equippedItems) == "table" then
+		for heroeId, ranuras in datos.equippedItems do
+			if type(heroeId) == "string" and table.find(p.unlockedHeroIds, heroeId) and type(ranuras) == "table" then
+				for _, id in ranuras do
+					if type(id) == "string" and items[id] and not vistos[id] then
+						vistos[id] = true
+						p.equippedItems[heroeId] = { [items[id].slot] = id }
+						break -- un objeto por héroe, como el 2D
+					end
+				end
+			end
+		end
+	end
+	if type(datos.ownedItemIds) == "table" then
+		for _, id in datos.ownedItemIds do
+			if type(id) == "string" and items[id] and not vistos[id] then
+				vistos[id] = true
+				table.insert(p.ownedItemIds, id)
+			end
+		end
 	end
 	local r = type(datos.modeRecords) == "table" and datos.modeRecords.survival
 	if type(r) == "table" then

@@ -62,43 +62,72 @@ local function duracionAjustada(e, tipo, duracion)
 	return duracion * math.max(0.2, 1 - (e.config.statusResistance or 0) - especifica)
 end
 
--- applyStatus del 2D para slow, armorBreak y poison.
--- shortcut: "sabotage" (inhibir curas e invocaciones) espera a que los enemigos tengan esas conductas.
+-- Daño periódico de una sola instancia (burn, curse, bleed): DPS según resolveStatusDamage del 2D.
+local DOT = { burn = true, curse = true, bleed = true }
+local function dps(e, efecto)
+	local base = efecto.damageBasis or (if efecto.type == "curse" or efecto.type == "poison" then "maxHealth" else "flat")
+	local valor = if base == "maxHealth" then e.vidaMax elseif base == "attackDamage" then (efecto.attackDamageSnapshot or 0) else 1
+	return valor * (efecto.power or 0.5)
+end
+
+-- addPoisonStacks del 2D: hasta 12 capas; en el tope, una capa más fuerte reemplaza a la más débil.
+local function agregarCapaVeneno(e, dps: number, duracion: number): boolean
+	local capas = e.estados.poison
+	local capa = { dps = dps, duracion = duracion, tic = 0 }
+	if #capas < MAX_CAPAS_VENENO then
+		table.insert(capas, capa)
+		return true
+	end
+	local debil = 1
+	for i, c in capas do
+		if c.dps < capas[debil].dps or (c.dps == capas[debil].dps and c.duracion < capas[debil].duracion) then
+			debil = i
+		end
+	end
+	if dps <= capas[debil].dps then
+		-- En el tope, un golpe igual sólo renueva su propia contribución (la capa equivalente más corta).
+		capas[debil].duracion = math.max(capas[debil].duracion, duracion)
+		return true
+	end
+	if capas[debil].tic > 0 then
+		Combate.recibir(e, capas[debil].dps * capas[debil].tic, { ignorarArmadura = true, fraccional = true })
+	end
+	capas[debil] = capa
+	return true
+end
+
+-- applyStatus del 2D para slow, armorBreak, haste, stun, poison y daño periódico (burn, curse, bleed).
+-- El sabotaje vive en Conductas.sabotear.
 function Combate.aplicarEstado(e, efecto): boolean
 	local tipo = efecto.type
 	if e.vida <= 0 then
 		return false
 	end
-	if tipo == "slow" and e.config.immuneToSlow then
+	if (tipo == "slow" and e.config.immuneToSlow) or (tipo == "stun" and e.config.immuneToStun) then
 		return false
 	end
 	local duracion = duracionAjustada(e, tipo, efecto.duration or 1)
 	if tipo == "poison" then
-		local dps = e.vidaMax * (efecto.power or 0.5) -- base "maxHealth" de resolveStatusDamage
-		local capas = e.estados.poison
-		local capa = { dps = dps, duracion = duracion, tic = 0 }
-		if #capas < MAX_CAPAS_VENENO then
-			table.insert(capas, capa)
-			return true
+		local aceptado = false
+		for _ = 1, math.clamp(math.floor(efecto.stacks or 1), 1, MAX_CAPAS_VENENO) do
+			aceptado = agregarCapaVeneno(e, e.vidaMax * (efecto.power or 0.5), duracion) or aceptado
 		end
-		local debil = 1
-		for i, c in capas do
-			if c.dps < capas[debil].dps or (c.dps == capas[debil].dps and c.duracion < capas[debil].duracion) then
-				debil = i
-			end
-		end
-		if dps <= capas[debil].dps then
-			-- En el tope, un golpe igual sólo renueva su propia contribución (la capa equivalente más corta).
-			capas[debil].duracion = math.max(capas[debil].duracion, duracion)
-			return true
-		end
-		if capas[debil].tic > 0 then
-			Combate.recibir(e, capas[debil].dps * capas[debil].tic, { ignorarArmadura = true, fraccional = true })
-		end
-		capas[debil] = capa
-		return true
+		return aceptado
 	end
 	local actual = e.estados[tipo]
+	if DOT[tipo] then
+		local nuevo = dps(e, efecto)
+		if actual then
+			actual.duration = math.max(actual.duration, duracion)
+			-- Se comparan DPS resueltos, no coeficientes de bases distintas.
+			if nuevo >= actual.dps then
+				actual.dps, actual.explicita = nuevo, efecto.damageBasis ~= nil
+			end
+		else
+			e.estados[tipo] = { duration = duracion, dps = nuevo, tic = 0, explicita = efecto.damageBasis ~= nil }
+		end
+		return true
+	end
 	if actual then
 		actual.duration = math.max(actual.duration, duracion)
 		actual.power = math.max(actual.power, efecto.power or 0.5)
@@ -106,6 +135,17 @@ function Combate.aplicarEstado(e, efecto): boolean
 		e.estados[tipo] = { duration = duracion, power = efecto.power or 0.5 }
 	end
 	return true
+end
+
+-- Cantidad de estados activos (para statusDamagePct de los objetos).
+function Combate.cantidadEstados(e): number
+	local n = if #e.estados.poison > 0 then 1 else 0
+	for tipo, v in e.estados do
+		if tipo ~= "poison" and v then
+			n += 1
+		end
+	end
+	return n
 end
 
 -- updateDebuffs del 2D: avanza estados y veneno. Devuelve el multiplicador de velocidad y si murió por veneno.
@@ -140,7 +180,23 @@ function Combate.actualizar(e, dt: number): (number, boolean)
 			end
 		end
 	end
-	for _, tipo in { "slow", "armorBreak", "haste" } do
+	-- burn/curse/bleed: tics de 0.5 s (bleed 0.4) que ignoran armadura; con base explícita se liquida el resto.
+	for tipo in DOT do
+		local d = e.estados[tipo]
+		if d and e.vida > 0 then
+			local intervalo = if tipo == "bleed" then 0.4 else 0.5
+			d.tic += math.min(dt, math.max(0, d.duration))
+			while d.tic >= intervalo and e.vida > 0 do
+				Combate.recibir(e, d.dps * intervalo, { ignorarArmadura = true, fraccional = d.explicita })
+				d.tic -= intervalo
+			end
+			if d.explicita and d.duration <= dt and d.tic > 0 and e.vida > 0 then
+				Combate.recibir(e, d.dps * d.tic, { ignorarArmadura = true, fraccional = true })
+				d.tic = 0
+			end
+		end
+	end
+	for _, tipo in { "slow", "armorBreak", "haste", "stun", "burn", "curse", "bleed" } do
 		local s = e.estados[tipo]
 		if s then
 			s.duration -= dt
@@ -148,6 +204,9 @@ function Combate.actualizar(e, dt: number): (number, boolean)
 				e.estados[tipo] = nil
 			end
 		end
+	end
+	if e.estados.stun then
+		return 0, e.vida <= 0
 	end
 	local lento = e.estados.slow and e.estados.slow.power or 0
 	local mult = if lento > 0 then math.max(0.2, 1 - lento) else 1
@@ -157,15 +216,18 @@ function Combate.actualizar(e, dt: number): (number, boolean)
 	return mult, e.vida <= 0
 end
 
--- applyImpact del 2D: daño principal, efectos (con probabilidad) y splash sin efectos.
--- golpe: { tipo, dano, penetracion, efectos, radioSplash, factorSplash }; cercanos(radio) → enemigos.
--- Devuelve la lista de enemigos que murieron.
-function Combate.impacto(objetivo, golpe, tablaTipos, azar: () -> number, cercanos)
-	local muertos = {}
-	local _, murio = Combate.danar(objetivo, golpe, 1, tablaTipos)
-	if murio then
-		table.insert(muertos, objetivo)
-	else
+-- applyImpact del 2D: daño principal, efectos (con probabilidad), splash y rebotes (sin efectos).
+-- golpe: { tipo, dano, penetracion, efectos, radioSplash, factorSplash, rebotes, rangoRebote, factorRebote }
+-- todos: enemigos vivos; posicion(e) → x, y en píxeles. Devuelve los enemigos tocados y los rebotes ({desde, hasta}).
+function Combate.impacto(objetivo, golpe, tablaTipos, azar: () -> number, todos, posicion)
+	local tocados, saltos = { objetivo }, {}
+	local function distancia(a, b)
+		local ax, ay = posicion(a)
+		local bx, by = posicion(b)
+		return math.sqrt((ax - bx) ^ 2 + (ay - by) ^ 2)
+	end
+	Combate.danar(objetivo, golpe, 1, tablaTipos)
+	if objetivo.vida > 0 then
 		for _, ef in golpe.efectos or {} do
 			if azar() < (ef.chance or 1) then
 				Combate.aplicarEstado(objetivo, ef)
@@ -173,16 +235,33 @@ function Combate.impacto(objetivo, golpe, tablaTipos, azar: () -> number, cercan
 		end
 	end
 	if (golpe.radioSplash or 0) > 0 then
-		for _, otro in cercanos(golpe.radioSplash) do
-			if otro ~= objetivo and otro.vida > 0 then
-				local _, m = Combate.danar(otro, golpe, golpe.factorSplash or 0.5, tablaTipos)
-				if m then
-					table.insert(muertos, otro)
-				end
+		for _, otro in todos do
+			if otro ~= objetivo and otro.vida > 0 and distancia(otro, objetivo) <= golpe.radioSplash then
+				Combate.danar(otro, golpe, golpe.factorSplash or 0.5, tablaTipos)
+				table.insert(tocados, otro)
 			end
 		end
 	end
-	return muertos
+	-- Rebotes: al más cercano no visitado dentro del rango, con factor^(salto).
+	local actual, visitados = objetivo, { [objetivo] = true }
+	for salto = 1, golpe.rebotes or 0 do
+		local siguiente, mejor = nil, math.huge
+		for _, otro in todos do
+			local d = if visitados[otro] or otro.vida <= 0 then math.huge else distancia(otro, actual)
+			if d <= (golpe.rangoRebote or 0) and d < mejor then
+				siguiente, mejor = otro, d
+			end
+		end
+		if not siguiente then
+			break
+		end
+		Combate.danar(siguiente, golpe, (golpe.factorRebote or 0.5) ^ salto, tablaTipos)
+		table.insert(saltos, { desde = actual, hasta = siguiente })
+		table.insert(tocados, siguiente)
+		visitados[siguiente] = true
+		actual = siguiente
+	end
+	return tocados, saltos
 end
 
 -- isSabotageTarget del 2D: apoyos, invocadores y comandantes que no sean jefes.
