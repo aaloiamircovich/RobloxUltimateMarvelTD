@@ -1,5 +1,6 @@
--- Partida de campaña en Base Avengers: mapa, oleadas del 2D y un Hawkeye fijo que dispara.
--- shortcut: torre fija y equipo de un solo héroe; falta colocar/mejorar héroes desde el cliente.
+-- Partida de campaña en Base Avengers: mapa, oleadas del 2D y héroes que el jugador despliega.
+-- Reglas del 3D: despliegue y movimiento gratis, una unidad por héroe, retiro sin reembolso.
+-- shortcut: un escuadrón compartido por todos los jugadores; con multijugador, una partida por jugador.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local RunService = game:GetService("RunService")
@@ -8,8 +9,9 @@ local TweenService = game:GetService("TweenService")
 local Shared = ReplicatedStorage.Shared
 local Data = Shared.Data
 local Oleadas = require(Shared.Oleadas)
+local Despliegue = require(Shared.Despliegue)
+local Mapa = require(Shared.Mapa)
 local Arco = require(Shared.Modelos.Arco)
-local Mapa = require(script.Parent.Mapa)
 
 local heroes = require(Data.heroes)
 local enemigosDatos = require(Data.enemies)
@@ -18,10 +20,12 @@ local tablaTipos = require(Data.TypeChart)
 
 local NIVEL, INDICE_NIVEL = niveles[1], 0
 local VIDAS_INICIALES, CREDITOS_INICIALES = 20, 650 -- ResourceManager del 2D
+local ESCUADRON = { "black_widow", "hawkeye", "korg" } -- héroes iniciales del 3D
 
 -- Estado visible para los clientes.
 local estado = Instance.new("Folder")
 estado.Name = "Estado"
+estado:SetAttribute("Escuadron", table.concat(ESCUADRON, ","))
 estado.Parent = ReplicatedStorage
 local function fijar(nombre, valor)
 	estado:SetAttribute(nombre, valor)
@@ -29,8 +33,14 @@ end
 fijar("Vidas", VIDAS_INICIALES)
 fijar("Creditos", CREDITOS_INICIALES)
 fijar("Oleada", 0)
-fijar("Mensaje", "Preparando la Base Avengers…")
+fijar("Fase", "preparacion")
+fijar("Mensaje", "Desplegá héroes y apretá «Iniciar oleada»")
 
+local accion = Instance.new("RemoteFunction")
+accion.Name = "Accion"
+accion.Parent = ReplicatedStorage
+
+local rutaPx = Mapa.rutaPixeles(NIVEL)
 local ruta = Mapa.construir(NIVEL)
 local largoTramo, largoTotal = {}, 0
 for i = 1, #ruta - 1 do
@@ -64,39 +74,41 @@ local carpetaEnemigos = Instance.new("Folder")
 carpetaEnemigos.Name = "Enemigos"
 carpetaEnemigos.Parent = workspace
 
-local function crearEnemigo(config)
-	local tam = if config.isBoss then 4 elseif config.isElite then 2.6 else 2
-	local cuerpo = Instance.new("Part")
-	cuerpo.Name = config.id
-	cuerpo.Anchored, cuerpo.CanCollide = true, false
-	cuerpo.Size = Vector3.new(tam, tam, tam)
-	cuerpo.Color = COLORES[config.category] or Color3.new(0.5, 0.5, 0.5)
-	cuerpo.Material = if config.stealth then Enum.Material.ForceField else Enum.Material.SmoothPlastic
-
-	local cartel = Instance.new("BillboardGui")
-	cartel.Size = UDim2.fromOffset(70, 22)
-	cartel.StudsOffset = Vector3.new(0, tam / 2 + 1, 0)
-	cartel.AlwaysOnTop = true
+local function cartel(padre: BasePart, texto: string, alto: number): Frame
+	local gui = Instance.new("BillboardGui")
+	gui.Size = UDim2.fromOffset(80, 22)
+	gui.StudsOffset = Vector3.new(0, alto, 0)
+	gui.AlwaysOnTop = true
 	local nombre = Instance.new("TextLabel")
 	nombre.Size = UDim2.new(1, 0, 0, 12)
 	nombre.BackgroundTransparency = 1
 	nombre.TextScaled = true
 	nombre.TextColor3 = Color3.new(1, 1, 1)
 	nombre.TextStrokeTransparency = 0.3
-	nombre.Text = config.name
-	nombre.Parent = cartel
+	nombre.Text = texto
+	nombre.Parent = gui
 	local fondo = Instance.new("Frame")
 	fondo.Position = UDim2.fromOffset(0, 14)
 	fondo.Size = UDim2.new(1, 0, 0, 6)
 	fondo.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-	fondo.Parent = cartel
+	fondo.Parent = gui
 	local barra = Instance.new("Frame")
 	barra.Size = UDim2.fromScale(1, 1)
 	barra.BackgroundColor3 = Color3.fromRGB(80, 220, 90)
 	barra.BorderSizePixel = 0
 	barra.Parent = fondo
-	cartel.Parent = cuerpo
+	gui.Parent = padre
+	return barra
+end
 
+local function crearEnemigo(config)
+	local tam = if config.isBoss then 4 elseif config.isElite then 2.6 else 2
+	local cuerpo = Instance.new("Part")
+	cuerpo.Name = config.id
+	cuerpo.Anchored, cuerpo.CanCollide, cuerpo.CanQuery = true, false, false
+	cuerpo.Size = Vector3.new(tam, tam, tam)
+	cuerpo.Color = COLORES[config.category] or Color3.new(0.5, 0.5, 0.5)
+	cuerpo.Material = if config.stealth then Enum.Material.ForceField else Enum.Material.SmoothPlastic
 	local e = {
 		config = config,
 		vida = config.hp,
@@ -104,12 +116,11 @@ local function crearEnemigo(config)
 		avance = 0,
 		altura = if config.flying then 4 else tam / 2,
 		cuerpo = cuerpo,
-		barra = barra,
+		barra = cartel(cuerpo, config.name, tam / 2 + 1),
 	}
 	cuerpo.Position = puntoEnRuta(0) + Vector3.new(0, e.altura, 0)
 	cuerpo.Parent = carpetaEnemigos
 	table.insert(enemigos, e)
-	return e
 end
 
 local function quitarEnemigo(e)
@@ -137,42 +148,159 @@ local function danar(e, cantidad: number, tipoAtacante: string)
 end
 
 --------------------------------------------------------------------------------
--- Torre: Hawkeye
+-- Unidades (héroes desplegados)
 --------------------------------------------------------------------------------
-local torres = {}
+local unidades = {} -- { uid, heroe, x, y, config, modelo, raiz, espera, disparo }
+local siguienteUid = 1
+local carpetaUnidades = Instance.new("Folder")
+carpetaUnidades.Name = "Unidades"
+carpetaUnidades.Parent = workspace
 
-local function crearTorre(heroeId: string, xPx: number, yPx: number)
-	local config = heroes[heroeId]
-	local plantillas = ServerStorage:FindFirstChild("Plantillas")
-	local plantilla = plantillas and plantillas:FindFirstChild("Arquero")
-	if not plantilla then
-		warn("[UMTD] Falta ServerStorage.Plantillas.Arquero; no se coloca la torre")
-		return
-	end
-	local modelo = plantilla:Clone()
-	modelo.Name = config.name
-	if not modelo:FindFirstChild("Arco") then
-		Arco.equipar(modelo)
-	end
-	local raiz = modelo:FindFirstChild("HumanoidRootPart") :: BasePart
-	raiz.Anchored = true
-	local pos = Mapa.aMundo(xPx, yPx)
-	modelo:PivotTo(CFrame.new(pos + Vector3.new(0, modelo.Humanoid.HipHeight + raiz.Size.Y / 2, 0)))
-	modelo.Parent = workspace
-
-	local animator = modelo.Humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator", modelo.Humanoid)
-	local anim = Instance.new("Animation")
-	anim.AnimationId = Arco.ANIMACION_DISPARO
-	table.insert(torres, {
-		config = config,
-		modelo = modelo,
-		raiz = raiz,
-		alcance = config.range * Mapa.ESCALA,
-		espera = 0,
-		disparo = animator:LoadAnimation(anim),
-	})
+-- Modelo provisional para héroes que todavía no tienen personaje: un bloque con su nombre.
+local function modeloProvisional(config): Model
+	local m = Instance.new("Model")
+	local cuerpo = Instance.new("Part")
+	cuerpo.Name = "HumanoidRootPart"
+	cuerpo.Size = Vector3.new(2, 4, 2)
+	cuerpo.Color = COLORES[config.category] or Color3.fromRGB(110, 110, 120)
+	cuerpo.Parent = m
+	m.PrimaryPart = cuerpo
+	local barra = cartel(cuerpo, config.name, 3)
+	barra.Parent.Visible = false -- las unidades no tienen barra de vida
+	return m
 end
 
+local function crearModelo(config): (Model, BasePart, AnimationTrack?)
+	local plantillas = ServerStorage:FindFirstChild("Plantillas")
+	local plantilla = if config.id == "hawkeye" and plantillas then plantillas:FindFirstChild("Arquero") else nil
+	local modelo = if plantilla then plantilla:Clone() else modeloProvisional(config)
+	local raiz = modelo:FindFirstChild("HumanoidRootPart") :: BasePart
+	raiz.Anchored = true
+	local disparo
+	local humanoide = modelo:FindFirstChildOfClass("Humanoid")
+	if humanoide then
+		if not modelo:FindFirstChild("Arco") then
+			Arco.equipar(modelo)
+		end
+		local animator = humanoide:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoide)
+		local anim = Instance.new("Animation")
+		anim.AnimationId = Arco.ANIMACION_DISPARO
+		disparo = animator:LoadAnimation(anim)
+	end
+	modelo.Name = config.name
+	return modelo, raiz, disparo
+end
+
+local function ubicar(u)
+	local alto = if u.modelo:FindFirstChildOfClass("Humanoid") then u.modelo.Humanoid.HipHeight + u.raiz.Size.Y / 2 else u.raiz.Size.Y / 2
+	-- La celda es pavimento/pasto (1 stud) o hangar (1.2): apoyar sobre la baldosa más alta.
+	u.modelo:PivotTo(CFrame.new(Mapa.aMundo(u.x, u.y) + Vector3.new(0, alto + 0.2, 0)))
+end
+
+local function listaUnidades()
+	local l = {}
+	for _, u in unidades do
+		table.insert(l, { uid = u.uid, heroe = u.heroe, x = u.x, y = u.y })
+	end
+	return l
+end
+
+local function buscarUnidad(uid)
+	for i, u in unidades do
+		if u.uid == uid then
+			return u, i
+		end
+	end
+	return nil
+end
+
+local ACCIONES = {}
+
+function ACCIONES.colocar(heroeId: string, x: number, y: number)
+	if not table.find(ESCUADRON, heroeId) then
+		return "Ese héroe no está en tu escuadrón"
+	end
+	local config = heroes[heroeId]
+	local err, cx, cy = Despliegue.error(config, x, y, NIVEL, rutaPx, listaUnidades())
+	if err then
+		return err
+	end
+	local modelo, raiz, disparo = crearModelo(config)
+	local u = { uid = siguienteUid, heroe = heroeId, x = cx, y = cy, config = config, modelo = modelo, raiz = raiz, espera = 0, disparo = disparo }
+	siguienteUid += 1
+	modelo:SetAttribute("Uid", u.uid)
+	modelo:SetAttribute("Heroe", heroeId)
+	ubicar(u)
+	modelo.Parent = carpetaUnidades
+	table.insert(unidades, u)
+	return nil
+end
+
+function ACCIONES.mover(uid: number, x: number, y: number)
+	local u = buscarUnidad(uid)
+	if not u then
+		return "Héroe no disponible"
+	end
+	local err, cx, cy = Despliegue.error(u.config, x, y, NIVEL, rutaPx, listaUnidades(), uid)
+	if err then
+		return err
+	end
+	u.x, u.y = cx, cy
+	ubicar(u)
+	return nil
+end
+
+function ACCIONES.retirar(uid: number)
+	local u, i = buscarUnidad(uid)
+	if not u then
+		return "Héroe no disponible"
+	end
+	table.remove(unidades, i)
+	u.modelo:Destroy()
+	return nil
+end
+
+local iniciarPedido = false
+function ACCIONES.iniciar()
+	if estado:GetAttribute("Fase") ~= "preparacion" then
+		return "La oleada ya está en curso"
+	end
+	if #unidades == 0 then
+		return "Desplegá al menos un héroe"
+	end
+	iniciarPedido = true
+	return nil
+end
+
+-- Frontera de confianza: validar tipos antes de tocar el estado.
+accion.OnServerInvoke = function(_jugador, nombre, a, b, c)
+	local f = ACCIONES[nombre]
+	if type(nombre) ~= "string" or not f then
+		return "Acción desconocida"
+	end
+	if estado:GetAttribute("Fase") == "fin" then
+		return "La misión ya terminó"
+	end
+	if nombre == "colocar" and not (type(a) == "string" and type(b) == "number" and type(c) == "number") then
+		return "Datos inválidos"
+	end
+	if nombre == "mover" and not (type(a) == "number" and type(b) == "number" and type(c) == "number") then
+		return "Datos inválidos"
+	end
+	if nombre == "retirar" and type(a) ~= "number" then
+		return "Datos inválidos"
+	end
+	for _, v in { a, b, c } do
+		if type(v) == "number" and (v ~= v or math.abs(v) == math.huge) then
+			return "Datos inválidos"
+		end
+	end
+	return f(a, b, c)
+end
+
+--------------------------------------------------------------------------------
+-- Ataque de las unidades
+--------------------------------------------------------------------------------
 local function flecha(desde: Vector3, hasta: Vector3)
 	local f = Instance.new("Part")
 	f.Anchored, f.CanCollide, f.CanQuery = true, false, false
@@ -188,40 +316,40 @@ local function flecha(desde: Vector3, hasta: Vector3)
 	t:Play()
 end
 
-local function actualizarTorre(t, dt)
-	t.espera -= dt
-	if t.espera > 0 then
+local function actualizarUnidad(u, dt)
+	u.espera -= dt
+	if u.espera > 0 then
 		return
 	end
-	-- Prioridad "Primero": el enemigo más avanzado dentro del alcance (en el plano del suelo).
+	-- Prioridad "Primero": el enemigo más avanzado dentro de la forma de alcance.
 	local objetivo
 	for _, e in enemigos do
-		local d = (e.cuerpo.Position - t.raiz.Position) * Vector3.new(1, 0, 1)
-		local visible = not e.config.stealth or t.config.canSeeStealth
-		if visible and d.Magnitude <= t.alcance and (not objetivo or e.avance > objetivo.avance) then
+		local ex, ey = Mapa.aPixeles(e.cuerpo.Position)
+		local visible = not e.config.stealth or u.config.canSeeStealth
+		if visible and Despliegue.enAlcance(u.x, u.y, ex, ey, u.config.range, u.config.rangePattern) and (not objetivo or e.avance > objetivo.avance) then
 			objetivo = e
 		end
 	end
 	if not objetivo then
 		return
 	end
-	t.espera = 1 / t.config.fireRate
+	u.espera = 1 / u.config.fireRate
 	local destino = objetivo.cuerpo.Position
-	t.modelo:PivotTo(CFrame.lookAt(t.raiz.Position, Vector3.new(destino.X, t.raiz.Position.Y, destino.Z)))
-	t.disparo:Play(0.05, 1, 2)
-	flecha(t.raiz.Position + Vector3.new(0, 1, 0), destino)
-	danar(objetivo, t.config.damage, t.config.category)
+	local p = u.raiz.Position
+	u.modelo:PivotTo(CFrame.lookAt(p, Vector3.new(destino.X, p.Y, destino.Z)))
+	if u.disparo then
+		u.disparo:Play(0.05, 1, 2)
+	end
+	flecha(p + Vector3.new(0, 1, 0), destino)
+	danar(objetivo, u.config.damage, u.config.category)
 end
 
---------------------------------------------------------------------------------
--- Bucle
---------------------------------------------------------------------------------
 RunService.Heartbeat:Connect(function(dt)
 	for i = #enemigos, 1, -1 do
 		local e = enemigos[i]
 		e.avance += e.config.speed * Mapa.ESCALA * dt
 		if e.avance >= largoTotal then
-			-- Como el 2D: un jefe que llega al final se lleva todas las vidas.
+			-- Como el 3D: un jefe que llega al final se lleva todas las vidas.
 			local perdida = if e.config.isBoss then estado:GetAttribute("Vidas") else 1
 			fijar("Vidas", math.max(0, estado:GetAttribute("Vidas") - perdida))
 			quitarEnemigo(e)
@@ -229,24 +357,29 @@ RunService.Heartbeat:Connect(function(dt)
 			e.cuerpo.Position = puntoEnRuta(e.avance) + Vector3.new(0, e.altura, 0)
 		end
 	end
-	for _, t in torres do
-		actualizarTorre(t, dt)
+	for _, u in unidades do
+		actualizarUnidad(u, dt)
 	end
 end)
 
-crearTorre("hawkeye", 304, 272)
-local equipo = {}
-for _, t in torres do
-	table.insert(equipo, t.config)
-end
-
+--------------------------------------------------------------------------------
+-- Oleadas
+--------------------------------------------------------------------------------
 for oleada = 1, Oleadas.MAX_OLEADAS do
-	local cola, mod = Oleadas.preparar(oleada, enemigosDatos, NIVEL, INDICE_NIVEL, equipo)
 	fijar("Oleada", oleada)
-	for s = 5, 1, -1 do
-		fijar("Mensaje", `Oleada {oleada}: {mod.nombre} — empieza en {s}`)
-		task.wait(1)
+	fijar("Fase", "preparacion")
+	fijar("Mensaje", `Oleada {oleada}: desplegá héroes y apretá «Iniciar oleada»`)
+	iniciarPedido = false
+	repeat
+		task.wait(0.1)
+	until iniciarPedido
+
+	local equipo = {}
+	for _, u in unidades do
+		table.insert(equipo, u.config)
 	end
+	local cola, mod = Oleadas.preparar(oleada, enemigosDatos, NIVEL, INDICE_NIVEL, equipo)
+	fijar("Fase", "combate")
 	fijar("Mensaje", `Oleada {oleada}: {mod.nombre}`)
 	for _, entrada in cola do
 		task.wait(entrada.espera)
@@ -259,8 +392,10 @@ for oleada = 1, Oleadas.MAX_OLEADAS do
 		task.wait(0.2)
 	end
 	if estado:GetAttribute("Vidas") <= 0 then
+		fijar("Fase", "fin")
 		fijar("Mensaje", `Derrota en la oleada {oleada}`)
 		return
 	end
 end
+fijar("Fase", "fin")
 fijar("Mensaje", "¡Victoria! Base Avengers defendida")
