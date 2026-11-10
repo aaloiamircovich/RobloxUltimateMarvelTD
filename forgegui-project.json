@@ -63,6 +63,12 @@
       "date": "2026-11-10",
       "by": "system",
       "value": "ForgeGUI también sin créditos para imágenes (1600 req, 1024 disp.): ladrillo y azotea con generate_material de Roblox"
+    },
+    {
+      "topic": "sanctum_adoquin",
+      "date": "2026-11-10",
+      "by": "system",
+      "value": "Mapa_adoquin generado tenía musgo verde lima en las 4 variantes: se borró y se usa Cobblestone de Roblox gris"
     }
   ],
   "publishing_destination": {
@@ -922,6 +928,69 @@
       "source": "copia de Plantillas.Hub.arbol_selva",
       "status": "inserted",
       "studio_path": "ServerStorage.Plantillas.Mapas.wakanda.arbol"
+    },
+    {
+      "id": "sanctum_porton",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.sanctum.porton"
+    },
+    {
+      "id": "sanctum_borde_2",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.sanctum.borde_2"
+    },
+    {
+      "id": "sanctum_borde_3",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.sanctum.borde_3"
+    },
+    {
+      "id": "sanctum_brasero",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.sanctum.brasero"
+    },
+    {
+      "id": "sanctum_arbol",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.sanctum.arbol"
+    },
+    {
+      "id": "sanctum_barrera",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.sanctum.barrera"
+    },
+    {
+      "id": "sanctum_base",
+      "kind": "model_3d",
+      "source": "copia de Plantillas.Hub.sanctum",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.sanctum.base"
+    },
+    {
+      "id": "sanctum_borde_1",
+      "kind": "model_3d",
+      "source": "copia de Plantillas.Mapas.new-york.borde_3",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.sanctum.borde_1"
+    },
+    {
+      "id": "sanctum_farol",
+      "kind": "model_3d",
+      "source": "copia de Plantillas.Mapas.new-york.farol",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.sanctum.farol"
     }
   ],
   "notas_importacion": "Los modelos de ForgeGUI llegan con un giro de ~10° alrededor de Y; enderezar al múltiplo de 90° más cercano antes de guardarlos como plantilla."

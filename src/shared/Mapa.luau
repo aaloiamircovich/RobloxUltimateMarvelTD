@@ -55,6 +55,22 @@ local TEMAS = {
 		sueltos = { { "hidrante", 1.8, 50 }, { "basurero", 2, 60 }, { "arbol", 7, 110 }, { "estructura_2", 3.6, 30 }, { "estructura_3", 4, 30 } },
 		vapor = true,
 	},
+	-- Sanctum: Bleecker Street; adoquines con runas, azoteas de ladrillo y el portal de la Dimensión Oscura.
+	sanctum = {
+		aspecto = {
+			[CAMINO] = { color = Color3.fromRGB(125, 118, 112), alto = 1, material = Enum.Material.Cobblestone },
+			[MONTANA] = { color = Color3.fromRGB(255, 255, 255), alto = 10, material = Enum.Material.Brick, variante = "Mapa_ladrillo", techo = "Mapa_azotea", techoMaterial = Enum.Material.Slate },
+			[VEREDA] = { color = Color3.fromRGB(255, 255, 255), alto = 1.4, material = Enum.Material.Grass, terreno = true },
+			[DETALLE] = { color = Color3.fromRGB(255, 255, 255), alto = 1.4, material = Enum.Material.Grass, terreno = true },
+		},
+		orilla = "runas",
+		banda = Color3.fromRGB(255, 95, 20),
+		bandaMaterial = Enum.Material.Neon,
+		sueltos = { { "arbusto", 2.4, 160 }, { "flores", 1, 180 }, { "arbol", 7, 50 } },
+		detalle = "brasero", -- un brasero en cada casilla de detalle
+		motas = Color3.fromRGB(255, 160, 70),
+		vortice = Color3.fromRGB(110, 40, 190),
+	},
 	-- Wakanda: casi todo es selva (bloqueada); las unidades van en mesetas de roca violeta y en el agua.
 	wakanda = {
 		aspecto = {
@@ -271,6 +287,7 @@ local function hash(a: number, b: number): number
 end
 
 
+local SELLO = "132807365750031" -- sello de Strange (el mismo del portal del HUB)
 local AMARILLO, NEGRO = Color3.fromRGB(255, 196, 0), Color3.fromRGB(25, 25, 28)
 local LADOS = { { -1, 0 }, { 1, 0 }, { 0, -1 }, { 0, 1 } } -- (fila, columna) vecinas
 
@@ -341,6 +358,13 @@ agregarDecorado = function(nivel, carpeta: Model, celdas, lado: number, origen: 
 					bloque(deco, CFrame.new(celda.centro + Vector3.new(0, alto / 2, 0)), Vector3.new(lado * 0.7, alto, lado * 0.7), Color3.fromRGB(120, 125, 135), Enum.Material.Concrete)
 				end
 			end
+		elseif celda.codigo == DETALLE and estilo.detalle and kit(nivel, estilo.detalle) then
+			local m = clonarKit(kit(nivel, estilo.detalle), "Y", 2.6)
+			apoyar(m, celda.centro, h / 1000 * math.pi * 2)
+			local luz = Instance.new("PointLight")
+			luz.Color, luz.Range, luz.Brightness = Color3.fromRGB(255, 150, 60), 12, 1.5
+			luz.Parent = m:FindFirstChildWhichIsA("BasePart", true)
+			m.Parent = deco
 		elseif celda.codigo == BOSQUE and arbol then
 			local m = clonarKit(arbol, "Y", 6 + h % 3)
 			apoyar(m, celda.centro, h / 1000 * math.pi * 2)
@@ -483,9 +507,36 @@ local function porton(nivel, padre: Instance, pos: Vector3, dir: Vector3, ancho:
 		m.Name = "Porton"
 		local tam = m:GetExtentsSize()
 		m:PivotTo(cf * CFrame.new(0, tam.Y / 2, tam.Z / 2))
-		-- Fondo oscuro para que los enemigos salgan de adentro y no se vea el pasto de atrás.
-		local fondo = bloque(m, cf * CFrame.new(0, tam.Y * 0.35, tam.Z - 1), Vector3.new(ancho, tam.Y * 0.7, 1), NEGRO, Enum.Material.SmoothPlastic)
-		fondo.CanQuery = false
+		local vortice = tema(nivel).vortice
+		if vortice then
+			-- Portal: disco de energía con el sello de Strange, de donde salen los enemigos.
+			local d = bloque(m, cf * CFrame.new(0, tam.Y * 0.4, tam.Z * 0.6) * CFrame.Angles(0, math.rad(90), 0), Vector3.new(0.3, tam.Y * 0.7, ancho * 0.95), vortice, Enum.Material.Neon)
+			d.Shape = Enum.PartType.Cylinder
+			d.Transparency, d.CanCollide, d.CanQuery = 0.15, false, false
+			for _, cara in { Enum.NormalId.Left, Enum.NormalId.Right } do
+				local sello = Instance.new("Decal")
+				sello.Texture = "rbxassetid://" .. SELLO
+				sello.Color3 = Color3.fromRGB(255, 150, 50)
+				sello.Face = cara
+				sello.Parent = d
+			end
+			local chispas = Instance.new("ParticleEmitter")
+			chispas.Color = ColorSequence.new(Color3.fromRGB(255, 150, 50))
+			chispas.LightEmission = 1
+			chispas.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 0) })
+			chispas.Lifetime = NumberRange.new(0.6, 1.2)
+			chispas.Rate = 30
+			chispas.Speed = NumberRange.new(2, 5)
+			chispas.SpreadAngle = Vector2.new(180, 180)
+			chispas.Parent = d
+			local luz = Instance.new("PointLight")
+			luz.Color, luz.Range, luz.Brightness = vortice, 18, 2
+			luz.Parent = d
+		else
+			-- Fondo oscuro para que los enemigos salgan de adentro y no se vea el pasto de atrás.
+			local fondo = bloque(m, cf * CFrame.new(0, tam.Y * 0.35, tam.Z - 1), Vector3.new(ancho, tam.Y * 0.7, 1), NEGRO, Enum.Material.SmoothPlastic)
+			fondo.CanQuery = false
+		end
 		m.Parent = padre
 		return m
 	end
@@ -548,6 +599,11 @@ function Mapa.construir(nivel, origen: Vector3, padre: Instance): ({ Vector3 }, 
 		if estilo.orilla == "cordon" then
 			local medio = (a + b) / 2 + Vector3.new(0, 0.2, 0)
 			bloque(padre, CFrame.lookAt(medio, medio + (b - a)), Vector3.new(0.6, 0.5, (b - a).Magnitude), Color3.fromRGB(205, 205, 200), Enum.Material.Concrete)
+		elseif estilo.orilla == "runas" then
+			-- Filo de luz naranja embutido en los adoquines.
+			local medio = (a + b) / 2 + Vector3.new(0, 0.02, 0)
+			local p = bloque(padre, CFrame.lookAt(medio, medio + (b - a)), Vector3.new(0.25, 0.06, (b - a).Magnitude), Color3.fromRGB(255, 95, 20), Enum.Material.Neon)
+			p.CanCollide = false
 		elseif estilo.orilla == "peligro" then
 			franjaPeligro(padre, a, b, 0.8)
 		end
@@ -611,6 +667,18 @@ function Mapa.construir(nivel, origen: Vector3, padre: Instance): ({ Vector3 }, 
 						local raya = bloque(carpeta, CFrame.lookAt(p, p + eje), Vector3.new(0.35, 0.06, lado * 0.45), AMARILLO, Enum.Material.SmoothPlastic)
 						raya.CanCollide = false
 					end
+				end
+				if estilo.orilla == "runas" and hash(f * 3 + 2, c * 7) % 3 == 0 then
+					-- Runa en el piso: el sello de Strange, tenue.
+					local p = centro + Vector3.new(0, t.alto + 0.03, 0)
+					local runa = bloque(carpeta, CFrame.new(p), Vector3.new(lado * 0.7, 0.05, lado * 0.7), blanco, Enum.Material.SmoothPlastic)
+					runa.Transparency, runa.CanCollide, runa.CanQuery = 1, false, false
+					local sello = Instance.new("Decal")
+					sello.Texture = "rbxassetid://" .. SELLO
+					sello.Color3 = Color3.fromRGB(255, 150, 50)
+					sello.Transparency = 0.35
+					sello.Face = Enum.NormalId.Top
+					sello.Parent = runa
 				end
 				if estilo.vapor and hash(f * 5 + 1, c * 3) % 7 == 0 then
 					-- Alcantarilla con vapor.
