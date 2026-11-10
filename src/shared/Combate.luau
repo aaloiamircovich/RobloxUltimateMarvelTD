@@ -1,19 +1,29 @@
 -- Daño y estados de enemigos, portados de Enemy.js, CombatSystem.applyImpact, PoisonStatus.js y
 -- StatusDamage.js del 2D. Módulo puro: opera sobre la tabla del enemigo, sin tocar el mundo.
 --
--- Enemigo: { config, vida, vidaMax, barrera, estados = { slow?, armorBreak?, poison = { capas } } }
+-- Enemigo: { config, vida, vidaMax, barrera, barreraMax, recargaBarrera, sigiloTemporal,
+--           estados = { slow?, armorBreak?, haste?, poison = { capas } } }
 local Combate = {}
 
 local MAX_CAPAS_VENENO, TIC_VENENO, EPS = 12, 0.5, 1e-10
 
 function Combate.nuevoEnemigo(config)
+	local barrera = math.floor(config.hp * (config.barrierRatio or 0) + 0.5)
 	return {
 		config = config,
 		vida = config.hp,
 		vidaMax = config.hp,
-		barrera = math.floor(config.hp * (config.barrierRatio or 0) + 0.5),
+		barrera = barrera,
+		barreraMax = barrera,
+		recargaBarrera = 0,
+		sigiloTemporal = 0,
 		estados = { poison = {} },
 	}
+end
+
+-- Sigilo efectivo: el propio del enemigo o el temporal de una fase (stealth del 2D).
+function Combate.sigilo(e): boolean
+	return e.config.stealth == true or e.sigiloTemporal > 0
 end
 
 -- takeDamage del 2D. op: { tipo, penetracion, ignorarArmadura, fraccional }. Devuelve daño hecho y si murió.
@@ -30,6 +40,9 @@ function Combate.recibir(e, cantidad: number, op): (number, boolean)
 	local final = math.max(if op.fraccional then 0 else 1, cantidad * (1 - resistencia) * (1 - armadura))
 	local absorbido = math.min(e.barrera, final)
 	e.barrera -= absorbido
+	if absorbido > 0 then
+		e.recargaBarrera = 5 -- absorbDamage del 2D
+	end
 	local aplicado = math.min(e.vida, final - absorbido)
 	e.vida -= aplicado
 	if e.vida <= 0 then
@@ -127,7 +140,7 @@ function Combate.actualizar(e, dt: number): (number, boolean)
 			end
 		end
 	end
-	for _, tipo in { "slow", "armorBreak" } do
+	for _, tipo in { "slow", "armorBreak", "haste" } do
 		local s = e.estados[tipo]
 		if s then
 			s.duration -= dt
@@ -137,7 +150,11 @@ function Combate.actualizar(e, dt: number): (number, boolean)
 		end
 	end
 	local lento = e.estados.slow and e.estados.slow.power or 0
-	return if lento > 0 then math.max(0.2, 1 - lento) else 1, e.vida <= 0
+	local mult = if lento > 0 then math.max(0.2, 1 - lento) else 1
+	if e.estados.haste then
+		mult *= 1 + e.estados.haste.power
+	end
+	return mult, e.vida <= 0
 end
 
 -- applyImpact del 2D: daño principal, efectos (con probabilidad) y splash sin efectos.

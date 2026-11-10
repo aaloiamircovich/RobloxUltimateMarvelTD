@@ -14,6 +14,7 @@ local Despliegue = require(Shared.Despliegue)
 local Progresion = require(Shared.Progresion)
 local Combate = require(Shared.Combate)
 local Kits = require(Shared.Kits)
+local Conductas = require(Shared.Conductas)
 local Mapa = require(Shared.Mapa)
 local Hub = require(script.Parent.Hub)
 local Perfiles = require(script.Parent.Perfiles)
@@ -173,7 +174,8 @@ local function moverEnemigo(e, cf: CFrame)
 	end
 end
 
-local function crearEnemigo(config)
+-- avanceInicial: las invocaciones aparecen donde está quien las invoca.
+local function crearEnemigo(config, avanceInicial: number?)
 	local tam = if config.isBoss then 4 elseif config.isElite then 2.6 else 2
 	local cuerpo = Instance.new("Part")
 	cuerpo.Name = config.id
@@ -185,11 +187,12 @@ local function crearEnemigo(config)
 	tam, modelo = vestir(cuerpo, config)
 	local e = Combate.nuevoEnemigo(config)
 	e.modelo = modelo
-	e.avance = 0
+	e.avance = avanceInicial or 0
+	Conductas.preparar(e)
 	e.altura = if config.flying then 4 else tam / 2
 	e.cuerpo = cuerpo
 	e.barra = cartel(cuerpo, config.name, tam / 2 + 1)
-	moverEnemigo(e, CFrame.new(puntoEnRuta(0) + Vector3.new(0, e.altura, 0)))
+	moverEnemigo(e, CFrame.new(puntoEnRuta(e.avance) + Vector3.new(0, e.altura, 0)))
 	cuerpo.Parent = carpetaEnemigos
 	table.insert(enemigos, e)
 end
@@ -489,11 +492,18 @@ local COLOR_MUNICION = {
 	piercing = Color3.fromHex("d8f0ff"),
 }
 
+local entornoConductas -- se completa más abajo, cuando existen las unidades
+
 local function vivo(e)
 	return e.vida > 0 and e.cuerpo.Parent ~= nil
 end
 
 local function actualizarUnidad(u, dt)
+	-- Aturdido (Guantelete de Thanos): como Hero.update del 2D, no actúa ni carga habilidades.
+	if (u.aturdido or 0) > 0 then
+		u.aturdido -= dt
+		return
+	end
 	local heroe = { x = u.x, y = u.y, alcance = u.stats.range, ve = u.stats.canSeeStealth }
 
 	-- Habilidades por tiempo: pisotón de Korg.
@@ -516,7 +526,7 @@ local function actualizarUnidad(u, dt)
 	-- Prioridad "Primero": el enemigo más avanzado dentro de la forma de alcance.
 	local objetivo
 	for _, c in enPixeles do
-		local visible = not c.e.config.stealth or u.stats.canSeeStealth
+		local visible = not Combate.sigilo(c.e) or u.stats.canSeeStealth
 		if vivo(c.e) and visible and Despliegue.enAlcance(u.x, u.y, c.x, c.y, u.stats.range, u.config.rangePattern) and (not objetivo or c.avance > objetivo.avance) then
 			objetivo = c
 		end
@@ -556,6 +566,9 @@ local function actualizarUnidad(u, dt)
 	-- onAttack: sabotaje de Black Widow al cuarto ataque (blanco + hasta 3 cercanos).
 	for i, g in Kits.alAtacar(u.kit, u.config, u.stats, u.nivel, objetivo.e, heroe, enPixeles) do
 		Combate.danar(g.enemigo, g.golpe, 1, tablaTipos)
+		if g.sabotaje and g.enemigo.vida > 0 then
+			Conductas.sabotear(g.enemigo, Conductas.SABOTAJE_SEGUNDOS)
+		end
 		table.insert(tocados, g.enemigo)
 		if i > 1 then
 			EFECTOS.rayo(destino, g.enemigo.cuerpo.Position)
@@ -566,6 +579,43 @@ local function actualizarUnidad(u, dt)
 	end
 end
 
+-- Lo que las conductas de enemigos pueden hacer en el mundo.
+entornoConductas = {
+	aliados = function(e, radio)
+		local ex, ey = Mapa.aPixeles(e.cuerpo.Position)
+		local r = {}
+		for _, otro in enemigos do
+			if otro ~= e and vivo(otro) then
+				local ox, oy = Mapa.aPixeles(otro.cuerpo.Position)
+				if math.sqrt((ox - ex) ^ 2 + (oy - ey) ^ 2) <= radio then
+					table.insert(r, otro)
+				end
+			end
+		end
+		return r
+	end,
+	-- Como spawnEnemy del 2D: config de la base de datos sin escalar, sin recompensa.
+	invocar = function(id, origen, factorVida)
+		local base = enemigosDatos.normal[id]
+		if not base then
+			return false
+		end
+		local config = table.clone(base)
+		config.hp = math.floor(base.hp * factorVida + 0.5)
+		config.reward = 0
+		crearEnemigo(config, origen.avance)
+		return true
+	end,
+	aviso = function(texto)
+		aviso:FireAllClients(texto)
+	end,
+	aturdirHeroes = function(segundos)
+		for _, u in unidades do
+			u.aturdido = segundos
+		end
+	end,
+}
+
 RunService.Heartbeat:Connect(function(dt)
 	for i = #enemigos, 1, -1 do
 		local e = enemigos[i]
@@ -574,6 +624,8 @@ RunService.Heartbeat:Connect(function(dt)
 			revisar(e) -- murió por veneno
 			continue
 		end
+		velocidad *= Conductas.actualizar(e, dt, entornoConductas)
+		e.barra.Size = UDim2.fromScale(math.clamp(e.vida / e.vidaMax, 0, 1), 1) -- curas y regeneración
 		e.avance += e.config.speed * velocidad * Mapa.ESCALA * dt
 		if e.avance >= largoTotal then
 			-- Como el 3D: un jefe que llega al final se lleva todas las vidas.

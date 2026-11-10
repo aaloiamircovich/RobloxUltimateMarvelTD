@@ -64,7 +64,7 @@ function Kits.alAtacar(kit, config, stats, nivel: number, objetivo, heroe, enemi
 		return {}
 	end
 	local function valido(c)
-		return c.e.vida > 0 and (not c.e.config.stealth or heroe.ve) and math.sqrt((c.x - heroe.x) ^ 2 + (c.y - heroe.y) ^ 2) <= heroe.alcance
+		return c.e.vida > 0 and (not Combate.sigilo(c.e) or heroe.ve) and math.sqrt((c.x - heroe.x) ^ 2 + (c.y - heroe.y) ^ 2) <= heroe.alcance
 	end
 	local blanco
 	for _, c in enemigos do
@@ -86,12 +86,13 @@ function Kits.alAtacar(kit, config, stats, nivel: number, objetivo, heroe, enemi
 	for _, c in cercanos do
 		table.insert(if Combate.esApoyo(c.e) then apoyos else resto, c)
 	end
-	local golpes = { { enemigo = objetivo, golpe = { tipo = config.category, dano = stats.damage * 0.55 * Kits.escalaPoder(nivel) } } }
+	-- sabotaje = true: el servidor inhibe curas, invocaciones y órdenes de los apoyos alcanzados.
+	local golpes = { { enemigo = objetivo, sabotaje = true, golpe = { tipo = config.category, dano = stats.damage * 0.55 * Kits.escalaPoder(nivel) } } }
 	for _, c in table.move(resto, 1, #resto, #apoyos + 1, apoyos) do
 		if #golpes >= 4 then
 			break
 		end
-		table.insert(golpes, { enemigo = c.e, golpe = { tipo = config.category, dano = stats.damage * 0.55 * Kits.escalaPoder(nivel) } })
+		table.insert(golpes, { enemigo = c.e, sabotaje = true, golpe = { tipo = config.category, dano = stats.damage * 0.55 * Kits.escalaPoder(nivel) } })
 	end
 	return golpes
 end
@@ -106,7 +107,7 @@ function Kits.actualizar(kit, dt: number, config, stats, heroe, enemigos)
 	local victimas = {}
 	for _, c in enemigos do
 		local cubierto = c.e.vida > 0
-			and (not c.e.config.stealth or heroe.ve)
+			and (not Combate.sigilo(c.e) or heroe.ve)
 			and Despliegue.enAlcance(heroe.x, heroe.y, c.x, c.y, stats.range, config.rangePattern)
 		if cubierto and not c.e.config.flying and math.sqrt((c.x - heroe.x) ^ 2 + (c.y - heroe.y) ^ 2) <= 65 then
 			table.insert(victimas, c)
