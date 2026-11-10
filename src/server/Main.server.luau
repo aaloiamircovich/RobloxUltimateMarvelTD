@@ -1,5 +1,6 @@
 -- HUB y partida de campaña en Base Avengers: mapa, oleadas del 2D y héroes que el jugador despliega.
--- Reglas del 3D: despliegue y movimiento gratis, una unidad por héroe, retiro sin reembolso.
+-- Reglas del 3D: despliegue y movimiento gratis, retiro sin reembolso. Unidades, límites por rareza y
+-- recompensas de gemas/núcleos/XP: docs/INVOCACIONES.md.
 -- shortcut: un escuadrón compartido por todos los jugadores; con multijugador, una partida por jugador.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,8 +21,11 @@ local Mapa = require(Shared.Mapa)
 local Hub = require(script.Parent.Hub)
 local Perfiles = require(script.Parent.Perfiles)
 local Reclutamiento = require(script.Parent.Reclutamiento)
+local Personajes = require(Shared.Personajes)
+local Unidades = require(Shared.Unidades)
+local Banner = require(Shared.Banner)
 
-local heroes = require(Data.heroes)
+local heroes = Personajes.todos -- heroes.json más los personajes evolucionados
 local enemigosDatos = require(Data.enemies)
 local niveles = require(Data.levels)
 local tablaTipos = require(Data.TypeChart)
@@ -30,7 +34,10 @@ local NIVEL, INDICE_NIVEL -- mapa de la misión en curso; se fija con cargarNive
 local ESTRELLAS_POR_MAPA = 25 -- STARS_PER_LEVEL_UNLOCK del 2D
 local VIDAS_INICIALES = 20 -- ResourceManager del 2D; los créditos de Historia son los del perfil
 local CREDITOS_INFINITO, BONO_HITO = 750, 300 -- GameModeSystem del 2D: supervivencia
-local ESCUADRON = {} -- el escuadrón del perfil del dueño, fijado al iniciar la misión
+-- Escuadrón de la misión: { uid, heroId, nivel, limite } por unidad del perfil del dueño.
+local ESCUADRON = {}
+local GEMAS_OLEADA, GEMAS_MAPA, GEMAS_INFINITO = 10, 25, 15 -- docs/INVOCACIONES.md
+local XP_OLEADA = 10
 
 -- Estado visible para los clientes.
 local estado = Instance.new("Folder")
@@ -274,7 +281,7 @@ end
 local function crearModelo(config): (Model, BasePart, AnimationTrack?, number)
 	local plantillas = ServerStorage:FindFirstChild("Plantillas")
 	local carpeta = plantillas and plantillas:FindFirstChild("Heroes")
-	local plantilla = carpeta and carpeta:FindFirstChild(config.id)
+	local plantilla = carpeta and carpeta:FindFirstChild(Personajes.base(config.id))
 	local modelo = if plantilla then plantilla:Clone() else modeloProvisional(config)
 	local raiz = modelo:FindFirstChild("HumanoidRootPart") :: BasePart
 	raiz.Anchored = true
@@ -321,32 +328,56 @@ end
 
 local ACCIONES = {}
 
--- Nivel del héroe guardado en el perfil del dueño (heroUpgrades del 2D).
-local function nivelGuardado(heroeId: string): number
-	local perfil = dueno and Perfiles.de(dueno)
-	local g = perfil and perfil.heroUpgrades[heroeId]
-	return g and g.level or 1
+-- Stats de combate: nivel de la partida (sin evolución, que ahora es por crafteo) y +1 % de daño por
+-- nivel de la unidad.
+local function statsUnidad(u)
+	local s = Progresion.stats(u.config, u.nivel, u.objeto, estado:GetAttribute("Vidas"), true)
+	s.damage *= Unidades.bonoDano(u.nivelUnidad)
+	return s
 end
 
-function ACCIONES.colocar(heroeId: string, x: number, y: number)
-	if not table.find(ESCUADRON, heroeId) then
-		return "Ese héroe no está en tu escuadrón"
+local function colocadas(ranura: number): number
+	local n = 0
+	for _, u in unidades do
+		if u.ranura == ranura then
+			n += 1
+		end
 	end
-	local config = heroes[heroeId]
-	local nivel = nivelGuardado(heroeId)
+	return n
+end
+
+-- ranura: uid de la unidad del perfil en el escuadrón. Las mejoras de la partida empiezan en nivel 1.
+function ACCIONES.colocar(ranura: number, x: number, y: number)
+	local e
+	for _, entrada in ESCUADRON do
+		if entrada.uid == ranura then
+			e = entrada
+		end
+	end
+	if not e then
+		return "Esa unidad no está en tu escuadrón"
+	end
+	if colocadas(ranura) >= e.limite then
+		return `Ya colocaste esta unidad {e.limite} {if e.limite == 1 then "vez" else "veces"} (máximo de su rareza)`
+	end
+	local config = heroes[e.heroId]
+	local nivel = 1
 	local perfil = dueno and Perfiles.de(dueno)
-	local objeto = perfil and Objetos.de(perfil, heroeId)
-	local err, cx, cy = Despliegue.error(Progresion.paraDespliegue(config, nivel, objeto), x, y, NIVEL, rutaPx, listaUnidades())
+	local objeto = perfil and Objetos.de(perfil, e.heroId)
+	local err, cx, cy = Despliegue.error(Progresion.paraDespliegue(config, nivel, objeto), x, y, NIVEL, rutaPx, listaUnidades(), nil, true)
 	if err then
 		return err
 	end
+	local base = Personajes.base(e.heroId)
 	local modelo, raiz, ataque, velocidadAtaque = crearModelo(config)
-	local u = { uid = siguienteUid, heroe = heroeId, x = cx, y = cy, config = config, nivel = nivel, objeto = objeto, stats = Progresion.stats(config, nivel, objeto), modelo = modelo, raiz = raiz, espera = 0, ataque = ataque, velocidadAtaque = velocidadAtaque, kit = Kits.nuevo(heroeId) }
+	local u = { uid = siguienteUid, ranura = ranura, heroe = base, x = cx, y = cy, config = config, nivel = nivel, nivelUnidad = e.nivel, objeto = objeto, modelo = modelo, raiz = raiz, espera = 0, ataque = ataque, velocidadAtaque = velocidadAtaque, kit = Kits.nuevo(base) }
+	u.stats = statsUnidad(u)
 	siguienteUid += 1
 	modelo:SetAttribute("Uid", u.uid)
-	modelo:SetAttribute("Heroe", heroeId)
+	modelo:SetAttribute("Heroe", e.heroId)
+	modelo:SetAttribute("Ranura", ranura)
 	modelo:SetAttribute("Nivel", nivel)
-	modelo:SetAttribute("Municion", if heroeId == "hawkeye" then "explosive" else nil)
+	modelo:SetAttribute("Municion", if base == "hawkeye" then "explosive" else nil)
 	ubicar(u)
 	modelo.Parent = carpetaUnidades
 	table.insert(unidades, u)
@@ -358,7 +389,7 @@ function ACCIONES.mover(uid: number, x: number, y: number)
 	if not u then
 		return "Héroe no disponible"
 	end
-	local err, cx, cy = Despliegue.error(Progresion.paraDespliegue(u.config, u.nivel, u.objeto), x, y, NIVEL, rutaPx, listaUnidades(), uid)
+	local err, cx, cy = Despliegue.error(Progresion.paraDespliegue(u.config, u.nivel, u.objeto), x, y, NIVEL, rutaPx, listaUnidades(), uid, true)
 	if err then
 		return err
 	end
@@ -390,19 +421,10 @@ function ACCIONES.mejorar(uid: number)
 	if creditos < costo then
 		return `Faltan {costo - creditos} créditos`
 	end
-	local evolucionaba = Progresion.evolucion(u.heroe, u.nivel)
 	u.nivel += 1
-	u.stats = Progresion.stats(u.config, u.nivel, u.objeto, estado:GetAttribute("Vidas"))
+	u.stats = statsUnidad(u)
 	u.modelo:SetAttribute("Nivel", u.nivel) -- antes que los créditos: el cliente refresca al cambiar Estado
-	local perfil = dueno and Perfiles.de(dueno)
-	if perfil then
-		perfil.heroUpgrades[u.heroe] = { level = u.nivel }
-	end
 	fijar("Creditos", creditos - costo)
-	local evo = Progresion.evolucion(u.heroe, u.nivel)
-	if evo and not evolucionaba then
-		fijar("Mensaje", `¡{u.config.name} evolucionó: {evo.name}!`)
-	end
 	return nil
 end
 
@@ -445,7 +467,7 @@ accion.OnServerInvoke = function(jugador, nombre, a, b, c)
 	if nombre ~= "volver" and estado:GetAttribute("Fase") == "fin" then
 		return "La misión ya terminó"
 	end
-	if nombre == "colocar" and not (type(a) == "string" and type(b) == "number" and type(c) == "number") then
+	if nombre == "colocar" and not (type(a) == "number" and type(b) == "number" and type(c) == "number") then
 		return "Datos inválidos"
 	end
 	if nombre == "mover" and not (type(a) == "number" and type(b) == "number" and type(c) == "number") then
@@ -555,7 +577,7 @@ local function actualizarUnidad(u, dt)
 		return
 	end
 	-- Recalcular por los bonus de objeto con 10 vidas o menos ("lowLife").
-	u.stats = Progresion.stats(u.config, u.nivel, u.objeto, estado:GetAttribute("Vidas"))
+	u.stats = statsUnidad(u)
 	u.espera = 1 / u.stats.fireRate
 	local destino = objetivo.e.cuerpo.Position
 	local p = u.raiz.Position
@@ -750,6 +772,7 @@ local function partida(id: number)
 			return
 		end
 		local perfil = dueno and Perfiles.de(dueno)
+		local premios = {}
 		if infinito then
 			-- onWaveFinished del 2D: puntaje, récord y hito de +300 cada cinco oleadas.
 			puntaje += math.round(100 * oleada + estado:GetAttribute("Vidas") * 12)
@@ -757,7 +780,14 @@ local function partida(id: number)
 				local r = perfil.modeRecords.survival
 				r.bestWave = math.max(r.bestWave, oleada)
 				r.bestScore = math.max(r.bestScore, puntaje)
-				Perfiles.marcar(dueno)
+				if oleada % 5 == 0 then
+					perfil.gems += GEMAS_INFINITO
+					table.insert(premios, `+{GEMAS_INFINITO} gemas`)
+				end
+				if oleada % 10 == 0 then
+					perfil.cores += 1
+					table.insert(premios, "+1 núcleo")
+				end
 			end
 			if oleada % 5 == 0 then
 				fijar("Creditos", estado:GetAttribute("Creditos") + BONO_HITO)
@@ -766,14 +796,39 @@ local function partida(id: number)
 		elseif perfil then
 			-- Oleada superada: mejor oleada y estrellas del mapa, como mapProgress del 2D.
 			local p = perfil.mapProgress[NIVEL.id] or { bestWave = 0, stars = 0 }
+			if oleada > p.bestWave then
+				perfil.gems += GEMAS_OLEADA -- sólo la primera vez que se supera esta oleada en este mapa
+				table.insert(premios, `+{GEMAS_OLEADA} gemas`)
+			end
 			p.bestWave = math.max(p.bestWave, oleada)
 			p.stars = math.max(p.stars, p.bestWave)
 			perfil.mapProgress[NIVEL.id] = p
+		end
+		if perfil then
+			-- Experiencia para cada unidad del escuadrón (×1,5 en mapas Difíciles).
+			local xp = math.floor(XP_OLEADA * (if Oleadas.dificultad(NIVEL) == "hard" then 1.5 else 1))
+			local subieron = 0
+			for _, e in ESCUADRON do
+				local u = Unidades.buscar(perfil, e.uid)
+				if u and Unidades.ganarXP(u, xp) > 0 then
+					subieron += 1
+				end
+			end
+			table.insert(premios, `+{xp} XP al escuadrón` .. (if subieron > 0 then ` ({subieron} subieron de nivel)` else ""))
 			Perfiles.marcar(dueno)
+			aviso:FireClient(dueno, table.concat(premios, " · "))
+			dueno:SetAttribute("Gemas", perfil.gems)
 		end
 	end
+	local perfil = dueno and Perfiles.de(dueno)
+	if perfil then
+		perfil.gems += GEMAS_MAPA
+		perfil.cores += 1
+		Perfiles.marcar(dueno)
+		dueno:SetAttribute("Gemas", perfil.gems)
+	end
 	fijar("Fase", "fin")
-	fijar("Mensaje", "¡Victoria! Base Avengers defendida")
+	fijar("Mensaje", `¡Victoria! {NIVEL.name} defendido · +{GEMAS_MAPA} gemas · +1 núcleo`)
 end
 
 -- Infinito se juega siempre en Base Avengers, como el 3D.
@@ -782,7 +837,7 @@ local function iniciarPartida(jugador: Player, modo: string, nivelId: string?): 
 	if not perfil then
 		return "Tu perfil todavía no cargó"
 	end
-	if #perfil.activeTeamIds == 0 then
+	if #perfil.squad == 0 then
 		return "Elegí tu héroe inicial en Invocaciones"
 	end
 	local indice = 1
@@ -797,8 +852,18 @@ local function iniciarPartida(jugador: Player, modo: string, nivelId: string?): 
 		end
 	end
 	cargarNivel(indice)
-	ESCUADRON = table.clone(perfil.activeTeamIds)
-	fijar("Escuadron", table.concat(ESCUADRON, ","))
+	-- Escuadrón para el cliente: "uid:personaje:nivel:límite" separados por comas.
+	ESCUADRON = {}
+	local texto = {}
+	for _, uid in perfil.squad do
+		local u = Unidades.buscar(perfil, uid)
+		if u then
+			local e = { uid = uid, heroId = u.heroId, nivel = u.level, limite = Unidades.LIMITE_COLOCACION[heroes[u.heroId].rarity] or 1 }
+			table.insert(ESCUADRON, e)
+			table.insert(texto, `{e.uid}:{e.heroId}:{e.nivel}:{e.limite}`)
+		end
+	end
+	fijar("Escuadron", table.concat(texto, ","))
 	partidaActual += 1
 	limpiar()
 	dueno = jugador
@@ -841,7 +906,7 @@ local hub = Hub.construir(function(jugador, estacion)
 		end
 		abrirPanel:FireClient(jugador, "historia", { estrellas = estrellas(perfil), mapas = mapas })
 	elseif estacion == "summon" then
-		abrirPanel:FireClient(jugador, "invocaciones")
+		abrirPanel:FireClient(jugador, "invocaciones", { pestana = "banner" })
 	elseif estacion == "tienda" then
 		abrirPanel:FireClient(jugador, "invocaciones", { pestana = "tienda" })
 	elseif estacion == "infinite" then
@@ -863,6 +928,7 @@ end)
 local function alEntrar(jugador: Player)
 	local perfil, problema = Perfiles.cargar(jugador)
 	jugador:SetAttribute("Creditos", perfil.credits)
+	jugador:SetAttribute("Gemas", perfil.gems)
 	if problema then
 		aviso:FireClient(jugador, problema)
 	end
@@ -899,14 +965,26 @@ local function resumen(perfil)
 	for heroeId in perfil.equippedItems do
 		equipados[heroeId] = Objetos.de(perfil, heroeId).id
 	end
+	local ahora = os.time()
+	local destacados = Banner.destacados(Banner.hora(ahora))
+	local garantia = perfil.shop.heroPity >= Banner.GARANTIA
+	local porRareza, porDestacado = Banner.probabilidades(destacados, garantia)
 	return {
 		creditos = perfil.credits,
+		gemas = perfil.gems,
+		nucleos = perfil.cores,
+		unidades = perfil.units,
+		escuadron = perfil.squad,
 		desbloqueados = perfil.unlockedHeroIds,
-		equipo = perfil.activeTeamIds,
-		costo = Reclutamiento.costo(perfil),
-		probabilidades = Reclutamiento.probabilidades(perfil, heroes),
 		iniciales = Reclutamiento.INICIALES,
-		garantia = perfil.shop.heroPity >= 4,
+		banner = {
+			destacados = destacados,
+			cambiaEn = 3600 - ahora % 3600, -- segundos hasta la próxima rotación
+			costo = Banner.COSTO,
+			probabilidades = porRareza,
+			probDestacados = porDestacado,
+			garantia = garantia,
+		},
 		vitrina = vitrina,
 		inventario = perfil.ownedItemIds,
 		equipados = equipados,
@@ -944,15 +1022,20 @@ coleccion.OnServerInvoke = function(jugador, nombre, arg)
 	local res = {}
 	if nombre == "elegirInicial" and type(arg) == "string" then
 		res.error = Reclutamiento.elegirInicial(perfil, arg)
-	elseif nombre == "reclutar" then
-		local heroe, extra = Reclutamiento.reclutar(perfil, heroes, math.random)
-		if heroe then
-			res.heroe = { id = heroe.id, nombre = heroe.name, rareza = heroe.rarity, categoria = heroe.category, garantizado = extra }
-		else
-			res.error = extra
-		end
-	elseif nombre == "equipo" and type(arg) == "table" then
-		res.error = Reclutamiento.fijarEquipo(perfil, arg)
+	elseif nombre == "invocar" and (arg == 1 or arg == 10) then
+		local nuevas, err = Banner.invocar(perfil, arg, Banner.hora(os.time()), math.random)
+		res.error = err
+		res.nuevas = nuevas
+	elseif nombre == "escuadron" and type(arg) == "table" then
+		res.error = Unidades.fijarEscuadron(perfil, arg)
+	elseif nombre == "vender" and type(arg) == "number" then
+		local gemas, err = Unidades.vender(perfil, arg)
+		res.error = err
+		res.gemas = gemas
+	elseif nombre == "evolucionar" and type(arg) == "table" then
+		local nueva, err = Unidades.evolucionar(perfil, arg)
+		res.error = err
+		res.nueva = nueva
 	elseif nombre == "comprar" and type(arg) == "string" then
 		res.error = Objetos.comprar(perfil, arg)
 	elseif nombre == "equipar" and type(arg) == "table" and type(arg.heroe) == "string" and type(arg.objeto) == "string" then
@@ -965,6 +1048,7 @@ coleccion.OnServerInvoke = function(jugador, nombre, arg)
 	if nombre ~= "estado" and not res.error then
 		Perfiles.marcar(jugador)
 		jugador:SetAttribute("Creditos", perfil.credits)
+		jugador:SetAttribute("Gemas", perfil.gems)
 	end
 	res.estado = resumen(perfil)
 	return res

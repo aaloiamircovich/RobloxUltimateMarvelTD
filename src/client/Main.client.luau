@@ -9,7 +9,7 @@ local Mapa = require(Shared.Mapa)
 local Despliegue = require(Shared.Despliegue)
 local Progresion = require(Shared.Progresion)
 local Kits = require(Shared.Kits)
-local heroes = require(Shared.Data.heroes)
+local heroes = require(Shared.Personajes).todos
 local niveles = require(Shared.Data.levels)
 
 local estado = ReplicatedStorage:WaitForChild("Estado")
@@ -124,7 +124,7 @@ local function avisar(texto: string?)
 end
 
 --------------------------------------------------------------------------------
--- Modo de interacción: nil | { tipo = "colocar", heroe } | { tipo = "seleccion", uid } | { tipo = "mover", uid, heroe }
+-- Modo de interacción: nil | { tipo = "colocar", heroe, ranura } | { tipo = "seleccion", uid } | { tipo = "mover", uid, heroe }
 --------------------------------------------------------------------------------
 local modo = nil
 local botonesHeroe = {}
@@ -144,8 +144,15 @@ local function refrescar()
 	local municion = seleccion and seleccion:GetAttribute("Municion")
 	botonMunicion.Visible = municion ~= nil
 	botonMunicion.Text = `Munición: {Kits.NOMBRE_MODO[municion] or ""}`
-	for id, b in botonesHeroe do
-		b.BackgroundColor3 = if modo and modo.tipo == "colocar" and modo.heroe == id then Color3.fromRGB(60, 120, 200) else Color3.fromRGB(40, 44, 60)
+	for ranura, b in botonesHeroe do
+		b.BackgroundColor3 = if modo and modo.tipo == "colocar" and modo.ranura == ranura then Color3.fromRGB(60, 120, 200) else Color3.fromRGB(40, 44, 60)
+		local puestas = 0
+		for _, m in workspace:WaitForChild("Unidades"):GetChildren() do
+			if m:GetAttribute("Ranura") == ranura then
+				puestas += 1
+			end
+		end
+		b.Text = `{b:GetAttribute("Nombre")}\nNv {b:GetAttribute("NivelUnidad")} · {puestas}/{b:GetAttribute("Limite")}`
 	end
 	local conUnidad = modo ~= nil and (modo.tipo == "seleccion" or modo.tipo == "mover")
 	botonMover.Visible, botonRetirar.Visible = conUnidad, conUnidad
@@ -153,7 +160,7 @@ local function refrescar()
 	botonIniciar.Visible = estado:GetAttribute("Fase") == "preparacion"
 	panel.Visible, barra.Visible = enBatalla(), enBatalla()
 	saldo.Visible = not enBatalla()
-	saldo.Text = `💰 {jugador:GetAttribute("Creditos") or "…"}`
+	saldo.Text = `💰 {jugador:GetAttribute("Creditos") or "…"}   💎 {jugador:GetAttribute("Gemas") or "…"}`
 	panel.Text = `Oleada {estado:GetAttribute("Oleada")}   ·   ❤ {estado:GetAttribute("Vidas")}   ·   💰 {estado:GetAttribute("Creditos")}\n{estado:GetAttribute("Mensaje")}`
 end
 
@@ -163,16 +170,22 @@ local function armarEscuadron()
 		b:Destroy()
 	end
 	table.clear(botonesHeroe)
-	for i, id in string.split(estado:GetAttribute("Escuadron") or "", ",") do
-		local config = heroes[id]
-		if config then
+	-- Cada entrada es "uid:personaje:nivel:límite" (una unidad del perfil; se coloca hasta su límite).
+	for i, texto in string.split(estado:GetAttribute("Escuadron") or "", ",") do
+		local partes = string.split(texto, ":")
+		local ranura, id = tonumber(partes[1]), partes[2]
+		local config = id and heroes[id]
+		if ranura and config then
 			local b = boton(config.name, barra, function()
-				modo = if modo and modo.heroe == id and modo.tipo == "colocar" then nil else { tipo = "colocar", heroe = id }
+				modo = if modo and modo.ranura == ranura and modo.tipo == "colocar" then nil else { tipo = "colocar", heroe = id, ranura = ranura }
 				refrescar()
 			end)
+			b:SetAttribute("Nombre", config.name)
+			b:SetAttribute("NivelUnidad", tonumber(partes[3]) or 1)
+			b:SetAttribute("Limite", tonumber(partes[4]) or 1)
 			b.LayoutOrder = i - 100 -- antes que Mover, Retirar, Mejorar e Iniciar
-			b.Size = UDim2.fromOffset(120, 44)
-			botonesHeroe[id] = b
+			b.Size = UDim2.fromOffset(130, 44)
+			botonesHeroe[ranura] = b
 		end
 	end
 end
@@ -231,6 +244,10 @@ end)
 
 estado.AttributeChanged:Connect(refrescar)
 jugador:GetAttributeChangedSignal("Creditos"):Connect(refrescar)
+jugador:GetAttributeChangedSignal("Gemas"):Connect(refrescar)
+-- El contador de colocaciones de cada botón sigue a las unidades del mapa.
+workspace:WaitForChild("Unidades").ChildAdded:Connect(refrescar)
+workspace:WaitForChild("Unidades").ChildRemoved:Connect(refrescar)
 refrescar()
 gui.Parent = jugador:WaitForChild("PlayerGui")
 
@@ -271,7 +288,7 @@ RunService.RenderStepped:Connect(function()
 	local x, y = Mapa.aPixeles(mouse.Hit.Position)
 	local moviendo = modo.tipo == "mover" and unidadDe(modo.uid)
 	local config = Progresion.paraDespliegue(heroes[heroeId], if moviendo then moviendo:GetAttribute("Nivel") or 1 else 1)
-	local err, cx, cy = Despliegue.error(config, x, y, NIVEL, rutaPx, unidadesActuales(), if moviendo then modo.uid else nil)
+	local err, cx, cy = Despliegue.error(config, x, y, NIVEL, rutaPx, unidadesActuales(), if moviendo then modo.uid else nil, true)
 	previa.Position = Mapa.aMundo(cx, cy) + Vector3.new(0, 0.4, 0)
 	previa.Color = if err then Color3.fromRGB(230, 70, 70) else Color3.fromRGB(70, 230, 110)
 end)
@@ -287,7 +304,7 @@ UserInputService.InputBegan:Connect(function(input, procesado)
 	end
 	local x, y = Mapa.aPixeles(mouse.Hit.Position)
 	if modo and modo.tipo == "colocar" then
-		local err = accion:InvokeServer("colocar", modo.heroe, x, y)
+		local err = accion:InvokeServer("colocar", modo.ranura, x, y)
 		avisar(err)
 		if not err then
 			modo = nil

@@ -45,8 +45,9 @@ end
 
 -- Subconjunto de Hero.getEffectiveStats: nivel, evolución, objeto equipado y modificadores especiales.
 -- objeto: entrada de items.json o nil; vidas: vidas actuales (los bonus "lowLife" valen con 10 o menos).
+-- sinEvolucion: el juego ya no evoluciona por nivel (docs/INVOCACIONES.md); sin él se calcula como el 2D.
 -- shortcut: sin maestrías, auras ni sinergias; se suman cuando existan esos sistemas.
-function Progresion.stats(config, nivel: number, objeto, vidas: number?)
+function Progresion.stats(config, nivel: number, objeto, vidas: number?, sinEvolucion: boolean?)
 	local s = {
 		damage = math.floor(config.damage * Progresion.multiplicadorDano(nivel, config.rarity)),
 		fireRate = config.fireRate,
@@ -55,7 +56,7 @@ function Progresion.stats(config, nivel: number, objeto, vidas: number?)
 		critDamage = 2,
 		canSeeStealth = config.canSeeStealth or false,
 	}
-	local evo = Progresion.evolucion(config.id, nivel)
+	local evo = not sinEvolucion and Progresion.evolucion(config.id, nivel)
 	if evo then
 		s.damage *= 1 + (evo.stats.damage or 0)
 		s.fireRate *= 1 + (evo.stats.fireRate or 0)
@@ -96,7 +97,7 @@ end
 -- Config con el alcance y los terrenos efectivos, para validar el despliegue como preview() del 3D.
 function Progresion.paraDespliegue(config, nivel: number, objeto)
 	local c = table.clone(config)
-	local s = Progresion.stats(config, nivel, objeto)
+	local s = Progresion.stats(config, nivel, objeto, nil, true)
 	c.range = s.range
 	c.allowedTerrains = s.terrenos
 	return c

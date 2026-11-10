@@ -97,8 +97,9 @@ local function puntoMasCercano(x, y, ruta)
 end
 
 -- placementError del 3D. unidades: { { uid, heroe, x, y } } en píxeles.
+-- repetidos: permite el mismo personaje varias veces (el límite por rareza lo controla quien llama).
 -- Devuelve nil si se puede, o el mensaje de error y la celda ajustada.
-function Despliegue.error(config, x: number, y: number, nivel, ruta, unidades, moviendoUid: number?): (string?, number, number)
+function Despliegue.error(config, x: number, y: number, nivel, ruta, unidades, moviendoUid: number?, repetidos: boolean?): (string?, number, number)
 	local _, lado = Mapa.terreno(nivel)
 	local cx, cy = Despliegue.celda(x, y, lado)
 	local t = Despliegue.terreno(nivel, cx, cy)
@@ -119,7 +120,7 @@ function Despliegue.error(config, x: number, y: number, nivel, ruta, unidades, m
 		return `Requiere {table.concat(permitidos, ", ")}; esta celda es {nombreTerreno(t)}`, cx, cy
 	end
 	for _, u in unidades do
-		if not moviendoUid and u.heroe == config.id then
+		if not moviendoUid and not repetidos and u.heroe == config.id then
 			return "Este héroe ya está desplegado", cx, cy
 		end
 	end

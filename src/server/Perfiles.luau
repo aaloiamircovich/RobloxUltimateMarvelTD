@@ -1,21 +1,28 @@
--- Perfil persistente por jugador (DataStore). Subconjunto del estado de ProgressionManager del 2D,
--- con los mismos nombres de campo para poder importar perfiles: credits, heroUpgrades, mapProgress,
--- unlockedHeroIds, activeTeamIds, shop, modeRecords (sólo supervivencia), ownedItemIds y equippedItems.
+-- Perfil persistente por jugador (DataStore). Parte del estado de ProgressionManager del 2D (credits,
+-- mapProgress, shop, modeRecords, ownedItemIds, equippedItems) más el sistema de unidades propio
+-- (docs/INVOCACIONES.md): gems, cores, units, nextUnitUid y squad. unlockedHeroIds se deriva de units.
 local DataStoreService = game:GetService("DataStoreService")
-local heroes = require(game:GetService("ReplicatedStorage").Shared.Data.heroes)
-local items = require(game:GetService("ReplicatedStorage").Shared.Data.items)
+local Shared = game:GetService("ReplicatedStorage").Shared
+local Personajes = require(Shared.Personajes)
+local Unidades = require(Shared.Unidades)
+local items = require(Shared.Data.items)
 
 local Perfiles = {}
 
-Perfiles.VERSION = 1
+Perfiles.VERSION = 2
 Perfiles.CREDITOS_INICIALES = 1200 -- createDefaultState del 2D
+Perfiles.GEMAS_INICIALES = 500
 local MAX_OLEADAS = 100
 
 local almacen = nil -- se pide al primer uso: falla en Studio sin acceso a API
 local perfiles = {} -- [Player] = { datos, guardable, sucio }
 
-local function nivelValido(n)
-	return math.clamp(math.floor(tonumber(n) or 1), 1, 100)
+local function entero(v, minimo, maximo, defecto)
+	local n = tonumber(v)
+	if not n or n ~= n then
+		return defecto
+	end
+	return math.clamp(math.floor(n), minimo, maximo)
 end
 
 -- Frontera de confianza: lo que viene del DataStore puede estar viejo o roto.
@@ -24,11 +31,14 @@ function Perfiles.normalizar(crudo)
 	local p = {
 		version = Perfiles.VERSION,
 		credits = Perfiles.CREDITOS_INICIALES,
-		heroUpgrades = {},
+		gems = entero(datos.gems, 0, 1e9, Perfiles.GEMAS_INICIALES),
+		cores = entero(datos.cores, 0, 1e6, 0),
+		units = {},
+		nextUnitUid = 1,
+		squad = {},
 		mapProgress = {},
 		unlockedHeroIds = {},
-		activeTeamIds = {},
-		shop = { heroPity = 0, heroBoxCost = 500 },
+		shop = { heroPity = 0 },
 		modeRecords = { survival = { bestWave = 0, bestScore = 0 } },
 		ownedItemIds = {},
 		equippedItems = {},
@@ -36,14 +46,6 @@ function Perfiles.normalizar(crudo)
 	local c = tonumber(datos.credits)
 	if c and c == c and c >= 0 and c < math.huge then
 		p.credits = math.floor(c)
-	end
-	if type(datos.heroUpgrades) == "table" then
-		for id, v in datos.heroUpgrades do
-			local nivel = nivelValido(if type(v) == "table" then v.level else v)
-			if type(id) == "string" and nivel > 1 then
-				p.heroUpgrades[id] = { level = nivel }
-			end
-		end
 	end
 	if type(datos.mapProgress) == "table" then
 		for id, v in datos.mapProgress do
@@ -53,27 +55,44 @@ function Perfiles.normalizar(crudo)
 			end
 		end
 	end
-	-- Colección: sólo ids de héroes existentes, sin repetir; el escuadrón, subconjunto de 1 a 6.
-	local function ids(lista, permitido, tope)
-		local r = {}
-		if type(lista) == "table" then
-			for _, id in lista do
-				if type(id) == "string" and heroes[id] and permitido(id) and not table.find(r, id) and #r < tope then
-					table.insert(r, id)
+	-- Unidades: personaje existente, uid único, nivel 1–50, hasta 100.
+	if type(datos.units) == "table" then
+		local usados = {}
+		for _, u in datos.units do
+			local uid = type(u) == "table" and entero(u.uid, 1, 1e9, nil)
+			if uid and not usados[uid] and type(u.heroId) == "string" and Personajes.de(u.heroId) and #p.units < Unidades.MAX_INVENTARIO then
+				usados[uid] = true
+				table.insert(p.units, { uid = uid, heroId = u.heroId, level = entero(u.level, 1, Unidades.NIVEL_MAXIMO, 1), xp = entero(u.xp, 0, 1e9, 0) })
+				p.nextUnitUid = math.max(p.nextUnitUid, uid + 1)
+			end
+		end
+		p.nextUnitUid = math.max(p.nextUnitUid, entero(datos.nextUnitUid, 1, 1e9, 1))
+		if type(datos.squad) == "table" then
+			for _, uid in datos.squad do
+				if type(uid) == "number" and Unidades.buscar(p, uid) and not table.find(p.squad, uid) and #p.squad < Unidades.MAX_ESCUADRON then
+					table.insert(p.squad, uid)
 				end
 			end
 		end
-		return r
+	elseif type(datos.unlockedHeroIds) == "table" then
+		-- Perfil de la versión 1 (héroes sin repetir): una unidad de nivel 1 por héroe; el escuadrón se conserva.
+		local equipo = if type(datos.activeTeamIds) == "table" then datos.activeTeamIds else {}
+		for _, id in datos.unlockedHeroIds do
+			if type(id) == "string" and Personajes.de(id) and not table.find(p.unlockedHeroIds, id) and #p.units < Unidades.MAX_INVENTARIO then
+				table.insert(p.unlockedHeroIds, id)
+				local u = { uid = p.nextUnitUid, heroId = id, level = 1, xp = 0 }
+				p.nextUnitUid += 1
+				table.insert(p.units, u)
+				if table.find(equipo, id) and #p.squad < Unidades.MAX_ESCUADRON then
+					table.insert(p.squad, u.uid)
+				end
+			end
+		end
 	end
-	p.unlockedHeroIds = ids(datos.unlockedHeroIds, function()
-		return true
-	end, math.huge)
-	p.activeTeamIds = ids(datos.activeTeamIds, function(id)
-		return table.find(p.unlockedHeroIds, id) ~= nil
-	end, 6)
-	if #p.activeTeamIds == 0 and #p.unlockedHeroIds > 0 then
-		p.activeTeamIds = { p.unlockedHeroIds[1] }
+	if #p.squad == 0 and #p.units > 0 then
+		p.squad = { p.units[1].uid }
 	end
+	Unidades.sincronizar(p)
 	-- Objetos: cada id existe una sola vez, en el inventario o equipado en un héroe desbloqueado.
 	local vistos = {}
 	if type(datos.equippedItems) == "table" then
@@ -103,8 +122,7 @@ function Perfiles.normalizar(crudo)
 		p.modeRecords.survival.bestScore = math.max(0, math.floor(tonumber(r.bestScore) or 0))
 	end
 	if type(datos.shop) == "table" then
-		p.shop.heroPity = math.max(0, math.floor(tonumber(datos.shop.heroPity) or 0))
-		p.shop.heroBoxCost = math.max(500, math.ceil(tonumber(datos.shop.heroBoxCost) or 500))
+		p.shop.heroPity = entero(datos.shop.heroPity, 0, 1e6, 0)
 	end
 	return p
 end

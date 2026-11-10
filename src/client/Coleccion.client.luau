@@ -1,11 +1,14 @@
--- Paneles de las estaciones del HUB: Invocaciones (elección inicial, reclutamiento y escuadrón)
--- e Infinito (explica la regla de créditos antes de entrar, como el 3D).
--- Sólo muestra y envía pedidos; el servidor valida y guarda.
+-- Paneles de las estaciones del HUB: Invocaciones (elección inicial, banner, unidades, tienda y objetos),
+-- Historia e Infinito (explica la regla de créditos antes de entrar, como el 3D).
+-- Sólo muestra y envía pedidos; el servidor valida y guarda. Reglas en docs/INVOCACIONES.md.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
-local heroes = require(ReplicatedStorage:WaitForChild("Shared").Data.heroes)
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Personajes = require(Shared.Personajes)
+local Unidades = require(Shared.Unidades)
+local heroes = Personajes.todos
 local items = require(ReplicatedStorage.Shared.Data.items)
 local coleccion = ReplicatedStorage:WaitForChild("Coleccion")
 local abrirPanel = ReplicatedStorage:WaitForChild("AbrirPanel")
@@ -77,7 +80,7 @@ local ventana = crear("Frame", {
 	BackgroundTransparency = 0.05,
 }, gui)
 local titulo = texto({ Position = UDim2.fromOffset(24, 14), Size = UDim2.new(1, -120, 0, 36), Font = Enum.Font.GothamBlack, TextSize = 26, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = ACENTO }, ventana)
-local saldo = texto({ Position = UDim2.new(1, -250, 0, 18), Size = UDim2.fromOffset(170, 28), TextSize = 18, TextXAlignment = Enum.TextXAlignment.Right }, ventana)
+local saldo = texto({ Position = UDim2.new(1, -420, 0, 18), Size = UDim2.fromOffset(340, 28), TextSize = 18, TextXAlignment = Enum.TextXAlignment.Right }, ventana)
 boton("X", { Position = UDim2.new(1, -56, 0, 12), Size = UDim2.fromOffset(40, 40) }, ventana, function()
 	gui.Enabled = false
 end)
@@ -88,9 +91,9 @@ local cuerpo = crear("Frame", { Position = UDim2.fromOffset(24, 64), Size = UDim
 -- Pantallas
 --------------------------------------------------------------------------------
 local estado = nil
-local pestana = "reclutar"
-local seleccion = {}
-local ultimo = nil -- último héroe reclutado, para mostrarlo
+local pestana = "banner"
+local ultimas = nil -- unidades de la última invocación, para mostrarlas
+local elegida = nil -- uid de la unidad seleccionada en la pestaña Unidades
 local mostrar
 
 local function pedir(nombre, arg)
@@ -119,7 +122,7 @@ end
 
 local function pantallaInicial()
 	titulo.Text = "Tu primer héroe"
-	texto({ Size = UDim2.new(1, 0, 0, 40), TextXAlignment = Enum.TextXAlignment.Left, Text = "Elegí uno de los tres héroes iniciales. Empezás con 1.200 créditos para reclutar o mejorar en combate." }, cuerpo)
+	texto({ Size = UDim2.new(1, 0, 0, 40), TextXAlignment = Enum.TextXAlignment.Left, Text = "Elegí uno de los tres héroes iniciales. Empezás con 500 gemas para invocar más." }, cuerpo)
 	local fila = crear("Frame", { Position = UDim2.fromOffset(0, 54), Size = UDim2.new(1, 0, 1, -54), BackgroundTransparency = 1 }, cuerpo)
 	crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 18), HorizontalAlignment = Enum.HorizontalAlignment.Center }, fila)
 	for _, id in estado.iniciales do
@@ -127,7 +130,7 @@ local function pantallaInicial()
 		texto({ Position = UDim2.fromOffset(10, 62), Size = UDim2.new(1, -20, 0, 170), TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, Text = heroes[id].abilityDesc or "" }, t)
 		boton(`ELEGIR`, { Position = UDim2.new(0, 10, 1, -50), Size = UDim2.new(1, -20, 0, 40), BackgroundColor3 = Color3.fromRGB(40, 140, 70) }, t, function()
 			if not pedir("elegirInicial", id).error then
-				pestana = "escuadron"
+				pestana = "banner"
 				mostrar()
 			end
 		end)
@@ -135,7 +138,7 @@ local function pantallaInicial()
 end
 
 local function pestanas()
-	for i, p in { { "reclutar", "Reclutamiento" }, { "escuadron", "Escuadrón" }, { "tienda", "Tienda" }, { "objetos", "Objetos" } } do
+	for i, p in { { "banner", "Banner" }, { "unidades", "Unidades" }, { "tienda", "Tienda" }, { "objetos", "Objetos" } } do
 		boton(p[2], { Position = UDim2.fromOffset((i - 1) * 150, 0), Size = UDim2.fromOffset(140, 36), BackgroundColor3 = if pestana == p[1] then Color3.fromRGB(60, 110, 190) else BOTON }, cuerpo, function()
 			pestana = p[1]
 			mostrar()
@@ -143,71 +146,163 @@ local function pestanas()
 	end
 end
 
-local function pantallaReclutar()
-	titulo.Text = "Centro de reclutamiento"
-	local izq = crear("Frame", { Position = UDim2.fromOffset(0, 50), Size = UDim2.new(0.5, -10, 1, -50), BackgroundTransparency = 1 }, cuerpo)
-	local lineas = { "Sin repetidos. El costo sube 12% por compra.", "Probabilidades del próximo reclutamiento:" }
-	for _, r in RAREZAS do
-		local pct = estado.probabilidades[r[1]]
-		if pct then
-			table.insert(lineas, `   {r[2]}: {string.format(if pct < 1 then "%.2f" else "%.1f", pct)}%`)
+local function porcentaje(p: number): string
+	return string.format(if p < 1 then "%.2f%%" else "%.1f%%", p)
+end
+
+-- Cuenta regresiva del banner: se actualiza sola mientras la pestaña está abierta.
+local relojBanner, finBanner = nil, 0
+task.spawn(function()
+	while true do
+		task.wait(1)
+		if relojBanner and relojBanner.Parent and gui.Enabled then
+			local s = math.max(0, math.floor(finBanner - os.clock()))
+			relojBanner.Text = string.format("Cambia en %d:%02d", s // 60, s % 60)
+			if s <= 0 and pestana == "banner" then
+				pedir("estado")
+				mostrar()
+			end
 		end
 	end
-	if estado.garantia then
-		table.insert(lineas, "Tras cuatro comunes seguidos, el próximo es de rareza superior.")
+end)
+
+local function pantallaBanner()
+	local b = estado.banner
+	titulo.Text = "Banner 1 · Asgard"
+	finBanner = os.clock() + b.cambiaEn
+	relojBanner = texto({ Position = UDim2.fromOffset(600, 4), Size = UDim2.fromOffset(130, 28), TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = ACENTO, TextSize = 15, Text = string.format("Cambia en %d:%02d", b.cambiaEn // 60, b.cambiaEn % 60) }, cuerpo)
+	-- Destacados: la estrella grande y los dos apoyos, con su probabilidad por tirada.
+	local fila = crear("Frame", { Position = UDim2.fromOffset(0, 46), Size = UDim2.new(1, 0, 0, 150), BackgroundTransparency = 1 }, cuerpo)
+	crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 14) }, fila)
+	for i, id in { b.destacados.estrella, b.destacados.apoyos[1], b.destacados.apoyos[2] } do
+		local t = tarjeta(id, fila, 150)
+		if i == 1 then
+			t.Size = UDim2.fromOffset(250, 150)
+		end
+		texto({ Position = UDim2.fromOffset(10, 62), Size = UDim2.new(1, -20, 0, 22), TextSize = 15, Font = Enum.Font.GothamBold, TextColor3 = ACENTO, Text = (if i == 1 then "★ ESTRELLA · " else "Destacado · ") .. porcentaje(b.probDestacados[id] or 0) }, t)
+		texto({ Position = UDim2.fromOffset(10, 88), Size = UDim2.new(1, -20, 0, 54), TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, Text = heroes[id].abilityDesc or "" }, t)
 	end
-	texto({ Size = UDim2.new(1, 0, 1, -60), TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, Text = table.concat(lineas, "\n") }, izq)
-	boton(`RECLUTAR · 💰 {estado.costo}`, { Position = UDim2.new(0, 0, 1, -50), Size = UDim2.new(1, 0, 0, 50), TextSize = 20, BackgroundColor3 = Color3.fromRGB(170, 120, 30) }, izq, function()
-		local res = pedir("reclutar")
-		ultimo = res.heroe
-		mostrar()
-	end)
-	local der = crear("Frame", { Position = UDim2.new(0.5, 10, 0, 50), Size = UDim2.new(0.5, -10, 1, -50), BackgroundTransparency = 1 }, cuerpo)
-	if ultimo then
-		texto({ Size = UDim2.new(1, 0, 0, 28), TextSize = 18, Text = if ultimo.garantizado then "¡Garantizado!" else "¡Nuevo héroe!" }, der)
-		local t = tarjeta(ultimo.id, der, 120)
-		t.Position = UDim2.new(0.5, -110, 0, 40)
-		texto({ Position = UDim2.fromOffset(10, 64), Size = UDim2.new(1, -20, 0, 40), TextSize = 13, Text = "Se sumó a tu escuadrón si había lugar." }, t)
+	-- Probabilidades por rareza.
+	local lineas = {}
+	for _, r in RAREZAS do
+		local p = b.probabilidades[r[1]]
+		if p then
+			table.insert(lineas, `{r[2]} {porcentaje(p)}`)
+		end
+	end
+	texto({ Position = UDim2.fromOffset(0, 206), Size = UDim2.new(1, 0, 0, 22), TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, Text = table.concat(lineas, "  ·  ") .. (if b.garantia then "  ·  Garantía: la próxima no es común" else "") }, cuerpo)
+	texto({ Position = UDim2.fromOffset(0, 228), Size = UDim2.new(1, 0, 0, 20), TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(180, 185, 200), Text = "Cuando sale la rareza de un destacado, hay 50% de que sea él. Los destacados cambian cada hora." }, cuerpo)
+	for i, n in { 1, 10 } do
+		boton(`INVOCAR x{n} · 💎 {b.costo * n}`, { Position = UDim2.new(1, -440 + (i - 1) * 230, 1, -50), Size = UDim2.fromOffset(210, 50), TextSize = 18, BackgroundColor3 = if n == 1 then Color3.fromRGB(170, 120, 30) else Color3.fromRGB(190, 80, 40) }, cuerpo, function()
+			local res = pedir("invocar", n)
+			ultimas = res.nuevas
+			mostrar()
+		end)
+	end
+	-- Resultado de la última invocación.
+	if ultimas then
+		local lista = crear("Frame", { Position = UDim2.fromOffset(0, 256), Size = UDim2.new(1, -460, 1, -256), BackgroundTransparency = 1 }, cuerpo)
+		crear("UIGridLayout", { CellSize = UDim2.fromOffset(150, 30), CellPadding = UDim2.fromOffset(6, 6) }, lista)
+		local destacado = { [b.destacados.estrella] = true, [b.destacados.apoyos[1]] = true, [b.destacados.apoyos[2]] = true }
+		for _, u in ultimas do
+			local h = heroes[u.heroId]
+			local f = crear("Frame", { BackgroundColor3 = BOTON }, lista)
+			crear("UIStroke", { Color = COLOR_RAREZA[h.rarity], Thickness = 2 }, f)
+			texto({ Size = UDim2.fromScale(1, 1), TextSize = 13, Font = Enum.Font.GothamBold, TextColor3 = COLOR_RAREZA[h.rarity], Text = (if destacado[u.heroId] then "★ " else "") .. h.name }, f)
+		end
 	end
 end
 
-local function pantallaEscuadron()
-	titulo.Text = "Tu escuadrón"
-	local cuenta = texto({ Position = UDim2.fromOffset(400, 4), Size = UDim2.fromOffset(160, 28), TextXAlignment = Enum.TextXAlignment.Right }, cuerpo)
-	local function contar()
-		cuenta.Text = `{#seleccion} / 6 · {#estado.desbloqueados} héroes`
-	end
-	local lista = crear("ScrollingFrame", {
-		Position = UDim2.fromOffset(0, 50),
-		Size = UDim2.new(1, 0, 1, -110),
-		BackgroundTransparency = 1,
-		ScrollBarThickness = 6,
-		AutomaticCanvasSize = Enum.AutomaticSize.Y,
-		CanvasSize = UDim2.new(),
-	}, cuerpo)
-	crear("UIGridLayout", { CellSize = UDim2.fromOffset(170, 56), CellPadding = UDim2.fromOffset(10, 10) }, lista)
-	for _, id in estado.desbloqueados do
-		local h = heroes[id]
-		local b
-		b = boton(`{h.name}\n{NOMBRE_RAREZA[h.rarity] or h.rarity}`, { TextSize = 14 }, lista, function()
-			local i = table.find(seleccion, id)
-			if i then
-				table.remove(seleccion, i)
-			elseif #seleccion < 6 then
-				table.insert(seleccion, id)
-			end
-			b.BackgroundColor3 = if table.find(seleccion, id) then Color3.fromRGB(60, 110, 190) else BOTON
-			contar()
-		end)
-		b.BackgroundColor3 = if table.find(seleccion, id) then Color3.fromRGB(60, 110, 190) else BOTON
-		crear("UIStroke", { Color = COLOR_RAREZA[h.rarity] or Color3.new(1, 1, 1), Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, b)
-	end
-	contar()
-	boton("Guardar escuadrón", { Position = UDim2.new(1, -220, 1, -50), Size = UDim2.fromOffset(220, 46), BackgroundColor3 = Color3.fromRGB(40, 140, 70) }, cuerpo, function()
-		if not pedir("equipo", seleccion).error then
-			mensaje.Text = "Escuadrón guardado"
+local function pantallaUnidades()
+	titulo.Text = "Unidades"
+	texto({ Position = UDim2.fromOffset(600, 4), Size = UDim2.fromOffset(130, 28), TextXAlignment = Enum.TextXAlignment.Right, Text = `{#estado.unidades} / {Unidades.MAX_INVENTARIO}` }, cuerpo)
+	local lista = crear("ScrollingFrame", { Position = UDim2.fromOffset(0, 46), Size = UDim2.new(0.62, -10, 1, -46), BackgroundTransparency = 1, ScrollBarThickness = 6, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new() }, cuerpo)
+	crear("UIGridLayout", { CellSize = UDim2.fromOffset(140, 62), CellPadding = UDim2.fromOffset(8, 8) }, lista)
+	-- Escuadrón primero, después por rareza (más alta arriba) y nivel.
+	local orden = table.clone(estado.unidades)
+	table.sort(orden, function(a, b)
+		local ea, eb = table.find(estado.escuadron, a.uid), table.find(estado.escuadron, b.uid)
+		if (ea ~= nil) ~= (eb ~= nil) then
+			return ea ~= nil
 		end
+		local ra, rb = table.find(Personajes.RAREZAS, heroes[a.heroId].rarity), table.find(Personajes.RAREZAS, heroes[b.heroId].rarity)
+		if ra ~= rb then
+			return ra > rb
+		end
+		return if a.level ~= b.level then a.level > b.level else a.uid < b.uid
 	end)
+	for _, u in orden do
+		local h = heroes[u.heroId]
+		local enEscuadron = table.find(estado.escuadron, u.uid) ~= nil
+		local b = boton("", { BackgroundColor3 = if elegida == u.uid then Color3.fromRGB(90, 140, 220) elseif enEscuadron then Color3.fromRGB(40, 80, 140) else BOTON }, lista, function()
+			elegida = if elegida == u.uid then nil else u.uid
+			mostrar()
+		end)
+		crear("UIStroke", { Color = COLOR_RAREZA[h.rarity], Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, b)
+		texto({ Position = UDim2.fromOffset(6, 4), Size = UDim2.new(1, -12, 0, 20), TextSize = 13, Font = Enum.Font.GothamBold, Text = h.name }, b)
+		texto({ Position = UDim2.fromOffset(6, 24), Size = UDim2.new(1, -12, 0, 16), TextSize = 12, TextColor3 = COLOR_RAREZA[h.rarity], Text = `Nv {u.level}` .. (if enEscuadron then " · Escuadrón" else "") }, b)
+		-- Barra de experiencia hacia el próximo nivel.
+		local fondo = crear("Frame", { Position = UDim2.new(0, 8, 1, -14), Size = UDim2.new(1, -16, 0, 6), BackgroundColor3 = Color3.fromRGB(20, 22, 32) }, b)
+		local llena = if u.level >= Unidades.NIVEL_MAXIMO then 1 else u.xp / Unidades.xpParaSubir(u.level)
+		crear("Frame", { Size = UDim2.fromScale(math.clamp(llena, 0, 1), 1), BackgroundColor3 = Color3.fromRGB(90, 220, 120) }, fondo)
+	end
+	-- Panel de la unidad elegida: escuadrón, venta y evolución.
+	local der = crear("Frame", { Position = UDim2.new(0.62, 10, 0, 46), Size = UDim2.new(0.38, -10, 1, -46), BackgroundColor3 = BOTON }, cuerpo)
+	local u
+	for _, x in estado.unidades do
+		if x.uid == elegida then
+			u = x
+		end
+	end
+	if not u then
+		texto({ Position = UDim2.fromOffset(12, 12), Size = UDim2.new(1, -24, 1, -24), TextSize = 14, TextYAlignment = Enum.TextYAlignment.Top, Text = `Elegí una unidad para sumarla o sacarla del escuadrón (hasta {Unidades.MAX_ESCUADRON}), venderla o evolucionarla.\n\nNúcleos: {estado.nucleos}` }, der)
+		return
+	end
+	local h = heroes[u.heroId]
+	local enEscuadron = table.find(estado.escuadron, u.uid)
+	texto({ Position = UDim2.fromOffset(12, 8), Size = UDim2.new(1, -24, 0, 26), TextSize = 19, Font = Enum.Font.GothamBold, Text = h.name }, der)
+	local xpTexto = if u.level >= Unidades.NIVEL_MAXIMO then "nivel máximo" else `{u.xp}/{Unidades.xpParaSubir(u.level)} XP`
+	texto({ Position = UDim2.fromOffset(12, 34), Size = UDim2.new(1, -24, 0, 40), TextSize = 13, TextColor3 = COLOR_RAREZA[h.rarity], Text = `{NOMBRE_RAREZA[h.rarity]} · Nv {u.level} ({xpTexto})\n+{u.level - 1}% de daño · se coloca hasta {Unidades.LIMITE_COLOCACION[h.rarity]} veces` }, der)
+	boton(if enEscuadron then "Sacar del escuadrón" else "Sumar al escuadrón", { Position = UDim2.fromOffset(12, 84), Size = UDim2.new(1, -24, 0, 38) }, der, function()
+		local nuevo = table.clone(estado.escuadron)
+		if enEscuadron then
+			table.remove(nuevo, enEscuadron)
+		else
+			table.insert(nuevo, u.uid)
+		end
+		pedir("escuadron", nuevo)
+		mostrar()
+	end)
+	boton(`Vender · 💎 {Unidades.VENTA[h.rarity]}`, { Position = UDim2.fromOffset(12, 130), Size = UDim2.new(1, -24, 0, 38), BackgroundColor3 = Color3.fromRGB(120, 50, 50) }, der, function()
+		if not pedir("vender", u.uid).error then
+			elegida = nil
+		end
+		mostrar()
+	end)
+	-- Evolución: esta unidad y otras dos copias del mismo personaje.
+	local destino = Personajes.evolucion(u.heroId)
+	if destino then
+		local copias = { u.uid }
+		for _, x in estado.unidades do
+			if x.heroId == u.heroId and x.uid ~= u.uid and #copias < Unidades.COPIAS_EVOLUCION then
+				table.insert(copias, x.uid)
+			end
+		end
+		local d = heroes[destino]
+		local nucleos = Unidades.NUCLEOS[d.rarity]
+		texto({ Position = UDim2.fromOffset(12, 178), Size = UDim2.new(1, -24, 0, 54), TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, Text = `Evoluciona en {d.name} ({NOMBRE_RAREZA[d.rarity]}).\nCopias {#copias}/{Unidades.COPIAS_EVOLUCION} · Núcleos {estado.nucleos}/{nucleos}` }, der)
+		local listo = #copias == Unidades.COPIAS_EVOLUCION and estado.nucleos >= nucleos
+		boton("Evolucionar", { Position = UDim2.new(0, 12, 1, -50), Size = UDim2.new(1, -24, 0, 40), BackgroundColor3 = if listo then Color3.fromRGB(150, 70, 200) else Color3.fromRGB(60, 60, 66) }, der, function()
+			local res = pedir("evolucionar", copias)
+			if res.nueva then
+				elegida = res.nueva.uid
+				mensaje.Text = `¡{d.name} se unió a tus unidades!`
+			end
+			mostrar()
+		end)
+	else
+		texto({ Position = UDim2.fromOffset(12, 178), Size = UDim2.new(1, -24, 0, 40), TextSize = 13, Text = "Este personaje no evoluciona." }, der)
+	end
 end
 
 local NOMBRE_RANURA = { weapon = "Arma", armor = "Armadura", artifact = "Artefacto" }
@@ -282,23 +377,20 @@ end
 
 function mostrar()
 	vaciar()
-	saldo.Text = `💰 {estado.creditos}`
+	saldo.Text = `💰 {estado.creditos}   💎 {estado.gemas}   🔷 {estado.nucleos}`
 	if #estado.desbloqueados == 0 then
 		pantallaInicial()
 		return
 	end
-	if pestana == "escuadron" then
-		seleccion = table.clone(estado.equipo)
-	end
 	pestanas()
-	if pestana == "reclutar" then
-		pantallaReclutar()
+	if pestana == "banner" then
+		pantallaBanner()
 	elseif pestana == "tienda" then
 		pantallaTienda()
 	elseif pestana == "objetos" then
 		pantallaObjetos()
 	else
-		pantallaEscuadron()
+		pantallaUnidades()
 	end
 end
 
@@ -374,7 +466,7 @@ abrirPanel.OnClientEvent:Connect(function(panel, datos)
 		return
 	end
 	mensaje.Text = ""
-	ultimo = nil
+	ultimas = nil
 	if datos and datos.pestana then
 		pestana = datos.pestana
 	end
