@@ -1,0 +1,1262 @@
+{
+  "adam_warlock": {
+    "id": "adam_warlock_evolution",
+    "name": "Evolucion Adam Warlock",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.3,
+      "fireRate": 0.08,
+      "range": 0.05,
+      "critChance": 5
+    },
+    "canSeeStealth": false
+  },
+  "angela": {
+    "id": "angela_evolution",
+    "name": "Angela Queen of Hel",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.3,
+      "fireRate": 0.08,
+      "range": 0.05,
+      "critChance": 5
+    },
+    "canSeeStealth": false
+  },
+  "ant_man": {
+    "id": "ant_man_evolution",
+    "name": "Evolucion Ant Man",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "black_bolt": {
+    "id": "black_bolt_evolution",
+    "name": "Evolucion Black Bolt",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "black_cat": {
+    "id": "black_cat_evolution",
+    "name": "Evolucion Black Cat",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "black_panther": {
+    "id": "black_panther_evolution",
+    "name": "King T'Challa",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.3,
+      "fireRate": 0.08,
+      "range": 0.05,
+      "critChance": 5
+    },
+    "canSeeStealth": false
+  },
+  "black_widow": {
+    "id": "black_widow_evolution",
+    "name": "Evolucion Black Widow",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "blade": {
+    "id": "blade_evolution",
+    "name": "Blade King of the Vampires",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.18,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 5
+    },
+    "canSeeStealth": false
+  },
+  "capitan_america": {
+    "id": "capitan_america_evolution",
+    "name": "Evolucion Capitan America",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.16,
+      "fireRate": 0.04,
+      "range": 0.08,
+      "critChance": 3
+    },
+    "canSeeStealth": false
+  },
+  "captain_marvel": {
+    "id": "captain_marvel_evolution",
+    "name": "Binary",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.3,
+      "fireRate": 0.08,
+      "range": 0.05,
+      "critChance": 5
+    },
+    "canSeeStealth": false
+  },
+  "cloak": {
+    "id": "cloak_evolution",
+    "name": "Cloak Fusion",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.22,
+      "fireRate": 0.05,
+      "range": 0.07,
+      "critChance": 3
+    },
+    "canSeeStealth": false
+  },
+  "crystal": {
+    "id": "crystal_evolution",
+    "name": "Evolucion Crystal",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "cyclops": {
+    "id": "cyclops_evolution",
+    "name": "Cyclops Desatado",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.3,
+      "fireRate": 0.08,
+      "range": 0.05,
+      "critChance": 5
+    },
+    "canSeeStealth": false
+  },
+  "dagger": {
+    "id": "dagger_evolution",
+    "name": "Dagger Fusion",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.22,
+      "fireRate": 0.05,
+      "range": 0.07,
+      "critChance": 3
+    },
+    "canSeeStealth": false
+  },
+  "daredevil": {
+    "id": "daredevil_evolution",
+    "name": "Evolucion Daredevil",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "deadpool": {
+    "id": "deadpool_evolution",
+    "name": "Evolucion Deadpool",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "devil_dinosaur": {
+    "id": "devil_dinosaur_evolution",
+    "name": "Evolucion Devil Dinosaur",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "doctor_strange": {
+    "id": "doctor_strange_evolution",
+    "name": "Evolucion Doctor Strange",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.3,
+      "fireRate": 0.08,
+      "range": 0.05,
+      "critChance": 5
+    },
+    "canSeeStealth": false
+  },
+  "domino": {
+    "id": "domino_evolution",
+    "name": "Evolucion Domino",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "elektra": {
+    "id": "elektra_evolution",
+    "name": "Evolucion Elektra",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "elsa_bloodstone": {
+    "id": "elsa_bloodstone_evolution",
+    "name": "Evolucion Elsa Bloodstone",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "emma_frost": {
+    "id": "emma_frost_evolution",
+    "name": "Emma Frost Diamond Form",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.3,
+      "fireRate": 0.08,
+      "range": 0.05,
+      "critChance": 5
+    },
+    "canSeeStealth": false
+  },
+  "falcon": {
+    "id": "falcon_evolution",
+    "name": "Evolucion Falcon",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "gambit": {
+    "id": "gambit_evolution",
+    "name": "Evolucion Gambit",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "gamora": {
+    "id": "gamora_evolution",
+    "name": "Evolucion Gamora",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "ghost_rider": {
+    "id": "ghost_rider_evolution",
+    "name": "Ghost Rider King of Hell",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.3,
+      "fireRate": 0.08,
+      "range": 0.05,
+      "critChance": 5
+    },
+    "canSeeStealth": false
+  },
+  "groot": {
+    "id": "groot_evolution",
+    "name": "King Groot",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.26,
+      "fireRate": 0.04,
+      "range": 0.06,
+      "critChance": 2
+    },
+    "canSeeStealth": false
+  },
+  "hawkeye": {
+    "id": "hawkeye_evolution",
+    "name": "Ronin",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.26,
+      "fireRate": 0.06,
+      "range": 0.06,
+      "critChance": 5
+    },
+    "canSeeStealth": false
+  },
+  "hela": {
+    "id": "hela_evolution",
+    "name": "Evolucion Hela",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "hulk": {
+    "id": "hulk_evolution",
+    "name": "World Breaker Hulk",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.34,
+      "fireRate": 0.04,
+      "range": 0.02,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "human_torch": {
+    "id": "human_torch_evolution",
+    "name": "Evolucion Human Torch",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "iceman": {
+    "id": "iceman_evolution",
+    "name": "Omega Iceman",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.3,
+      "fireRate": 0.08,
+      "range": 0.05,
+      "critChance": 5
+    },
+    "canSeeStealth": false
+  },
+  "invisible_woman": {
+    "id": "invisible_woman_evolution",
+    "name": "Evolucion Invisible Woman",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "iron_fist": {
+    "id": "iron_fist_evolution",
+    "name": "Immortal Iron Fist",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.3,
+      "fireRate": 0.08,
+      "range": 0.05,
+      "critChance": 5
+    },
+    "canSeeStealth": false
+  },
+  "iron_man": {
+    "id": "iron_man_extremis",
+    "name": "Superior Iron Man",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.12,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "jean_grey": {
+    "id": "phoenix",
+    "name": "Phoenix",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.3,
+      "fireRate": 0.08,
+      "range": 0.05,
+      "critChance": 5
+    },
+    "canSeeStealth": false
+  },
+  "jeff_the_land_shark": {
+    "id": "jeff_the_land_shark_evolution",
+    "name": "Evolucion Jeff The Land Shark",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "jessica_jones": {
+    "id": "jessica_jones_evolution",
+    "name": "Evolucion Jessica Jones",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "jubilee": {
+    "id": "jubilee_evolution",
+    "name": "Evolucion Jubilee",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "loki": {
+    "id": "loki_evolution",
+    "name": "God of Stories",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.3,
+      "fireRate": 0.08,
+      "range": 0.05,
+      "critChance": 5
+    },
+    "canSeeStealth": false
+  },
+  "luke_cage": {
+    "id": "luke_cage_evolution",
+    "name": "Evolucion Luke Cage",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "luna_snow": {
+    "id": "luna_snow_evolution",
+    "name": "Evolucion Luna Snow",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "magik": {
+    "id": "magik_evolution",
+    "name": "Darkchylde",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.3,
+      "fireRate": 0.08,
+      "range": 0.05,
+      "critChance": 5
+    },
+    "canSeeStealth": false
+  },
+  "magneto": {
+    "id": "magneto_evolution",
+    "name": "Omega Magneto",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.3,
+      "fireRate": 0.08,
+      "range": 0.05,
+      "critChance": 5
+    },
+    "canSeeStealth": false
+  },
+  "mantis": {
+    "id": "mantis_evolution",
+    "name": "Evolucion Mantis",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "medusa": {
+    "id": "medusa_evolution",
+    "name": "Evolucion Medusa",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "mister_fantastic": {
+    "id": "mister_fantastic_evolution",
+    "name": "The Maker",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.3,
+      "fireRate": 0.08,
+      "range": 0.05,
+      "critChance": 5
+    },
+    "canSeeStealth": false
+  },
+  "moon_knight": {
+    "id": "moon_knight_evolution",
+    "name": "Fist of Khonshu",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.3,
+      "fireRate": 0.08,
+      "range": 0.05,
+      "critChance": 5
+    },
+    "canSeeStealth": false
+  },
+  "ms_marvel": {
+    "id": "ms_marvel_evolution",
+    "name": "Evolucion Ms Marvel",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "namor": {
+    "id": "namor_evolution",
+    "name": "Evolucion Namor",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "namora": {
+    "id": "namora_evolution",
+    "name": "Evolucion Namora",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "nick_fury": {
+    "id": "nick_fury_evolution",
+    "name": "Evolucion Nick Fury",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "nightcrawler": {
+    "id": "nightcrawler_evolution",
+    "name": "Evolucion Nightcrawler",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "nova": {
+    "id": "nova_evolution",
+    "name": "Evolucion Nova",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "okoye": {
+    "id": "okoye_evolution",
+    "name": "Evolucion Okoye",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "peni_parker": {
+    "id": "peni_parker_evolution",
+    "name": "Evolucion Peni Parker",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "psylocke": {
+    "id": "psylocke_evolution",
+    "name": "Evolucion Psylocke",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "punisher": {
+    "id": "punisher_evolution",
+    "name": "Evolucion Punisher",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "quake": {
+    "id": "quake_evolution",
+    "name": "Evolucion Quake",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "rocket_raccoon": {
+    "id": "rocket_raccoon_evolution",
+    "name": "Evolucion Rocket Raccoon",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "scarlet_witch": {
+    "id": "scarlet_witch_evolution",
+    "name": "Evolucion Scarlet Witch",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.22,
+      "fireRate": 0.06,
+      "range": 0.05,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "shang_chi": {
+    "id": "shang_chi_evolution",
+    "name": "Evolucion Shang Chi",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "she_hulk": {
+    "id": "she_hulk_evolution",
+    "name": "Evolucion She Hulk",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "shuri": {
+    "id": "shuri_evolution",
+    "name": "Evolucion Shuri",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "silver_surfer": {
+    "id": "silver_surfer_evolution",
+    "name": "Evolucion Silver Surfer",
+    "requiredLevel": 100,
+    "stats": {
+      "damage": 0.3,
+      "fireRate": 0.08,
+      "range": 0.05,
+      "critChance": 5
+    },
+    "canSeeStealth": false
+  },
+  "spiderman": {
+    "id": "iron_spider",
+    "name": "Iron Spider",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.14,
+      "fireRate": 0.04,
+      "range": 0.16,
+      "critChance": 3
+    },
+    "canSeeStealth": true
+  },
+  "squirrel_girl": {
+    "id": "squirrel_girl_evolution",
+    "name": "Evolucion Squirrel Girl",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "star_lord": {
+    "id": "star_lord_evolution",
+    "name": "Master of the Sun",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.3,
+      "fireRate": 0.08,
+      "range": 0.05,
+      "critChance": 5
+    },
+    "canSeeStealth": false
+  },
+  "storm": {
+    "id": "storm_evolution",
+    "name": "Evolucion Storm",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "the_hood": {
+    "id": "the_hood_evolution",
+    "name": "Evolucion The Hood",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "thor": {
+    "id": "thor_evolution",
+    "name": "King Thor",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.3,
+      "fireRate": 0.08,
+      "range": 0.05,
+      "critChance": 5
+    },
+    "canSeeStealth": false
+  },
+  "triton": {
+    "id": "triton_evolution",
+    "name": "Evolucion Triton",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "venom": {
+    "id": "venom_evolution",
+    "name": "Evolucion Venom",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.3,
+      "fireRate": 0.08,
+      "range": 0.05,
+      "critChance": 5
+    },
+    "canSeeStealth": false
+  },
+  "vision": {
+    "id": "vision_evolution",
+    "name": "Evolucion Vision",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "war_machine": {
+    "id": "war_machine_evolution",
+    "name": "Evolucion War Machine",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "wasp": {
+    "id": "wasp_evolution",
+    "name": "Evolucion Wasp",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "winter_soldier": {
+    "id": "winter_soldier_evolution",
+    "name": "Evolucion Winter Soldier",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "wolverine": {
+    "id": "wolverine_evolution",
+    "name": "Evolucion Wolverine",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "yelena_belova": {
+    "id": "yelena_belova_evolution",
+    "name": "Evolucion Yelena Belova",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "mbaku": {
+    "id": "mbaku_evolution",
+    "name": "Evolucion Mbaku",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "red_guardian": {
+    "id": "red_guardian_evolution",
+    "name": "Evolucion Red Guardian",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "korg": {
+    "id": "korg_evolution",
+    "name": "Evolucion Korg",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "nebula": {
+    "id": "nebula_evolution",
+    "name": "Evolucion Nebula",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "wong": {
+    "id": "wong_evolution",
+    "name": "Evolucion Wong",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "yondu": {
+    "id": "yondu_evolution",
+    "name": "Evolucion Yondu",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "maria_hill": {
+    "id": "maria_hill_evolution",
+    "name": "Evolucion Maria Hill",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "echo": {
+    "id": "echo_evolution",
+    "name": "Evolucion Echo",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "howard_the_duck": {
+    "id": "howard_the_duck_evolution",
+    "name": "Evolucion Howard The Duck",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "valkyrie": {
+    "id": "valkyrie_evolution",
+    "name": "Evolucion Valkyrie",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "rogue": {
+    "id": "rogue_evolution",
+    "name": "Evolucion Rogue",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "beast": {
+    "id": "beast_evolution",
+    "name": "Evolucion Beast",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "cable": {
+    "id": "cable_evolution",
+    "name": "Evolucion Cable",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "miles_morales": {
+    "id": "miles_morales_evolution",
+    "name": "Evolucion Miles Morales",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "sentry": {
+    "id": "sentry_evolution",
+    "name": "Evolucion Sentry",
+    "requiredLevel": 100,
+    "stats": {
+      "damage": 0.3,
+      "fireRate": 0.08,
+      "range": 0.05,
+      "critChance": 5
+    },
+    "canSeeStealth": false
+  },
+  "x_23": {
+    "id": "x_23_evolution",
+    "name": "Evolucion X 23",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "beta_ray_bill": {
+    "id": "beta_ray_bill_evolution",
+    "name": "Evolucion Beta Ray Bill",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "drax": {
+    "id": "drax_evolution",
+    "name": "Evolucion Drax",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "cosmo": {
+    "id": "cosmo_evolution",
+    "name": "Evolucion Cosmo",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "lady_sif": {
+    "id": "lady_sif_evolution",
+    "name": "Evolucion Lady Sif",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "heimdall": {
+    "id": "heimdall_evolution",
+    "name": "Evolucion Heimdall",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "white_tiger": {
+    "id": "white_tiger_evolution",
+    "name": "Evolucion White Tiger",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "tigra": {
+    "id": "tigra_evolution",
+    "name": "Evolucion Tigra",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "mockingbird": {
+    "id": "mockingbird_evolution",
+    "name": "Evolucion Mockingbird",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "kate_bishop": {
+    "id": "kate_bishop_evolution",
+    "name": "Evolucion Kate Bishop",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  },
+  "profesor_x": {
+    "id": "profesor_x_evolution",
+    "name": "Evolucion Profesor X",
+    "requiredLevel": 50,
+    "stats": {
+      "damage": 0.24,
+      "fireRate": 0.06,
+      "range": 0.04,
+      "critChance": 4
+    },
+    "canSeeStealth": false
+  }
+}

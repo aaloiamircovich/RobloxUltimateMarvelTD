@@ -10,6 +10,7 @@ local Shared = ReplicatedStorage.Shared
 local Data = Shared.Data
 local Oleadas = require(Shared.Oleadas)
 local Despliegue = require(Shared.Despliegue)
+local Progresion = require(Shared.Progresion)
 local Mapa = require(Shared.Mapa)
 local Arco = require(Shared.Modelos.Arco)
 
@@ -221,15 +222,17 @@ function ACCIONES.colocar(heroeId: string, x: number, y: number)
 		return "Ese héroe no está en tu escuadrón"
 	end
 	local config = heroes[heroeId]
-	local err, cx, cy = Despliegue.error(config, x, y, NIVEL, rutaPx, listaUnidades())
+	local err, cx, cy = Despliegue.error(Progresion.paraDespliegue(config, 1), x, y, NIVEL, rutaPx, listaUnidades())
 	if err then
 		return err
 	end
 	local modelo, raiz, disparo = crearModelo(config)
-	local u = { uid = siguienteUid, heroe = heroeId, x = cx, y = cy, config = config, modelo = modelo, raiz = raiz, espera = 0, disparo = disparo }
+	-- shortcut: el nivel vale sólo para esta partida; en el 3D se guarda en el perfil (falta DataStore).
+	local u = { uid = siguienteUid, heroe = heroeId, x = cx, y = cy, config = config, nivel = 1, stats = Progresion.stats(config, 1), modelo = modelo, raiz = raiz, espera = 0, disparo = disparo }
 	siguienteUid += 1
 	modelo:SetAttribute("Uid", u.uid)
 	modelo:SetAttribute("Heroe", heroeId)
+	modelo:SetAttribute("Nivel", 1)
 	ubicar(u)
 	modelo.Parent = carpetaUnidades
 	table.insert(unidades, u)
@@ -241,7 +244,7 @@ function ACCIONES.mover(uid: number, x: number, y: number)
 	if not u then
 		return "Héroe no disponible"
 	end
-	local err, cx, cy = Despliegue.error(u.config, x, y, NIVEL, rutaPx, listaUnidades(), uid)
+	local err, cx, cy = Despliegue.error(Progresion.paraDespliegue(u.config, u.nivel), x, y, NIVEL, rutaPx, listaUnidades(), uid)
 	if err then
 		return err
 	end
@@ -257,6 +260,31 @@ function ACCIONES.retirar(uid: number)
 	end
 	table.remove(unidades, i)
 	u.modelo:Destroy()
+	return nil
+end
+
+function ACCIONES.mejorar(uid: number)
+	local u = buscarUnidad(uid)
+	if not u then
+		return "Héroe no disponible"
+	end
+	local costo = Progresion.costo(u.nivel)
+	if not costo then
+		return "Nivel máximo"
+	end
+	local creditos = estado:GetAttribute("Creditos")
+	if creditos < costo then
+		return `Faltan {costo - creditos} créditos`
+	end
+	local evolucionaba = Progresion.evolucion(u.heroe, u.nivel)
+	u.nivel += 1
+	u.stats = Progresion.stats(u.config, u.nivel)
+	u.modelo:SetAttribute("Nivel", u.nivel) -- antes que los créditos: el cliente refresca al cambiar Estado
+	fijar("Creditos", creditos - costo)
+	local evo = Progresion.evolucion(u.heroe, u.nivel)
+	if evo and not evolucionaba then
+		fijar("Mensaje", `¡{u.config.name} evolucionó: {evo.name}!`)
+	end
 	return nil
 end
 
@@ -287,7 +315,7 @@ accion.OnServerInvoke = function(_jugador, nombre, a, b, c)
 	if nombre == "mover" and not (type(a) == "number" and type(b) == "number" and type(c) == "number") then
 		return "Datos inválidos"
 	end
-	if nombre == "retirar" and type(a) ~= "number" then
+	if (nombre == "retirar" or nombre == "mejorar") and type(a) ~= "number" then
 		return "Datos inválidos"
 	end
 	for _, v in { a, b, c } do
@@ -325,15 +353,15 @@ local function actualizarUnidad(u, dt)
 	local objetivo
 	for _, e in enemigos do
 		local ex, ey = Mapa.aPixeles(e.cuerpo.Position)
-		local visible = not e.config.stealth or u.config.canSeeStealth
-		if visible and Despliegue.enAlcance(u.x, u.y, ex, ey, u.config.range, u.config.rangePattern) and (not objetivo or e.avance > objetivo.avance) then
+		local visible = not e.config.stealth or u.stats.canSeeStealth
+		if visible and Despliegue.enAlcance(u.x, u.y, ex, ey, u.stats.range, u.config.rangePattern) and (not objetivo or e.avance > objetivo.avance) then
 			objetivo = e
 		end
 	end
 	if not objetivo then
 		return
 	end
-	u.espera = 1 / u.config.fireRate
+	u.espera = 1 / u.stats.fireRate
 	local destino = objetivo.cuerpo.Position
 	local p = u.raiz.Position
 	u.modelo:PivotTo(CFrame.lookAt(p, Vector3.new(destino.X, p.Y, destino.Z)))
@@ -341,7 +369,9 @@ local function actualizarUnidad(u, dt)
 		u.disparo:Play(0.05, 1, 2)
 	end
 	flecha(p + Vector3.new(0, 1, 0), destino)
-	danar(objetivo, u.config.damage, u.config.category)
+	-- Crítico como Hero.attack del 2D: probabilidad en %, daño ×critDamage.
+	local critico = math.random() * 100 < u.stats.critChance
+	danar(objetivo, if critico then u.stats.damage * u.stats.critDamage else u.stats.damage, u.config.category)
 end
 
 RunService.Heartbeat:Connect(function(dt)

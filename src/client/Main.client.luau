@@ -7,6 +7,7 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Mapa = require(Shared.Mapa)
 local Despliegue = require(Shared.Despliegue)
+local Progresion = require(Shared.Progresion)
 local heroes = require(Shared.Data.heroes)
 local NIVEL = require(Shared.Data.levels)[1]
 local rutaPx = Mapa.rutaPixeles(NIVEL)
@@ -103,9 +104,19 @@ end
 --------------------------------------------------------------------------------
 local modo = nil
 local botonesHeroe = {}
-local botonMover, botonRetirar, botonIniciar
+local botonMover, botonRetirar, botonMejorar, botonIniciar
+local unidadDe
 
 local function refrescar()
+	local seleccion = modo and modo.uid and unidadDe(modo.uid)
+	if seleccion then
+		local nivel = seleccion:GetAttribute("Nivel") or 1
+		local costo = Progresion.costo(nivel)
+		botonMejorar.Text = if costo then `Mejorar Nv {nivel}→{nivel + 1}\n💰 {costo}` else `Nivel {nivel} (máximo)`
+		botonMejorar.AutoButtonColor = costo ~= nil and estado:GetAttribute("Creditos") >= costo
+		botonMejorar.BackgroundColor3 = if botonMejorar.AutoButtonColor then Color3.fromRGB(150, 110, 30) else Color3.fromRGB(60, 60, 66)
+	end
+	botonMejorar.Visible = seleccion ~= nil
 	for id, b in botonesHeroe do
 		b.BackgroundColor3 = if modo and modo.tipo == "colocar" and modo.heroe == id then Color3.fromRGB(60, 120, 200) else Color3.fromRGB(40, 44, 60)
 	end
@@ -126,7 +137,7 @@ for _, id in string.split(estado:GetAttribute("Escuadron") or "", ",") do
 	end
 end
 
-local function unidadDe(uid: number): Model?
+function unidadDe(uid: number): Model?
 	for _, m in workspace:WaitForChild("Unidades"):GetChildren() do
 		if m:GetAttribute("Uid") == uid then
 			return m
@@ -146,6 +157,12 @@ botonRetirar = boton("Retirar (sin reembolso)", barra, function()
 	if modo and modo.uid then
 		avisar(accion:InvokeServer("retirar", modo.uid))
 		modo = nil
+		refrescar()
+	end
+end)
+botonMejorar = boton("Mejorar", barra, function()
+	if modo and modo.uid then
+		avisar(accion:InvokeServer("mejorar", modo.uid))
 		refrescar()
 	end
 end)
@@ -189,7 +206,9 @@ RunService.RenderStepped:Connect(function()
 		return
 	end
 	local x, y = Mapa.aPixeles(mouse.Hit.Position)
-	local err, cx, cy = Despliegue.error(heroes[heroeId], x, y, NIVEL, rutaPx, unidadesActuales(), if modo.tipo == "mover" then modo.uid else nil)
+	local moviendo = modo.tipo == "mover" and unidadDe(modo.uid)
+	local config = Progresion.paraDespliegue(heroes[heroeId], if moviendo then moviendo:GetAttribute("Nivel") or 1 else 1)
+	local err, cx, cy = Despliegue.error(config, x, y, NIVEL, rutaPx, unidadesActuales(), if moviendo then modo.uid else nil)
 	previa.Position = Mapa.aMundo(cx, cy) + Vector3.new(0, 0.4, 0)
 	previa.Color = if err then Color3.fromRGB(230, 70, 70) else Color3.fromRGB(70, 230, 110)
 end)
