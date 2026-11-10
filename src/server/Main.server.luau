@@ -371,20 +371,43 @@ end
 --------------------------------------------------------------------------------
 -- Ataque de las unidades
 --------------------------------------------------------------------------------
-local function flecha(desde: Vector3, hasta: Vector3)
+local function pieza(tam: Vector3, color: Color3, cf: CFrame): Part
 	local f = Instance.new("Part")
 	f.Anchored, f.CanCollide, f.CanQuery = true, false, false
-	f.Size = Vector3.new(0.15, 0.15, 1.6)
-	f.Color = Color3.fromRGB(150, 80, 230)
+	f.Size = tam
+	f.Color = color
 	f.Material = Enum.Material.Neon
-	f.CFrame = CFrame.lookAt(desde, hasta)
+	f.CFrame = cf
 	f.Parent = workspace
-	local t = TweenService:Create(f, TweenInfo.new(0.12, Enum.EasingStyle.Linear), { CFrame = CFrame.lookAt(hasta, hasta + (hasta - desde)) })
+	return f
+end
+
+local function animarYBorrar(f: Part, segundos: number, meta)
+	local t = TweenService:Create(f, TweenInfo.new(segundos, Enum.EasingStyle.Quad), meta)
 	t.Completed:Once(function()
 		f:Destroy()
 	end)
 	t:Play()
 end
+
+-- Efecto visual del ataque según el atributo Efecto de la plantilla del héroe.
+local EFECTOS = {
+	flecha = function(desde: Vector3, hasta: Vector3)
+		local f = pieza(Vector3.new(0.15, 0.15, 1.6), Color3.fromRGB(150, 80, 230), CFrame.lookAt(desde, hasta))
+		animarYBorrar(f, 0.12, { CFrame = CFrame.lookAt(hasta, hasta + (hasta - desde)) })
+	end,
+	rayo = function(desde: Vector3, hasta: Vector3)
+		local largo = (hasta - desde).Magnitude
+		local f = pieza(Vector3.new(0.2, 0.2, largo), Color3.fromRGB(90, 190, 255), CFrame.lookAt(desde, hasta) * CFrame.new(0, 0, -largo / 2))
+		animarYBorrar(f, 0.15, { Transparency = 1, Size = Vector3.new(0.05, 0.05, largo) })
+	end,
+	impacto = function(_desde: Vector3, hasta: Vector3)
+		local f = pieza(Vector3.new(1, 1, 1), Color3.fromRGB(190, 130, 80), CFrame.new(hasta))
+		f.Shape = Enum.PartType.Ball
+		f.Material = Enum.Material.Slate
+		animarYBorrar(f, 0.25, { Transparency = 1, Size = Vector3.new(4, 4, 4) })
+	end,
+}
 
 local function actualizarUnidad(u, dt)
 	u.espera -= dt
@@ -410,7 +433,8 @@ local function actualizarUnidad(u, dt)
 	if u.ataque then
 		u.ataque:Play(0.05, 1, u.velocidadAtaque)
 	end
-	flecha(p + Vector3.new(0, 1, 0), destino)
+	local efecto = EFECTOS[u.modelo:GetAttribute("Efecto")] or EFECTOS.flecha
+	efecto(p + Vector3.new(0, 1, 0), destino)
 	-- Crítico como Hero.attack del 2D: probabilidad en %, daño ×critDamage.
 	local critico = math.random() * 100 < u.stats.critChance
 	danar(objetivo, if critico then u.stats.damage * u.stats.critDamage else u.stats.damage, u.config.category)

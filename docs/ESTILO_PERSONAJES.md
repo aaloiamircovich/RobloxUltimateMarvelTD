@@ -28,6 +28,6 @@ Hechos (facción Base Avengers): `ultron_drone`, `doombot`, `aim_scientist`, `ch
 
 ## Héroes en el juego
 
-Plantillas en `ServerStorage.Plantillas.Heroes/<id del héroe>` (en el lugar, no en Git): el R15 de `auto_setup_avatar` con atributos opcionales `AnimacionAtaque` (rbxassetid) y `VelocidadAtaque`. El servidor posiciona por la `HumanoidRootPart`, no por el pivote del modelo (están desfasados ~2 studs). Sin plantilla, el héroe aparece como bloque.
+Plantillas en `ServerStorage.Plantillas.Heroes/<id del héroe>` (en el lugar, no en Git): el R15 de `auto_setup_avatar` con atributos opcionales `AnimacionAtaque` (rbxassetid), `VelocidadAtaque` y `Efecto` (`flecha`, `rayo` o `impacto`). El servidor posiciona por la `HumanoidRootPart`, no por el pivote del modelo (están desfasados ~2 studs). Sin plantilla, el héroe aparece como bloque.
 
-Hechos: `hawkeye` (arco y disparo), `black_widow` (ojos verdes, bastones en la espalda), `korg` (roca con cara anime).
+Hechos: `hawkeye` (arco y disparo, flecha), `black_widow` (ojos verdes, golpe cruzado con bastones, rayo), `korg` (roca con cara anime, puñetazo, impacto). Las animaciones de la IA duran ~2 s y se reproducen ×2.
