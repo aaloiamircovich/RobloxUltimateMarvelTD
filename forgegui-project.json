@@ -335,6 +335,30 @@
       "moderation": "approved",
       "studio_path": "ServerStorage.Plantillas.Hub.estacion",
       "notas": "sin giro"
+    },
+    {
+      "id": "observatorio_bifrost",
+      "kind": "model_3d",
+      "request_id": "umtd-hub-observatorio_bifrost-v1",
+      "job_id": "1df4b6a0-901b-4186-a44a-2487ad902b8e",
+      "delivery": "publish",
+      "status": "inserted",
+      "roblox_asset_id": "86138645874415",
+      "publication_id": "0572becf-adaf-422d-9292-08584126e3c9",
+      "moderation": "approved",
+      "studio_path": "ServerStorage.Plantillas.Hub.observatorio_bifrost",
+      "notas": "venía girado 68°, enderezado a 90°"
+    },
+    {
+      "id": "sello_portal",
+      "kind": "image_gui",
+      "request_id": "umtd-hub-sello_portal-v1",
+      "job_id": "9fa8e4fb-223b-4224-8f55-4371a833b2f5",
+      "status": "inserted",
+      "roblox_asset_id": "132807365750031",
+      "moderation": "approved",
+      "preparacion": "luminance_to_alpha (blanco) + contain 1024x1024; el juego lo tiñe naranja",
+      "notas": "la imagen original traía manchas verdes"
     }
   ],
   "notas_importacion": "Los modelos de ForgeGUI llegan con un giro de ~10° alrededor de Y; enderezar al múltiplo de 90° más cercano antes de guardarlos como plantilla."

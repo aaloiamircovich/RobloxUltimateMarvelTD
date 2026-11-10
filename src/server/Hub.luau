@@ -20,6 +20,8 @@ local TEXTURAS = {
 	madera = { id = "90645111155656", base = Enum.Material.WoodPlanks, tile = 12 },
 	roca = { id = "106184400863615", base = Enum.Material.Rock, tile = 12 },
 }
+local SELLO = "132807365750031" -- imagen del sello del portal (ForgeGUI)
+Hub.sellos = {}
 local CIELO = { Bk = "100762723591606", Dn = "83631052228499", Ft = "97687357399973", Lf = "119663534279596", Rt = "131553877257439", Up = "102386796755504" }
 
 local ISLAS = {
@@ -98,6 +100,8 @@ Hub.ESTACIONES = {
 local HITOS = {
 	{ id = "torre_vengadores", isla = "central", x = 0, z = -4, alto = 34, huella = 10, color = "cfd8e3" },
 	{ id = "castillo_asgard", isla = "asgard", x = 0, z = -10, alto = 30, huella = 22, color = "e0b84a" },
+	-- Observatorio del Bifrost: al costado de donde llega el puente, mirando hacia él.
+	{ id = "observatorio_bifrost", isla = "asgard", x = 13, z = 18, alto = 10, huella = 9, color = "e0b84a", mirar = { x = 0, z = 28 } },
 	{ id = "palacio_wakanda", isla = "wakanda", x = -12, z = 0, alto = 18, huella = 16, color = "4b2d6b" },
 	{ id = "empire_state", isla = "nuevaYork", x = 12, z = -10, alto = 40, huella = 9, color = "b7b2a6" },
 	{ id = "daily_bugle", isla = "nuevaYork", x = 12, z = 12, alto = 22, huella = 10, color = "8a6f5a" },
@@ -233,8 +237,24 @@ local function puente(padre, a: Vector3, b: Vector3, estilo: string)
 			local piso = parte(m, "ffffff", cf, Vector3.new(ancho, 0.4, paso + 0.05))
 			piso.Transparency = 1
 		elseif estilo == "bifrost" then
+			-- Losas de luz: Hub.animar corre el arcoíris a lo largo del puente.
 			local tabla = parte(m, ARCOIRIS[i % #ARCOIRIS + 1], cf, Vector3.new(ancho, 0.5, paso + 0.05), Enum.Material.Neon)
-			tabla.Transparency = 0.15
+			tabla.Transparency = 0.25
+			tabla.Name = "Bifrost"
+			tabla:SetAttribute("Indice", i)
+			if i % 3 == 0 then
+				local brillo = Instance.new("ParticleEmitter")
+				brillo.Color = ColorSequence.new(Color3.new(1, 1, 1))
+				brillo.LightEmission = 1
+				brillo.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.3, 0.2), NumberSequenceKeypoint.new(1, 0) })
+				brillo.Transparency = NumberSequence.new(0.2)
+				brillo.Lifetime = NumberRange.new(0.8, 1.6)
+				brillo.Rate = 6
+				brillo.Speed = NumberRange.new(1, 2.5)
+				brillo.EmissionDirection = Enum.NormalId.Top
+				brillo.SpreadAngle = Vector2.new(25, 25)
+				brillo.Parent = tabla
+			end
 		elseif estilo == "selva" then
 			parte(m, if i % 2 == 0 then "8a5a33" else "7a4e2b", cf, Vector3.new(ancho, 0.4, paso - 0.25), Enum.Material.WoodPlanks)
 			if i % 3 == 0 then
@@ -288,23 +308,59 @@ end
 local function portal(padre, pos: Vector3, mira: Vector3, destino: CFrame)
 	local m = Instance.new("Model")
 	m.Name = "Portal"
-	local cf = CFrame.lookAt(pos + Vector3.new(0, 5, 0), mira + Vector3.new(0, 5, 0))
-	local aro = parte(m, "ff6a00", cf * CFrame.Angles(0, math.rad(90), 0), Vector3.new(0.6, 9.5, 9.5), Enum.Material.Neon)
-	aro.Shape = Enum.PartType.Cylinder
-	local centro = parte(m, "ff7a1a", cf * CFrame.Angles(0, math.rad(90), 0), Vector3.new(0.8, 8.6, 8.6), Enum.Material.Neon)
+	local radio = 4.6
+	local cf = CFrame.lookAt(pos + Vector3.new(0, radio + 0.6, 0), mira + Vector3.new(0, radio + 0.6, 0))
+	-- Centro: velo naranja translúcido que se atraviesa.
+	local centro = parte(m, "ff7a1a", cf * CFrame.Angles(0, math.rad(90), 0), Vector3.new(0.3, radio * 2 - 0.4, radio * 2 - 0.4), Enum.Material.Neon)
 	centro.Shape = Enum.PartType.Cylinder
-	centro.Transparency = 0.65
+	centro.Transparency = 0.9
 	centro.CanCollide = false
-	aro.CanCollide = false
-	local chispas = Instance.new("ParticleEmitter")
-	chispas.Color = ColorSequence.new(Color3.fromHex("ffb84d"))
-	chispas.LightEmission = 1
-	chispas.Size = NumberSequence.new(0.25, 0)
-	chispas.Lifetime = NumberRange.new(0.5, 1)
-	chispas.Rate = 60
-	chispas.Speed = NumberRange.new(2, 4)
-	chispas.SpreadAngle = Vector2.new(180, 180)
-	chispas.Parent = aro
+	-- Sello místico girando en las dos caras (imagen generada con ForgeGUI).
+	local lamina = parte(m, "ffffff", cf, Vector3.new(radio * 2.3, radio * 2.3, 0.05))
+	lamina.Transparency, lamina.CanCollide, lamina.CanQuery, lamina.CanTouch = 1, false, false, false
+	for _, cara in { Enum.NormalId.Front, Enum.NormalId.Back } do
+		local gui = Instance.new("SurfaceGui")
+		gui.Face = cara
+		gui.LightInfluence = 0
+		gui.Brightness = 2
+		gui.PixelsPerStud = 40
+		local sello = Instance.new("ImageLabel")
+		sello.Name = "Sello"
+		sello.BackgroundTransparency = 1
+		sello.Size = UDim2.fromScale(1, 1)
+		sello.Image = "rbxassetid://" .. SELLO
+		sello.ImageColor3 = Color3.fromHex("ffb347")
+		sello.Parent = gui
+		gui.Parent = lamina
+		table.insert(Hub.sellos, sello)
+	end
+	-- Anillo de chispas: emisores sobre la circunferencia que despiden chispas tangentes, como un portal de hechicero.
+	-- El aro es invisible: sólo sostiene los emisores; el borde lo dibujan las chispas.
+	local aro = parte(m, "ff6a00", cf * CFrame.Angles(0, math.rad(90), 0), Vector3.new(0.25, radio * 2 + 0.3, radio * 2 + 0.3))
+	aro.Transparency, aro.CanCollide, aro.CanQuery, aro.CanTouch = 1, false, false, false
+	for k = 0, 23 do
+		local a = k / 24 * math.pi * 2
+		local punto = Instance.new("Attachment")
+		punto.CFrame = CFrame.new(0, math.cos(a) * radio, math.sin(a) * radio) * CFrame.Angles(a, 0, 0)
+		punto.Parent = aro
+		local chispas = Instance.new("ParticleEmitter")
+		chispas.Color = ColorSequence.new(Color3.fromHex("ffd27a"), Color3.fromHex("ff5a00"))
+		chispas.LightEmission = 1
+		chispas.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 0) })
+		chispas.Lifetime = NumberRange.new(0.3, 0.6)
+		chispas.Rate = 40
+		chispas.Speed = NumberRange.new(6, 10)
+		chispas.Drag = 3
+		chispas.Acceleration = Vector3.new(0, -6, 0)
+		chispas.EmissionDirection = Enum.NormalId.Front
+		chispas.SpreadAngle = Vector2.new(12, 12)
+		chispas.Parent = punto
+	end
+	local luz = Instance.new("PointLight")
+	luz.Color = Color3.fromHex("ff8a2a")
+	luz.Range = 14
+	luz.Brightness = 2
+	luz.Parent = centro
 	local recien = {}
 	centro.Touched:Connect(function(otro)
 		local personaje = otro.Parent
@@ -388,7 +444,9 @@ end
 local function hito(padre, h)
 	local datos = ISLAS[h.isla]
 	local base = datos.pos + Vector3.new(h.x, 0, h.z)
-	local mira = CFrame.lookAt(base, Vector3.new(datos.pos.X, base.Y, datos.pos.Z))
+	-- Mira al centro de su isla, o al punto relativo `h.mirar` si lo tiene.
+	local objetivo = if h.mirar then datos.pos + Vector3.new(h.mirar.x, 0, h.mirar.z) else datos.pos
+	local mira = CFrame.lookAt(base, Vector3.new(objetivo.X, base.Y, objetivo.Z))
 	local modelo = plantilla(h.id)
 	if modelo then
 		local m = clonar(modelo, "Y", h.alto)
@@ -431,6 +489,7 @@ function Hub.construir(alUsar: (Player, string) -> ())
 	end
 	local hub = Instance.new("Model")
 	hub.Name = "Hub"
+	Hub.sellos = {}
 	ambientar()
 
 	for _, datos in ISLAS do
@@ -491,19 +550,33 @@ function Hub.construir(alUsar: (Player, string) -> ())
 	Hub.aparicion = aparicion
 
 	hub.Parent = workspace
-	Hub.orbes = {}
+	Hub.orbes, Hub.bifrost = {}, {}
 	for _, d in hub:GetDescendants() do
 		if d.Name == "Orbe" then
 			table.insert(Hub.orbes, d)
+		elseif d.Name == "Bifrost" then
+			table.insert(Hub.bifrost, d)
 		end
 	end
 	return hub
 end
 
--- Gira los orbes y devuelve a la aparición a quien cae de las islas (llamar en Heartbeat).
+-- Gira orbes y sellos, corre el arcoíris del Bifrost y devuelve a la aparición a quien cae (llamar en Heartbeat).
+local reloj, ultimoBifrost = 0, 0
 function Hub.animar(_hub: Model, dt: number)
+	reloj += dt
 	for _, o in Hub.orbes do
 		o.CFrame *= CFrame.Angles(0, dt * 1.5, 0)
+	end
+	for i, s in Hub.sellos do
+		s.Rotation = (reloj * 25 * (if i % 2 == 0 then -1 else 1)) % 360 -- la cara de atrás gira al revés para verse igual
+	end
+	-- shortcut: el arcoíris se actualiza 10 veces por segundo desde el servidor; pasarlo al cliente si pesa en la red.
+	if reloj - ultimoBifrost > 0.1 then
+		ultimoBifrost = reloj
+		for _, tabla in Hub.bifrost do
+			tabla.Color = Color3.fromHSV((tabla:GetAttribute("Indice") / 24 - reloj * 0.15) % 1, 0.75, 1)
+		end
 	end
 	for _, j in Players:GetPlayers() do
 		local raiz = j.Character and j.Character:FindFirstChild("HumanoidRootPart")
