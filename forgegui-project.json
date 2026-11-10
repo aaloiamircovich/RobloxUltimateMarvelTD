@@ -257,6 +257,85 @@
       "moderation": "approved",
       "status": "inserted",
       "notas": "Lf y Rt intercambiados al asignarlos al Sky (Hub.luau)"
+    },
+    {
+      "id": "tramo_selva",
+      "kind": "model_3d",
+      "request_id": "umtd-hub-tramo_selva-v1",
+      "job_id": "cfafe7d0-00d6-4322-8091-4df087d5b1f6",
+      "delivery": "publish",
+      "status": "inserted",
+      "destino": "ServerStorage.Plantillas.Hub/tramo_selva",
+      "roblox_asset_id": "98856267957479",
+      "moderation": "approved",
+      "studio_path": "ServerStorage.Plantillas.Hub.tramo_selva",
+      "notas": "recorrido venía en X: girado 90° para que el largo quede en Z"
+    },
+    {
+      "id": "tramo_telarana",
+      "kind": "model_3d",
+      "request_id": "umtd-hub-tramo_telarana-v1",
+      "job_id": "f221c2c1-c45a-4b5f-9b45-1f5c211b425b",
+      "delivery": "publish",
+      "status": "inserted",
+      "destino": "ServerStorage.Plantillas.Hub/tramo_telarana",
+      "roblox_asset_id": "101700862844012",
+      "moderation": "approved",
+      "studio_path": "ServerStorage.Plantillas.Hub.tramo_telarana",
+      "notas": "recorrido venía en X: girado 90° para que el largo quede en Z"
+    },
+    {
+      "id": "tramo_baxter",
+      "kind": "model_3d",
+      "request_id": "umtd-hub-tramo_baxter-v1",
+      "job_id": "e2663aff-4a1c-4999-8b0b-45bffe1fa8cd",
+      "delivery": "publish",
+      "status": "inserted",
+      "destino": "ServerStorage.Plantillas.Hub/tramo_baxter",
+      "roblox_asset_id": "138590715617802",
+      "moderation": "approved",
+      "studio_path": "ServerStorage.Plantillas.Hub.tramo_baxter",
+      "notas": "recorrido venía en X: girado 90° para que el largo quede en Z"
+    },
+    {
+      "id": "arbol_jardin",
+      "kind": "model_3d",
+      "request_id": "umtd-hub-arbol_jardin-v1",
+      "job_id": "3e3e7547-84fa-4655-8cab-4429e733d688",
+      "delivery": "publish",
+      "status": "inserted",
+      "destino": "ServerStorage.Plantillas.Hub/arbol_jardin",
+      "roblox_asset_id": "117601857630879",
+      "moderation": "approved",
+      "studio_path": "ServerStorage.Plantillas.Hub.arbol_jardin",
+      "notas": "sin giro"
+    },
+    {
+      "id": "arbol_selva",
+      "kind": "model_3d",
+      "request_id": "umtd-hub-arbol_selva-v1",
+      "job_id": "95b8c81b-e3e1-45c1-9ee5-2497b26dda44",
+      "delivery": "publish",
+      "status": "inserted",
+      "destino": "ServerStorage.Plantillas.Hub/arbol_selva",
+      "roblox_asset_id": "94446023766059",
+      "moderation": "approved",
+      "studio_path": "ServerStorage.Plantillas.Hub.arbol_selva",
+      "notas": "sin giro"
+    },
+    {
+      "id": "estacion",
+      "kind": "model_3d",
+      "request_id": "umtd-hub-estacion-v1",
+      "job_id": "643d9ce6-a8b0-4912-9f95-ec8a44a1d69e",
+      "delivery": "publish",
+      "status": "inserted",
+      "destino": "ServerStorage.Plantillas.Hub/estacion",
+      "roblox_asset_id": "75613883356766",
+      "moderation": "approved",
+      "studio_path": "ServerStorage.Plantillas.Hub.estacion",
+      "notas": "sin giro"
     }
-  ]
+  ],
+  "notas_importacion": "Los modelos de ForgeGUI llegan con un giro de ~10° alrededor de Y; enderezar al múltiplo de 90° más cercano antes de guardarlos como plantilla."
 }

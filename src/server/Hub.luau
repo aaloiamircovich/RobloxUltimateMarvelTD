@@ -172,7 +172,27 @@ local function isla(padre, datos)
 	m.Parent = padre
 end
 
+-- Modelo generado de ServerStorage.Plantillas.Hub (mira a −Z, pivote en el centro de su caja), o nil.
+local function plantilla(id: string): Model?
+	local p = ServerStorage:FindFirstChild("Plantillas")
+	local h = p and p:FindFirstChild("Hub")
+	return h and h:FindFirstChild(id)
+end
+
+-- Clon de una plantilla escalado para que su eje mida `medida` (X, Y o Z del tamaño).
+local function clonar(m: Model, eje: string, medida: number): Model
+	local c = m:Clone()
+	c:ScaleTo(c:GetScale() * medida / c:GetExtentsSize()[eje])
+	for _, d in c:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.Anchored = true
+		end
+	end
+	return c
+end
+
 -- Puente entre dos puntos del borde de las islas, con barandas invisibles para no caerse.
+-- Con plantilla "tramo_<estilo>", el piso es invisible y los tramos generados lo cubren.
 local ARCOIRIS = { "ff4d4d", "ff9f40", "ffe14d", "5cff7a", "4dc3ff", "6b6bff", "c46bff" }
 local function puente(padre, a: Vector3, b: Vector3, estilo: string)
 	local m = Instance.new("Model")
@@ -181,12 +201,38 @@ local function puente(padre, a: Vector3, b: Vector3, estilo: string)
 	local ancho = if estilo == "bifrost" then 7 else 6
 	local paso = 2
 	local n = math.ceil(largo / paso)
+	local tramo = plantilla("tramo_" .. estilo)
+	local function curva(t: number): Vector3
+		local caida = if estilo == "selva" or estilo == "telarana" then -math.sin(math.pi * t) * 2.5 else 0
+		return a:Lerp(b, t) + Vector3.new(0, caida - 0.25, 0)
+	end
+	if tramo then
+		local muestra = clonar(tramo, "X", ancho + 1)
+		local largoTramo = muestra:GetExtentsSize().Z * 0.96 -- leve solape entre tramos
+		local alto = muestra:GetExtentsSize().Y
+		local cantidad = math.ceil(largo / largoTramo)
+		for k = 0, cantidad - 1 do
+			local t0, t1 = k / cantidad, (k + 1) / cantidad
+			local p0, p1 = curva(t0), curva(t1)
+			local c = if k == 0 then muestra else muestra:Clone()
+			-- El piso del tramo queda al ras del piso invisible.
+			c:PivotTo(CFrame.lookAt((p0 + p1) / 2, (p0 + p1) / 2 + (p1 - p0)) * CFrame.new(0, alto / 2 - 0.2, 0))
+			for _, d in c:GetDescendants() do
+				if d:IsA("BasePart") then
+					d.CanCollide, d.CanQuery = false, false
+				end
+			end
+			c.Parent = m
+		end
+	end
 	for i = 0, n - 1 do
 		local t = (i + 0.5) / n
-		local caida = if estilo == "selva" or estilo == "telarana" then -math.sin(math.pi * t) * 2.5 else 0
-		local p = a:Lerp(b, t) + Vector3.new(0, caida - 0.25, 0)
+		local p = curva(t)
 		local cf = CFrame.lookAt(p, p + (b - a))
-		if estilo == "bifrost" then
+		if tramo then
+			local piso = parte(m, "ffffff", cf, Vector3.new(ancho, 0.4, paso + 0.05))
+			piso.Transparency = 1
+		elseif estilo == "bifrost" then
 			local tabla = parte(m, ARCOIRIS[i % #ARCOIRIS + 1], cf, Vector3.new(ancho, 0.5, paso + 0.05), Enum.Material.Neon)
 			tabla.Transparency = 0.15
 		elseif estilo == "selva" then
@@ -284,11 +330,18 @@ local function estacion(padre, e, alUsar)
 	base.Name = "Base"
 	disco(m, color, pos + Vector3.new(0, 0.39, 0), 2.9, 0.035, Enum.Material.Neon)
 	-- El marco queda detrás de la base (lejos del centro de la isla) y mira hacia el centro.
-	parte(m, "172e48", cf * CFrame.new(0, 2.8, 1.7), Vector3.new(6, 5.6, 0.7))
-	for _, lado in { -1, 1 } do
-		parte(m, color, cf * CFrame.new(lado * 2.5, 2.6, 1.22), Vector3.new(0.13, 4.7, 0.12), Enum.Material.Neon)
+	local marco = plantilla("estacion")
+	if marco then
+		local c = clonar(marco, "Y", 6)
+		c:PivotTo(cf * CFrame.new(0, 3, 1.4))
+		c.Parent = m
+	else
+		parte(m, "172e48", cf * CFrame.new(0, 2.8, 1.7), Vector3.new(6, 5.6, 0.7))
+		for _, lado in { -1, 1 } do
+			parte(m, color, cf * CFrame.new(lado * 2.5, 2.6, 1.22), Vector3.new(0.13, 4.7, 0.12), Enum.Material.Neon)
+		end
+		parte(m, color, cf * CFrame.new(0, 5, 1.22), Vector3.new(5.1, 0.14, 0.12), Enum.Material.Neon)
 	end
-	parte(m, color, cf * CFrame.new(0, 5, 1.22), Vector3.new(5.1, 0.14, 0.12), Enum.Material.Neon)
 	local aro = parte(m, color, cf * CFrame.new(0, 2.7, 1.16) * CFrame.Angles(0, math.rad(90), 0), Vector3.new(0.1, 3.3, 3.3), Enum.Material.Neon)
 	aro.Shape = Enum.PartType.Cylinder
 	local orbe = parte(m, color, cf * CFrame.new(0, 2.7, 0.9) * CFrame.Angles(math.rad(45), 0, math.rad(45)), Vector3.new(0.9, 0.9, 0.9), Enum.Material.Neon)
@@ -336,12 +389,9 @@ local function hito(padre, h)
 	local datos = ISLAS[h.isla]
 	local base = datos.pos + Vector3.new(h.x, 0, h.z)
 	local mira = CFrame.lookAt(base, Vector3.new(datos.pos.X, base.Y, datos.pos.Z))
-	local plantillas = ServerStorage:FindFirstChild("Plantillas")
-	local carpeta = plantillas and plantillas:FindFirstChild("Hub")
-	local plantilla = carpeta and carpeta:FindFirstChild(h.id)
-	if plantilla then
-		local m = plantilla:Clone()
-		m:ScaleTo(m:GetScale() * h.alto / m:GetExtentsSize().Y)
+	local modelo = plantilla(h.id)
+	if modelo then
+		local m = clonar(modelo, "Y", h.alto)
 		-- La plantilla mira a −Z con el pivote en el centro de la caja: apoyarla en el piso.
 		m:PivotTo(mira * CFrame.new(0, m:GetExtentsSize().Y / 2, 0))
 		m.Name = "Hito_" .. h.id
@@ -355,7 +405,15 @@ local function hito(padre, h)
 	m.Parent = padre
 end
 
-local function arbol(padre, pos: Vector3, copa: string)
+local function arbol(padre, pos: Vector3, copa: string, id: string, alto: number)
+	local modelo = plantilla(id)
+	if modelo then
+		local c = clonar(modelo, "Y", alto)
+		-- Giro según la posición para que los árboles no se vean todos iguales.
+		c:PivotTo(CFrame.new(pos + Vector3.new(0, alto / 2, 0)) * CFrame.Angles(0, (pos.X * 7 + pos.Z * 13) % 6.28, 0))
+		c.Parent = padre
+		return
+	end
 	disco(padre, "5a3b20", pos + Vector3.new(0, 2.5, 0), 0.7, 2.5, Enum.Material.Wood)
 	local c = parte(padre, copa, CFrame.new(pos + Vector3.new(0, 3.6, 0)), Vector3.new(3, 3, 3), Enum.Material.Grass)
 	c.Shape = Enum.PartType.Ball
@@ -413,10 +471,10 @@ function Hub.construir(alUsar: (Player, string) -> ())
 
 	-- Árboles: jardín de la isla central y selva de Wakanda.
 	for _, a in { -70, -20, 140, 200 } do
-		arbol(hub, enIsla(c, a, 35), "4f9e45")
+		arbol(hub, enIsla(c, a, 35), "4f9e45", "arbol_jardin", 7)
 	end
 	for _, a in { 100, 140, 180, 220, 260, 300 } do
-		arbol(hub, enIsla(ISLAS.wakanda, a, 25), "2f7a2c")
+		arbol(hub, enIsla(ISLAS.wakanda, a, 25), "2f7a2c", "arbol_selva", 9)
 	end
 
 	-- Aparición al pie de la torre, mirando hacia afuera: las estaciones miran al centro, o sea al jugador.
