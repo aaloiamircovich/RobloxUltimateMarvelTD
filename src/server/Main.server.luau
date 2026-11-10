@@ -15,6 +15,7 @@ local Progresion = require(Shared.Progresion)
 local Mapa = require(Shared.Mapa)
 local Hub = require(script.Parent.Hub)
 local Perfiles = require(script.Parent.Perfiles)
+local Reclutamiento = require(script.Parent.Reclutamiento)
 
 local heroes = require(Data.heroes)
 local enemigosDatos = require(Data.enemies)
@@ -23,12 +24,11 @@ local tablaTipos = require(Data.TypeChart)
 
 local NIVEL, INDICE_NIVEL = niveles[1], 0
 local VIDAS_INICIALES = 20 -- ResourceManager del 2D; los créditos de Historia son los del perfil
-local ESCUADRON = { "black_widow", "hawkeye", "korg" } -- héroes iniciales del 3D
+local ESCUADRON = {} -- el escuadrón del perfil del dueño, fijado al iniciar la misión
 
 -- Estado visible para los clientes.
 local estado = Instance.new("Folder")
 estado.Name = "Estado"
-estado:SetAttribute("Escuadron", table.concat(ESCUADRON, ","))
 estado.Parent = ReplicatedStorage
 local function fijar(nombre, valor)
 	estado:SetAttribute(nombre, valor)
@@ -56,6 +56,12 @@ end)
 local accion = Instance.new("RemoteFunction")
 accion.Name = "Accion"
 accion.Parent = ReplicatedStorage
+local aviso = Instance.new("RemoteEvent")
+aviso.Name = "Aviso"
+aviso.Parent = ReplicatedStorage
+local abrirPanel = Instance.new("RemoteEvent")
+abrirPanel.Name = "AbrirPanel"
+abrirPanel.Parent = ReplicatedStorage
 
 local rutaPx = Mapa.rutaPixeles(NIVEL)
 local ruta = Mapa.construir(NIVEL)
@@ -572,6 +578,12 @@ local function iniciarPartida(jugador: Player)
 	if not perfil then
 		return
 	end
+	if #perfil.activeTeamIds == 0 then
+		aviso:FireClient(jugador, "Elegí tu héroe inicial en Invocaciones")
+		return
+	end
+	ESCUADRON = table.clone(perfil.activeTeamIds)
+	fijar("Escuadron", table.concat(ESCUADRON, ","))
 	partidaActual += 1
 	limpiar()
 	dueno = jugador
@@ -596,10 +608,6 @@ end
 --------------------------------------------------------------------------------
 -- HUB
 --------------------------------------------------------------------------------
-local aviso = Instance.new("RemoteEvent")
-aviso.Name = "Aviso"
-aviso.Parent = ReplicatedStorage
-
 local hub = Hub.construir(function(jugador, estacion)
 	if estacion == "story" then
 		if estado:GetAttribute("Modo") == "hub" then
@@ -607,8 +615,10 @@ local hub = Hub.construir(function(jugador, estacion)
 		elseif dueno ~= jugador then
 			aviso:FireClient(jugador, `{dueno and dueno.DisplayName or "Otro jugador"} está en una misión`)
 		end
+	elseif estacion == "summon" then
+		abrirPanel:FireClient(jugador, "invocaciones")
 	else
-		-- Infinito y reclutamiento esperan su port; traits y grades, las reglas del usuario.
+		-- Infinito espera su port; traits y grades, las reglas del usuario.
 		aviso:FireClient(jugador, "Próximamente")
 	end
 end)
@@ -646,3 +656,53 @@ task.spawn(function()
 		Perfiles.guardarTodos()
 	end
 end)
+
+--------------------------------------------------------------------------------
+-- Colección (estación Invocaciones): acciones por jugador sobre su propio perfil
+--------------------------------------------------------------------------------
+local function resumen(perfil)
+	return {
+		creditos = perfil.credits,
+		desbloqueados = perfil.unlockedHeroIds,
+		equipo = perfil.activeTeamIds,
+		costo = Reclutamiento.costo(perfil),
+		probabilidades = Reclutamiento.probabilidades(perfil, heroes),
+		iniciales = Reclutamiento.INICIALES,
+		garantia = perfil.shop.heroPity >= 4,
+	}
+end
+
+local coleccion = Instance.new("RemoteFunction")
+coleccion.Name = "Coleccion"
+coleccion.Parent = ReplicatedStorage
+coleccion.OnServerInvoke = function(jugador, nombre, arg)
+	local perfil = Perfiles.de(jugador)
+	if not perfil then
+		return { error = "Tu perfil todavía no cargó" }
+	end
+	-- Los créditos de una misión en curso son los del perfil: no tocarlos desde otro lado a la vez.
+	if nombre ~= "estado" and jugador == dueno then
+		return { error = "Terminá o abandoná la misión primero" }
+	end
+	local res = {}
+	if nombre == "elegirInicial" and type(arg) == "string" then
+		res.error = Reclutamiento.elegirInicial(perfil, arg)
+	elseif nombre == "reclutar" then
+		local heroe, extra = Reclutamiento.reclutar(perfil, heroes, math.random)
+		if heroe then
+			res.heroe = { id = heroe.id, nombre = heroe.name, rareza = heroe.rarity, categoria = heroe.category, garantizado = extra }
+		else
+			res.error = extra
+		end
+	elseif nombre == "equipo" and type(arg) == "table" then
+		res.error = Reclutamiento.fijarEquipo(perfil, arg)
+	elseif nombre ~= "estado" then
+		res.error = "Acción desconocida"
+	end
+	if nombre ~= "estado" and not res.error then
+		Perfiles.marcar(jugador)
+		jugador:SetAttribute("Creditos", perfil.credits)
+	end
+	res.estado = resumen(perfil)
+	return res
+end

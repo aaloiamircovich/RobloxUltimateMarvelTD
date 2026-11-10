@@ -1,6 +1,8 @@
 -- Perfil persistente por jugador (DataStore). Subconjunto del estado de ProgressionManager del 2D,
--- con los mismos nombres de campo para poder importar perfiles: credits, heroUpgrades, mapProgress.
+-- con los mismos nombres de campo para poder importar perfiles: credits, heroUpgrades, mapProgress,
+-- unlockedHeroIds, activeTeamIds y shop.
 local DataStoreService = game:GetService("DataStoreService")
+local heroes = require(game:GetService("ReplicatedStorage").Shared.Data.heroes)
 
 local Perfiles = {}
 
@@ -23,6 +25,9 @@ function Perfiles.normalizar(crudo)
 		credits = Perfiles.CREDITOS_INICIALES,
 		heroUpgrades = {},
 		mapProgress = {},
+		unlockedHeroIds = {},
+		activeTeamIds = {},
+		shop = { heroPity = 0, heroBoxCost = 500 },
 	}
 	local c = tonumber(datos.credits)
 	if c and c == c and c >= 0 and c < math.huge then
@@ -43,6 +48,31 @@ function Perfiles.normalizar(crudo)
 				p.mapProgress[id] = { bestWave = mejor, stars = math.max(mejor, math.clamp(math.floor(tonumber(v.stars) or 0), 0, MAX_OLEADAS)) }
 			end
 		end
+	end
+	-- Colección: sólo ids de héroes existentes, sin repetir; el escuadrón, subconjunto de 1 a 6.
+	local function ids(lista, permitido, tope)
+		local r = {}
+		if type(lista) == "table" then
+			for _, id in lista do
+				if type(id) == "string" and heroes[id] and permitido(id) and not table.find(r, id) and #r < tope then
+					table.insert(r, id)
+				end
+			end
+		end
+		return r
+	end
+	p.unlockedHeroIds = ids(datos.unlockedHeroIds, function()
+		return true
+	end, math.huge)
+	p.activeTeamIds = ids(datos.activeTeamIds, function(id)
+		return table.find(p.unlockedHeroIds, id) ~= nil
+	end, 6)
+	if #p.activeTeamIds == 0 and #p.unlockedHeroIds > 0 then
+		p.activeTeamIds = { p.unlockedHeroIds[1] }
+	end
+	if type(datos.shop) == "table" then
+		p.shop.heroPity = math.max(0, math.floor(tonumber(datos.shop.heroPity) or 0))
+		p.shop.heroBoxCost = math.max(500, math.ceil(tonumber(datos.shop.heroBoxCost) or 500))
 	end
 	return p
 end

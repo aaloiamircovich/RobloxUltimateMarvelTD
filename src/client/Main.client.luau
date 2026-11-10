@@ -92,12 +92,13 @@ local saldo = etiqueta({ Position = UDim2.fromOffset(16, 16), Size = UDim2.fromO
 local barra = Instance.new("Frame")
 barra.AnchorPoint = Vector2.new(0.5, 1)
 barra.Position = UDim2.new(0.5, 0, 1, -12)
-barra.Size = UDim2.fromOffset(1240, 44)
+barra.Size = UDim2.fromOffset(1600, 44)
 barra.BackgroundTransparency = 1
 local lista = Instance.new("UIListLayout")
 lista.FillDirection = Enum.FillDirection.Horizontal
 lista.HorizontalAlignment = Enum.HorizontalAlignment.Center
 lista.Padding = UDim.new(0, 8)
+lista.SortOrder = Enum.SortOrder.LayoutOrder
 lista.Parent = barra
 barra.Parent = gui
 
@@ -141,15 +142,27 @@ local function refrescar()
 	panel.Text = `Oleada {estado:GetAttribute("Oleada")}   ·   ❤ {estado:GetAttribute("Vidas")}   ·   💰 {estado:GetAttribute("Creditos")}\n{estado:GetAttribute("Mensaje")}`
 end
 
-for _, id in string.split(estado:GetAttribute("Escuadron") or "", ",") do
-	local config = heroes[id]
-	if config then
-		botonesHeroe[id] = boton(config.name, barra, function()
-			modo = if modo and modo.heroe == id and modo.tipo == "colocar" then nil else { tipo = "colocar", heroe = id }
-			refrescar()
-		end)
+-- Botones del escuadrón de la misión (cambia con el perfil de quien la inicia).
+local function armarEscuadron()
+	for _, b in botonesHeroe do
+		b:Destroy()
+	end
+	table.clear(botonesHeroe)
+	for i, id in string.split(estado:GetAttribute("Escuadron") or "", ",") do
+		local config = heroes[id]
+		if config then
+			local b = boton(config.name, barra, function()
+				modo = if modo and modo.heroe == id and modo.tipo == "colocar" then nil else { tipo = "colocar", heroe = id }
+				refrescar()
+			end)
+			b.LayoutOrder = i - 100 -- antes que Mover, Retirar, Mejorar e Iniciar
+			b.Size = UDim2.fromOffset(120, 44)
+			botonesHeroe[id] = b
+		end
 	end
 end
+armarEscuadron()
+estado:GetAttributeChangedSignal("Escuadron"):Connect(armarEscuadron)
 
 function unidadDe(uid: number): Model?
 	for _, m in workspace:WaitForChild("Unidades"):GetChildren() do
