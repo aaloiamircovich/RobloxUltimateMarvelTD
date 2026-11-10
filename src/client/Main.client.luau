@@ -328,7 +328,8 @@ cambiarPartida()
 --------------------------------------------------------------------------------
 local previa = Instance.new("Part")
 previa.Anchored, previa.CanCollide, previa.CanQuery = true, false, false
-previa.Size = Vector3.new(4, 0.3, 4)
+previa.Shape = Enum.PartType.Cylinder
+previa.Size = Vector3.new(0.3, 4, 4)
 previa.Material = Enum.Material.Neon
 previa.Transparency = 1
 previa.Parent = workspace
@@ -338,7 +339,6 @@ local function unidadesActuales()
 	local l = {}
 	for _, m in unidadesDelMapa() do
 		local x, y = Mapa.aPixeles(m:GetPivot().Position, origen)
-		x, y = Despliegue.celda(x, y, select(2, Mapa.terreno(NIVEL)))
 		table.insert(l, { uid = m:GetAttribute("Uid"), heroe = m:GetAttribute("Heroe"), x = x, y = y })
 	end
 	return l
@@ -361,8 +361,9 @@ RunService.RenderStepped:Connect(function()
 	local x, y = Mapa.aPixeles(mouse.Hit.Position, origen)
 	local moviendo = modo.tipo == "mover" and modo.uid
 	local config = Progresion.paraDespliegue(heroes[heroeId], 1)
-	local err, cx, cy = Despliegue.error(config, x, y, NIVEL, rutaPx, unidadesActuales(), moviendo or nil, true)
-	previa.Position = Mapa.aMundo(cx, cy, origen) + Vector3.new(0, 0.4, 0)
+	local err, cx, cy = Despliegue.error(config, x, y, NIVEL, rutaPx, unidadesActuales(), moviendo or nil, true, true)
+	local suelo = origen + Vector3.new(cx * Mapa.ESCALA, Mapa.alturaSuelo(NIVEL, cx, cy) + 0.2, cy * Mapa.ESCALA)
+	previa.CFrame = CFrame.new(suelo) * CFrame.Angles(0, 0, math.rad(90))
 	previa.Color = if err then Color3.fromRGB(230, 70, 70) else Color3.fromRGB(70, 230, 110)
 end)
 

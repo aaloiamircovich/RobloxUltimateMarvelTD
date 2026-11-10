@@ -49,7 +49,7 @@ local function origenLibre(): (number, Vector3)
 		i += 1
 	end
 	-- Arenas en fila al este del HUB, separadas para que no se vean entre sí.
-	return i, Vector3.new(400 + (i - 1) * 220, 0, -40)
+	return i, Vector3.new(450 + (i - 1) * 450, 0, -110) -- mapas de 300×225 studs con 40 de borde
 end
 
 local function indiceNivel(mapaId: string): number?

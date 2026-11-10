@@ -32,5 +32,13 @@ return function()
 	assert(Despliegue.enAlcance(0, 0, 30, 200, 220, "cross"), "cruz: carril vertical")
 	assert(not Despliegue.enAlcance(0, 0, 100, 100, 220, "cross"), "cruz: diagonal fuera")
 	assert(Despliegue.enAlcance(0, 0, 100, 100, 220, nil), "círculo: diagonal dentro")
+
+	-- Colocación libre (docs/PARTIDA.md): punto exacto, cuerpo entero fuera del camino, separación mínima.
+	local korg = heroes.korg
+	local err, lx, ly = Despliegue.error(korg, 300, 170, nivel, ruta, {}, nil, true, true)
+	assert(err == nil and lx == 300 and ly == 170, `libre: sin ajuste a la celda ({err})`)
+	assert(Despliegue.error(korg, 262, 170, nivel, ruta, {}, nil, true, true) == "Muy cerca del camino o del borde", "libre: no pisa el camino")
+	assert(Despliegue.error(korg, 310, 170, nivel, ruta, { { uid = 1, heroe = "x", x = 300, y = 170 } }, nil, true, true) == "Este espacio ya está ocupado", "libre: separación")
+	assert(Despliegue.error(korg, 320, 170, nivel, ruta, { { uid = 1, heroe = "x", x = 300, y = 170 } }, nil, true, true) == nil, "libre: a 20 px se puede")
 	return "OK: reglas de despliegue"
 end

@@ -98,13 +98,30 @@ end
 
 -- placementError del 3D. unidades: { { uid, heroe, x, y } } en píxeles.
 -- repetidos: permite el mismo personaje varias veces (el límite por rareza lo controla quien llama).
--- Devuelve nil si se puede, o el mensaje de error y la celda ajustada.
-function Despliegue.error(config, x: number, y: number, nivel, ruta, unidades, moviendoUid: number?, repetidos: boolean?): (string?, number, number)
+-- libre: colocación sin grilla (docs/PARTIDA.md): el punto exacto, con todo el cuerpo de la unidad sobre
+-- terreno permitido y separada de las demás; sin él se ajusta a la celda como el 2D.
+-- Devuelve nil si se puede, o el mensaje de error y el punto (o la celda) final.
+Despliegue.RADIO_LIBRE = 8 -- px: medio cuerpo de una unidad
+Despliegue.SEPARACION_LIBRE = 14 -- px entre unidades
+function Despliegue.error(config, x: number, y: number, nivel, ruta, unidades, moviendoUid: number?, repetidos: boolean?, libre: boolean?): (string?, number, number)
 	local _, lado = Mapa.terreno(nivel)
-	local cx, cy = Despliegue.celda(x, y, lado)
+	local cx, cy = x, y
+	if not libre then
+		cx, cy = Despliegue.celda(x, y, lado)
+	end
 	local t = Despliegue.terreno(nivel, cx, cy)
-	if t == nil then
+	if t == nil or cx < 0 or cy < 0 or cx > Mapa.ANCHO or cy > Mapa.ALTO then
 		return "Fuera del mapa", cx, cy
+	end
+	if libre then
+		-- Las cuatro puntas del cuerpo también tienen que caer en terreno permitido (no pisar el camino).
+		local r = Despliegue.RADIO_LIBRE
+		for _, d in { { -r, -r }, { r, -r }, { -r, r }, { r, r } } do
+			local otro = Despliegue.terreno(nivel, cx + d[1], cy + d[2])
+			if otro ~= t and not Despliegue.puedeEnTerreno(config, otro) then
+				return "Muy cerca del camino o del borde", cx, cy
+			end
+		end
 	end
 	if Despliegue.reservada(nivel, cx, cy) then
 		return "Celda reservada para una defensa de la misión.", cx, cy
@@ -125,7 +142,7 @@ function Despliegue.error(config, x: number, y: number, nivel, ruta, unidades, m
 		end
 	end
 	for _, u in unidades do
-		if u.uid ~= moviendoUid and math.sqrt((u.x - cx) ^ 2 + (u.y - cy) ^ 2) < lado * 0.8 then
+		if u.uid ~= moviendoUid and math.sqrt((u.x - cx) ^ 2 + (u.y - cy) ^ 2) < (if libre then Despliegue.SEPARACION_LIBRE else lado * 0.8) then
 			return "Este espacio ya está ocupado", cx, cy
 		end
 	end

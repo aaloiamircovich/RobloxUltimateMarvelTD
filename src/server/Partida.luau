@@ -254,8 +254,11 @@ function Partida.nueva(op)
 		j:SetAttribute("Escuadron", texto)
 		j:SetAttribute("Listo", false)
 		j:SetAttribute("Auto", false)
+		-- Aparece en el borde del mapa, junto a la base, mirando hacia el campo.
 		if j.Character then
-			j.Character:PivotTo(CFrame.new(Mapa.aMundo(Mapa.ANCHO / 2, Mapa.ALTO / 2, origen) + Vector3.new(0, 6, 0)))
+			local base = ruta[#ruta]
+			local llegada = base + (ruta[#ruta - 1] - base).Unit * 6 + Vector3.new(0, 8, 0)
+			j.Character:PivotTo(CFrame.lookAt(llegada, ruta[#ruta - 1] + Vector3.new(0, 8, 0)))
 		end
 	end
 	for _, j in op.jugadores do
@@ -372,7 +375,9 @@ function Partida.nueva(op)
 
 	local function ubicar(u)
 		local alto = if u.modelo:FindFirstChildOfClass("Humanoid") then u.modelo.Humanoid.HipHeight + u.raiz.Size.Y / 2 else u.raiz.Size.Y / 2
-		ponerRaiz(u, CFrame.new(Mapa.aMundo(u.x, u.y, origen) + Vector3.new(0, alto + 0.2, 0)))
+		-- Apoyada sobre la superficie real (techos y plataformas de montaña son más altos).
+		local suelo = origen + Vector3.new(u.x * Mapa.ESCALA, Mapa.alturaSuelo(NIVEL, u.x, u.y), u.y * Mapa.ESCALA)
+		ponerRaiz(u, CFrame.new(suelo + Vector3.new(0, alto + 0.1, 0)))
 	end
 
 	local function listaUnidades()
@@ -422,7 +427,7 @@ function Partida.nueva(op)
 		end
 		local perfil = Perfiles.de(j)
 		local objeto = perfil and Objetos.de(perfil, e.heroId)
-		local err, cx, cy = Despliegue.error(Progresion.paraDespliegue(config, 1, objeto), x, y, NIVEL, rutaPx, listaUnidades(), nil, true)
+		local err, cx, cy = Despliegue.error(Progresion.paraDespliegue(config, 1, objeto), x, y, NIVEL, rutaPx, listaUnidades(), nil, true, true)
 		if err then
 			return err
 		end
@@ -471,7 +476,7 @@ function Partida.nueva(op)
 		if not u then
 			return "Héroe no disponible"
 		end
-		local err, cx, cy = Despliegue.error(Progresion.paraDespliegue(u.config, 1, u.objeto), x, y, NIVEL, rutaPx, listaUnidades(), uid, true)
+		local err, cx, cy = Despliegue.error(Progresion.paraDespliegue(u.config, 1, u.objeto), x, y, NIVEL, rutaPx, listaUnidades(), uid, true, true)
 		if err then
 			return err
 		end
@@ -979,6 +984,7 @@ function Partida.nueva(op)
 
 	function p.destruir()
 		terminada = true
+		Mapa.limpiar(NIVEL, origen)
 		mundo:Destroy()
 		estado:Destroy()
 	end
