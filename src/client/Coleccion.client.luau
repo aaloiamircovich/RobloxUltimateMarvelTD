@@ -27,9 +27,10 @@ for _, r in RAREZAS do
 	NOMBRE_RAREZA[r[1]], COLOR_RAREZA[r[1]] = r[2], r[3]
 end
 
-local OSCURO = Color3.fromRGB(20, 22, 32)
-local BOTON = Color3.fromRGB(44, 48, 66)
-local ACENTO = Color3.fromRGB(255, 200, 90)
+-- Paleta cómic (la misma que Comic.luau del HUD): fondo rojo muy oscuro, botones rojos, acento amarillo.
+local OSCURO = Color3.fromRGB(28, 8, 12)
+local BOTON = Color3.fromRGB(150, 25, 32)
+local ACENTO = Color3.fromRGB(255, 214, 40)
 
 --------------------------------------------------------------------------------
 -- Piezas de interfaz
@@ -37,6 +38,7 @@ local ACENTO = Color3.fromRGB(255, 200, 90)
 local gui = Instance.new("ScreenGui")
 gui.Name = "Coleccion"
 gui.ResetOnSpawn = false
+gui.DisplayOrder = 5 -- encima del HUD del lobby
 gui.Enabled = false
 
 local function crear(clase: string, props, padre: Instance?)
@@ -45,7 +47,12 @@ local function crear(clase: string, props, padre: Instance?)
 		i[k] = v
 	end
 	if clase == "Frame" or clase == "TextButton" or clase == "ScrollingFrame" then
-		Instance.new("UICorner", i).CornerRadius = UDim.new(0, 10)
+		Instance.new("UICorner", i).CornerRadius = UDim.new(0, 6)
+	end
+	if clase == "TextButton" then
+		local borde = Instance.new("UIStroke")
+		borde.Thickness, borde.ApplyStrokeMode = 2, Enum.ApplyStrokeMode.Border
+		borde.Parent = i
 	end
 	i.Parent = padre
 	return i
@@ -64,8 +71,9 @@ local function boton(txt: string, props, padre, alClic)
 	props.Text = txt
 	props.BackgroundColor3 = props.BackgroundColor3 or BOTON
 	props.TextColor3 = Color3.new(1, 1, 1)
-	props.Font = Enum.Font.GothamBold
-	props.TextSize = props.TextSize or 16
+	props.Font = Enum.Font.Bangers
+	props.TextSize = (props.TextSize or 16) + 4
+	props.TextStrokeTransparency = 0
 	props.TextWrapped = true
 	local b = crear("TextButton", props, padre)
 	b.Activated:Connect(alClic)
@@ -79,7 +87,10 @@ local ventana = crear("Frame", {
 	BackgroundColor3 = OSCURO,
 	BackgroundTransparency = 0.05,
 }, gui)
-local titulo = texto({ Position = UDim2.fromOffset(24, 14), Size = UDim2.new(1, -120, 0, 36), Font = Enum.Font.GothamBlack, TextSize = 26, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = ACENTO }, ventana)
+local bordeVentana = Instance.new("UIStroke")
+bordeVentana.Thickness = 5
+bordeVentana.Parent = ventana
+local titulo = texto({ Position = UDim2.fromOffset(24, 14), Size = UDim2.new(1, -120, 0, 36), Font = Enum.Font.Bangers, TextSize = 34, TextStrokeTransparency = 0, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = ACENTO }, ventana)
 local saldo = texto({ Position = UDim2.new(1, -420, 0, 18), Size = UDim2.fromOffset(340, 28), TextSize = 18, TextXAlignment = Enum.TextXAlignment.Right }, ventana)
 boton("X", { Position = UDim2.new(1, -56, 0, 12), Size = UDim2.fromOffset(40, 40) }, ventana, function()
 	gui.Enabled = false
@@ -238,7 +249,8 @@ local function pantallaUnidades()
 			elegida = if elegida == u.uid then nil else u.uid
 			mostrar()
 		end)
-		crear("UIStroke", { Color = COLOR_RAREZA[h.rarity], Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, b)
+		-- El botón ya trae su borde: se pinta del color de la rareza.
+		b:FindFirstChildOfClass("UIStroke").Color = COLOR_RAREZA[h.rarity]
 		texto({ Position = UDim2.fromOffset(6, 4), Size = UDim2.new(1, -12, 0, 20), TextSize = 13, Font = Enum.Font.GothamBold, Text = h.name }, b)
 		texto({ Position = UDim2.fromOffset(6, 24), Size = UDim2.new(1, -12, 0, 16), TextSize = 12, TextColor3 = COLOR_RAREZA[h.rarity], Text = `Nv {u.level}` .. (if enEscuadron then " · Escuadrón" else "") }, b)
 		-- Barra de experiencia hacia el próximo nivel.

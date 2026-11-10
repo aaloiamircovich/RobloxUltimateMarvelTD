@@ -161,7 +161,7 @@ local function refrescar()
 	botonMover.BackgroundColor3 = if modo and modo.tipo == "mover" then Color3.fromRGB(60, 120, 200) else Color3.fromRGB(40, 44, 60)
 	botonIniciar.Visible = estado:GetAttribute("Fase") == "preparacion"
 	panel.Visible, barra.Visible = enBatalla(), enBatalla()
-	saldo.Visible = not enBatalla()
+	saldo.Visible = false -- el HUD del lobby (Hud.client) muestra las monedas
 	saldo.Text = `💰 {jugador:GetAttribute("Creditos") or "…"}   💎 {jugador:GetAttribute("Gemas") or "…"}`
 	panel.Text = `Oleada {estado:GetAttribute("Oleada")}   ·   ❤ {estado:GetAttribute("Vidas")}   ·   💰 {estado:GetAttribute("Creditos")}\n{estado:GetAttribute("Mensaje")}`
 end

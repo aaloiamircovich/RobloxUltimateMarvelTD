@@ -76,7 +76,7 @@ return function()
 	local nuevas = Banner.invocar(p, 10, 0, azar)
 	assert(#nuevas == 10 and p.gems == 0 and #p.units == 11, "x10 cuesta 500 y da 10 unidades")
 	assert(select(2, Banner.invocar(p, 1, 0, azar)) == "Faltan 50 gemas", "sin gemas")
-	assert(#p.squad == 6, "las nuevas llenan el escuadrón hasta 6")
+	assert(#p.squad == 3, "las nuevas llenan el escuadrón hasta las 3 casillas del nivel 1")
 	p.gems = 1e6
 	for _ = 1, 8 do
 		Banner.invocar(p, 10, 0, azar)

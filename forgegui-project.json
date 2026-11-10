@@ -33,6 +33,12 @@
       "value": "publish/roblox con la conexión Personal @TPS_Xe0K",
       "by": "user",
       "date": "2026-11-10"
+    },
+    {
+      "topic": "interfaz",
+      "value": "estilo cómic marcado, tonos rojos y amarillos, fuente Bangers; HUD del lobby como Anime Galaxy/ASTD",
+      "by": "user",
+      "date": "2026-11-10"
     }
   ],
   "publishing_destination": {
@@ -359,6 +365,135 @@
       "moderation": "approved",
       "preparacion": "luminance_to_alpha (blanco) + contain 1024x1024; el juego lo tiñe naranja",
       "notas": "la imagen original traía manchas verdes"
+    },
+    {
+      "id": "icono_jugar",
+      "kind": "image_gui",
+      "request_id": "umtd-ui-icono-jugar-v1",
+      "job_id": "282f6322-25f7-493c-912a-555f7ea624b8",
+      "roblox_asset_id": "94776253411726",
+      "moderation": "approved",
+      "status": "inserted",
+      "uso": "src/shared/Iconos.luau",
+      "estilo_ref": "mcp-artifact:282f6322-25f7-493c-912a-555f7ea624b8:0"
+    },
+    {
+      "id": "icono_tienda",
+      "kind": "image_gui",
+      "request_id": "umtd-ui-icono-tienda-v1",
+      "job_id": "4acc9c8f-44fb-47de-b911-cc323c2a5867",
+      "roblox_asset_id": "106907292556143",
+      "moderation": "approved",
+      "status": "inserted",
+      "uso": "src/shared/Iconos.luau",
+      "estilo_ref": "mcp-artifact:282f6322-25f7-493c-912a-555f7ea624b8:0"
+    },
+    {
+      "id": "icono_unidades",
+      "kind": "image_gui",
+      "request_id": "umtd-ui-icono-unidades-v1",
+      "job_id": "dfa2c305-c282-4833-8ea7-936c6bf7f801",
+      "roblox_asset_id": "89668530940778",
+      "moderation": "approved",
+      "status": "inserted",
+      "uso": "src/shared/Iconos.luau",
+      "estilo_ref": "mcp-artifact:282f6322-25f7-493c-912a-555f7ea624b8:0"
+    },
+    {
+      "id": "icono_inventario",
+      "kind": "image_gui",
+      "request_id": "umtd-ui-icono-inventario-v1",
+      "job_id": "eb63eba6-7f19-4ba5-8bd3-d40c4e679fcb",
+      "roblox_asset_id": "115639584956003",
+      "moderation": "approved",
+      "status": "inserted",
+      "uso": "src/shared/Iconos.luau",
+      "estilo_ref": "mcp-artifact:282f6322-25f7-493c-912a-555f7ea624b8:0"
+    },
+    {
+      "id": "icono_misiones",
+      "kind": "image_gui",
+      "request_id": "umtd-ui-icono-misiones-v1",
+      "job_id": "f4a261e2-7c80-4a6b-9b5d-6417c85ba4b0",
+      "roblox_asset_id": "79494063942487",
+      "moderation": "approved",
+      "status": "inserted",
+      "uso": "src/shared/Iconos.luau",
+      "estilo_ref": "mcp-artifact:282f6322-25f7-493c-912a-555f7ea624b8:0"
+    },
+    {
+      "id": "icono_invocar",
+      "kind": "image_gui",
+      "request_id": "umtd-ui-icono-invocar-v1",
+      "job_id": "44593168-2a2c-4516-9e82-4971db1060eb",
+      "roblox_asset_id": "90316330053444",
+      "moderation": "approved",
+      "status": "inserted",
+      "uso": "src/shared/Iconos.luau",
+      "estilo_ref": "mcp-artifact:282f6322-25f7-493c-912a-555f7ea624b8:0"
+    },
+    {
+      "id": "icono_pase",
+      "kind": "image_gui",
+      "request_id": "umtd-ui-icono-pase-v1",
+      "job_id": "1b0e44c2-4a16-4d09-b419-759a66a13d3e",
+      "roblox_asset_id": "77175466130042",
+      "moderation": "approved",
+      "status": "inserted",
+      "uso": "src/shared/Iconos.luau",
+      "estilo_ref": "mcp-artifact:282f6322-25f7-493c-912a-555f7ea624b8:0"
+    },
+    {
+      "id": "icono_teleport",
+      "kind": "image_gui",
+      "request_id": "umtd-ui-icono-teleport-v1",
+      "job_id": "acf1c367-fae1-46ce-8fe8-ccc7aeb70de4",
+      "roblox_asset_id": "117254542260676",
+      "moderation": "approved",
+      "status": "inserted",
+      "uso": "src/shared/Iconos.luau",
+      "estilo_ref": "mcp-artifact:282f6322-25f7-493c-912a-555f7ea624b8:0"
+    },
+    {
+      "id": "icono_perfil",
+      "kind": "image_gui",
+      "request_id": "umtd-ui-icono-perfil-v1",
+      "job_id": "740860d3-db49-4eb4-bf3d-44ee1b69aaf2",
+      "roblox_asset_id": "86275274594690",
+      "moderation": "approved",
+      "status": "inserted",
+      "uso": "src/shared/Iconos.luau",
+      "estilo_ref": "mcp-artifact:282f6322-25f7-493c-912a-555f7ea624b8:0"
+    },
+    {
+      "id": "icono_evento",
+      "kind": "image_gui",
+      "request_id": "umtd-ui-icono-evento-v1",
+      "job_id": "3aa543f9-beb8-44fa-a33e-5f51fa96328d",
+      "roblox_asset_id": "84437897808417",
+      "moderation": "approved",
+      "status": "inserted",
+      "uso": "src/shared/Iconos.luau",
+      "estilo_ref": "mcp-artifact:282f6322-25f7-493c-912a-555f7ea624b8:0"
+    },
+    {
+      "id": "icono_log",
+      "kind": "image_gui",
+      "request_id": "umtd-ui-icono-log-v1",
+      "job_id": "85d5b74a-bca9-4ac3-9f5e-f50d49884634",
+      "roblox_asset_id": "85785178972567",
+      "moderation": "approved",
+      "status": "inserted",
+      "uso": "src/shared/Iconos.luau",
+      "estilo_ref": "mcp-artifact:282f6322-25f7-493c-912a-555f7ea624b8:0"
+    },
+    {
+      "id": "trama_halftone",
+      "kind": "image_texture",
+      "request_id": "umtd-ui-trama-v1",
+      "job_id": "7884c49f-0f96-46cf-a468-a2132e1eb614",
+      "status": "outcome_unknown",
+      "notas": "no regenerar; reconciliar o pedir nueva con otro request_id si el usuario lo aprueba"
     }
   ],
   "notas_importacion": "Los modelos de ForgeGUI llegan con un giro de ~10° alrededor de Y; enderezar al múltiplo de 90° más cercano antes de guardarlos como plantilla."

@@ -561,6 +561,20 @@ function Hub.construir(alUsar: (Player, string) -> ())
 	return hub
 end
 
+-- Punto de llegada del teletransporte del HUD: borde de la isla mirando a su centro; nil si no existe.
+function Hub.llegada(nombre: string): CFrame?
+	local datos = ISLAS[nombre]
+	if not datos then
+		return nil
+	end
+	if nombre == "central" then
+		return Hub.aparicion.CFrame + Vector3.new(0, 3, 0)
+	end
+	local haciaCentral = (ISLAS.central.pos - datos.pos) * Vector3.new(1, 0, 1)
+	local p = datos.pos + haciaCentral.Unit * (datos.radio - 6) + Vector3.new(0, 3, 0)
+	return CFrame.lookAt(p, Vector3.new(datos.pos.X, p.Y, datos.pos.Z))
+end
+
 -- Gira orbes y sellos, corre el arcoíris del Bifrost y devuelve a la aparición a quien cae (llamar en Heartbeat).
 local reloj, ultimoBifrost = 0, 0
 function Hub.animar(_hub: Model, dt: number)

@@ -1,11 +1,12 @@
 -- Inventario de unidades del perfil: copias repetibles con nivel y experiencia, escuadrón, venta
 -- y evolución por crafteo. Reglas en docs/INVOCACIONES.md. Módulo puro sobre el perfil.
 local Personajes = require(script.Parent.Personajes)
+local Cuenta = require(script.Parent.Cuenta)
 
 local Unidades = {}
 
 Unidades.MAX_INVENTARIO = 100
-Unidades.MAX_ESCUADRON = 6
+Unidades.MAX_ESCUADRON = 6 -- tope absoluto; las casillas abiertas dependen del nivel de cuenta (Cuenta.casillas)
 Unidades.NIVEL_MAXIMO = 50
 Unidades.COPIAS_EVOLUCION = 3
 Unidades.LIMITE_COLOCACION = { Common = 4, Rare = 3, Epic = 3, Legendary = 2, Mythic = 1, Secret = 1 }
@@ -55,7 +56,7 @@ function Unidades.agregar(perfil, heroId: string, nivel: number?)
 	local u = { uid = perfil.nextUnitUid, heroId = heroId, level = nivel or 1, xp = 0 }
 	perfil.nextUnitUid += 1
 	table.insert(perfil.units, u)
-	if #perfil.squad < Unidades.MAX_ESCUADRON then
+	if #perfil.squad < Cuenta.casillas(perfil.level or 1) then
 		table.insert(perfil.squad, u.uid)
 	end
 	Unidades.sincronizar(perfil)
@@ -77,7 +78,7 @@ function Unidades.ganarXP(u, xp: number): number
 	return subidos
 end
 
--- Escuadrón: de 1 a 6 unidades propias, sin repetir la misma unidad.
+-- Escuadrón: de 1 a las casillas abiertas (3 a 6 según el nivel de cuenta), sin repetir la misma unidad.
 function Unidades.fijarEscuadron(perfil, uids): string?
 	local r = {}
 	for _, uid in uids do
@@ -88,8 +89,9 @@ function Unidades.fijarEscuadron(perfil, uids): string?
 	if #r == 0 then
 		return "El escuadrón necesita al menos una unidad"
 	end
-	if #r > Unidades.MAX_ESCUADRON then
-		return `El escuadrón admite hasta {Unidades.MAX_ESCUADRON} unidades`
+	local casillas = Cuenta.casillas(perfil.level or 1)
+	if #r > casillas then
+		return `Tu escuadrón tiene {casillas} casillas abiertas (subí de nivel para abrir más)`
 	end
 	perfil.squad = r
 	return nil

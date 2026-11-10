@@ -25,6 +25,7 @@ local Personajes = require(Shared.Personajes)
 local Unidades = require(Shared.Unidades)
 local Banner = require(Shared.Banner)
 local Mejoras = require(Shared.Mejoras)
+local Cuenta = require(Shared.Cuenta)
 
 local heroes = Personajes.todos -- heroes.json más los personajes evolucionados
 local enemigosDatos = require(Data.enemies)
@@ -807,17 +808,28 @@ local function partida(id: number)
 				end
 			end
 			table.insert(premios, `+{xp} XP al escuadrón` .. (if subieron > 0 then ` ({subieron} subieron de nivel)` else ""))
+			-- Experiencia de cuenta.
+			if Cuenta.ganarXP(perfil, if infinito then Cuenta.XP_OLEADA_INFINITO else Cuenta.XP_OLEADA) > 0 then
+				table.insert(premios, `¡Nivel de cuenta {perfil.level}!`)
+			end
+			dueno:SetAttribute("Nivel", perfil.level)
+			dueno:SetAttribute("XP", perfil.xp)
 			Perfiles.marcar(dueno)
 			aviso:FireClient(dueno, table.concat(premios, " · "))
 			dueno:SetAttribute("Gemas", perfil.gems)
+			dueno:SetAttribute("Nucleos", perfil.cores)
 		end
 	end
 	local perfil = dueno and Perfiles.de(dueno)
 	if perfil then
 		perfil.gems += GEMAS_MAPA
 		perfil.cores += 1
+		Cuenta.ganarXP(perfil, Cuenta.XP_MAPA)
+		dueno:SetAttribute("Nivel", perfil.level)
+		dueno:SetAttribute("XP", perfil.xp)
 		Perfiles.marcar(dueno)
 		dueno:SetAttribute("Gemas", perfil.gems)
+		dueno:SetAttribute("Nucleos", perfil.cores)
 	end
 	fijar("Fase", "fin")
 	fijar("Mensaje", `¡Victoria! {NIVEL.name} defendido · +{GEMAS_MAPA} gemas · +1 núcleo`)
@@ -882,7 +894,7 @@ end
 --------------------------------------------------------------------------------
 -- HUB
 --------------------------------------------------------------------------------
-local hub = Hub.construir(function(jugador, estacion)
+local function usarEstacion(jugador: Player, estacion: string)
 	if estacion == "story" then
 		-- El cliente muestra los mapas con su requisito de estrellas y elige.
 		local perfil = Perfiles.de(jugador)
@@ -908,6 +920,42 @@ local hub = Hub.construir(function(jugador, estacion)
 		-- Traits, grades, pets, bailes, monturas, raids, banners 2 y 3, salas, etc. esperan sus reglas.
 		aviso:FireClient(jugador, if estacion:sub(1, 5) == "sala_" then "Próximamente: salas con amigos" else "Próximamente")
 	end
+end
+local hub = Hub.construir(usarEstacion)
+
+-- Botones del HUD del lobby: abren los mismos paneles que las estaciones, sin caminar hasta ellas.
+local PANELES_HUD = {
+	story = true,
+	infinite = true,
+	summon = true,
+	tienda = true,
+	unidades = "unidades",
+	inventario = "objetos",
+}
+local usarHud = Instance.new("RemoteEvent")
+usarHud.Name = "UsarHud"
+usarHud.Parent = ReplicatedStorage
+usarHud.OnServerEvent:Connect(function(jugador, nombre)
+	local destino = type(nombre) == "string" and PANELES_HUD[nombre]
+	if not destino or estado:GetAttribute("Modo") ~= "hub" then
+		return
+	end
+	if type(destino) == "string" then
+		abrirPanel:FireClient(jugador, "invocaciones", { pestana = destino })
+	else
+		usarEstacion(jugador, nombre)
+	end
+end)
+
+-- Teletransporte entre islas del HUB.
+local teletransportar = Instance.new("RemoteEvent")
+teletransportar.Name = "Teletransportar"
+teletransportar.Parent = ReplicatedStorage
+teletransportar.OnServerEvent:Connect(function(jugador, isla)
+	local destino = type(isla) == "string" and Hub.llegada(isla)
+	if destino and jugador.Character then
+		jugador.Character:PivotTo(destino)
+	end
 end)
 RunService.Heartbeat:Connect(function(dt)
 	Hub.animar(hub, dt)
@@ -918,8 +966,12 @@ end)
 --------------------------------------------------------------------------------
 local function alEntrar(jugador: Player)
 	local perfil, problema = Perfiles.cargar(jugador)
+	jugador:SetAttribute("Nivel", perfil.level)
+	jugador:SetAttribute("XP", perfil.xp)
+	jugador:SetAttribute("Nucleos", perfil.cores)
 	jugador:SetAttribute("Creditos", perfil.credits)
 	jugador:SetAttribute("Gemas", perfil.gems)
+	jugador:SetAttribute("Nucleos", perfil.cores)
 	if problema then
 		aviso:FireClient(jugador, problema)
 	end
@@ -963,6 +1015,9 @@ local function resumen(perfil)
 	return {
 		creditos = perfil.credits,
 		gemas = perfil.gems,
+		nivel = perfil.level,
+		xp = perfil.xp,
+		casillas = Cuenta.casillas(perfil.level),
 		nucleos = perfil.cores,
 		unidades = perfil.units,
 		escuadron = perfil.squad,
@@ -1040,6 +1095,7 @@ coleccion.OnServerInvoke = function(jugador, nombre, arg)
 		Perfiles.marcar(jugador)
 		jugador:SetAttribute("Creditos", perfil.credits)
 		jugador:SetAttribute("Gemas", perfil.gems)
+		jugador:SetAttribute("Nucleos", perfil.cores)
 	end
 	res.estado = resumen(perfil)
 	return res

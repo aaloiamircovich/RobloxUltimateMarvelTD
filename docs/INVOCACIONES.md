@@ -50,3 +50,8 @@ evolución por nivel del 2D (ShopSystem.recruitHero / EvolutionSystem). El resto
 - El resultado es un **personaje nuevo**: la evolución del 2D (evolutions.json) como héroe propio, **una rareza más alta**
   que el original, con los bonos de su evolución aplicados a sus stats base. Hereda el **nivel más alto** de las 3 copias.
 - Un personaje Secreto no evoluciona.
+
+## Nivel de cuenta
+- +5 XP por oleada de Historia superada, +2 por oleada de Infinito, +50 al ganar un mapa.
+- Subir del nivel N al N+1 pide **100 × N** XP.
+- El escuadrón empieza con **3 casillas**; se abren la 4.ª en el nivel 10, la 5.ª en el 25 y la 6.ª en el 40.

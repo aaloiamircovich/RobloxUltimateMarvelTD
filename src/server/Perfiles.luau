@@ -5,6 +5,7 @@ local DataStoreService = game:GetService("DataStoreService")
 local Shared = game:GetService("ReplicatedStorage").Shared
 local Personajes = require(Shared.Personajes)
 local Unidades = require(Shared.Unidades)
+local Cuenta = require(Shared.Cuenta)
 local items = require(Shared.Data.items)
 
 local Perfiles = {}
@@ -33,6 +34,8 @@ function Perfiles.normalizar(crudo)
 		credits = Perfiles.CREDITOS_INICIALES,
 		gems = entero(datos.gems, 0, 1e9, Perfiles.GEMAS_INICIALES),
 		cores = entero(datos.cores, 0, 1e6, 0),
+		level = entero(datos.level, 1, 10000, 1), -- nivel de cuenta
+		xp = entero(datos.xp, 0, 1e9, 0),
 		units = {},
 		nextUnitUid = 1,
 		squad = {},
@@ -88,6 +91,10 @@ function Perfiles.normalizar(crudo)
 				end
 			end
 		end
+	end
+	-- El escuadrón no puede pasar de las casillas abiertas por el nivel de cuenta.
+	while #p.squad > Cuenta.casillas(p.level) do
+		table.remove(p.squad)
 	end
 	if #p.squad == 0 and #p.units > 0 then
 		p.squad = { p.units[1].uid }
