@@ -1,4 +1,5 @@
--- Panel de la estación Invocaciones: elección inicial, reclutamiento y escuadrón.
+-- Paneles de las estaciones del HUB: Invocaciones (elección inicial, reclutamiento y escuadrón)
+-- e Infinito (explica la regla de créditos antes de entrar, como el 3D).
 -- Sólo muestra y envía pedidos; el servidor valida y guarda.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -7,6 +8,7 @@ local UserInputService = game:GetService("UserInputService")
 local heroes = require(ReplicatedStorage:WaitForChild("Shared").Data.heroes)
 local coleccion = ReplicatedStorage:WaitForChild("Coleccion")
 local abrirPanel = ReplicatedStorage:WaitForChild("AbrirPanel")
+local entrar = ReplicatedStorage:WaitForChild("Entrar")
 
 local RAREZAS = {
 	{ "Common", "Común", Color3.fromRGB(170, 175, 185) },
@@ -225,7 +227,42 @@ function mostrar()
 	end
 end
 
-abrirPanel.OnClientEvent:Connect(function(panel)
+local function pantallaInfinito(record)
+	vaciar()
+	titulo.Text = "Infinito"
+	saldo.Text = ""
+	mensaje.Text = ""
+	local r = record or { bestWave = 0, bestScore = 0 }
+	texto({
+		Size = UDim2.new(1, 0, 1, -70),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextYAlignment = Enum.TextYAlignment.Top,
+		TextSize = 18,
+		Text = table.concat({
+			"Oleadas sin límite en la Base Avengers con tu escuadrón.",
+			"Empezás con 750 créditos y 20 vidas; cada cinco oleadas ganás +300.",
+			"",
+			"Regla de créditos: si ganás o gastás créditos en Infinito, tu saldo pasa a ser el de esta partida.",
+			"Si salís antes de cualquier movimiento, conservás tu saldo actual.",
+			"",
+			`Tu récord: oleada {r.bestWave} · {r.bestScore} puntos`,
+		}, "\n"),
+	}, cuerpo)
+	boton("ENTRAR", { Position = UDim2.new(1, -220, 1, -50), Size = UDim2.fromOffset(220, 50), TextSize = 20, BackgroundColor3 = Color3.fromRGB(120, 80, 210) }, cuerpo, function()
+		local err = entrar:InvokeServer("survival")
+		mensaje.Text = err or ""
+		if not err then
+			gui.Enabled = false
+		end
+	end)
+end
+
+abrirPanel.OnClientEvent:Connect(function(panel, datos)
+	if panel == "infinito" then
+		pantallaInfinito(datos)
+		gui.Enabled = true
+		return
+	end
 	if panel ~= "invocaciones" then
 		return
 	end

@@ -14,14 +14,17 @@ const heroes = leer("heroes.json");
 
 const oleadas = [...Array(30).keys()].map((i) => i + 1).concat([40, 50, 75, 99, 100]);
 const casos = [];
-for (const equipo of [[], ["hawkeye"]]) {
-  const game = { currentLevel: levels[0], levelsData: levels, difficulty: "normal", heroes: equipo.map((id) => ({ config: heroes[id] })), enemies: [] };
-  for (const w of oleadas) {
+// Supervivencia como la arma el 3D (combat.js): modeId "survival" sin start(), así la semilla sigue siendo "campaign".
+const supervivencia = { modeId: "survival", getSeed: () => "campaign", buildWave: () => null };
+for (const modo of ["campaign", "survival"]) for (const equipo of [[], ["hawkeye"]]) {
+  const game = { currentLevel: levels[0], levelsData: levels, difficulty: "normal", heroes: equipo.map((id) => ({ config: heroes[id] })), enemies: [], modeSystem: modo === "survival" ? supervivencia : undefined };
+  for (const w of modo === "survival" ? oleadas.concat([101, 125, 150]) : oleadas) {
     const wm = new WaveManager(game, enemies);
+    if (modo === "survival") wm.maxWaves = Number.MAX_SAFE_INTEGER;
     wm.currentWave = w;
     wm.prepareNextWave();
     casos.push({
-      equipo, oleada: w, modificador: wm.waveModifier.id,
+      modo, equipo, oleada: w, modificador: wm.waveModifier.id,
       cola: wm.preparedQueue.map((q) => [q.config.id, q.config.hp, q.config.speed, q.config.reward, +q.config.armor.toFixed(4), q.config.stealth ? 1 : 0, +q.delay.toFixed(4)]),
     });
   }

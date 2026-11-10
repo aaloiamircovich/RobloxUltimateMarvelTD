@@ -24,6 +24,7 @@ local tablaTipos = require(Data.TypeChart)
 
 local NIVEL, INDICE_NIVEL = niveles[1], 0
 local VIDAS_INICIALES = 20 -- ResourceManager del 2D; los créditos de Historia son los del perfil
+local CREDITOS_INFINITO, BONO_HITO = 750, 300 -- GameModeSystem del 2D: supervivencia
 local ESCUADRON = {} -- el escuadrón del perfil del dueño, fijado al iniciar la misión
 
 -- Estado visible para los clientes.
@@ -43,9 +44,21 @@ fijar("Mensaje", "")
 -- Jugador que inició la partida: juega con su perfil y es el único que puede actuar en ella.
 local dueno: Player? = nil
 
+-- "campaign" (Historia) o "survival" (Infinito).
+local modoPartida = "campaign"
+-- Infinito: hasta el primer movimiento de créditos, el saldo del perfil no se toca (regla del 3D).
+local creditosIntactos = false
+
 -- Los créditos de la partida son el saldo del perfil del dueño (como Historia en el 3D).
+-- En Infinito, ganar o gastar reemplaza el saldo del perfil por el de la partida.
 estado:GetAttributeChangedSignal("Creditos"):Connect(function()
 	local perfil = dueno and Perfiles.de(dueno)
+	if creditosIntactos then
+		if estado:GetAttribute("Creditos") == CREDITOS_INFINITO then
+			return
+		end
+		creditosIntactos = false
+	end
 	if perfil and estado:GetAttribute("Modo") == "batalla" then
 		perfil.credits = estado:GetAttribute("Creditos")
 		Perfiles.marcar(dueno)
@@ -522,10 +535,15 @@ local function partida(id: number)
 	local function sigue()
 		return id == partidaActual
 	end
-	for oleada = 1, Oleadas.MAX_OLEADAS do
+	local infinito = modoPartida == "survival"
+	local prefijo = if infinito then "Infinito · " else ""
+	local puntaje = 0
+	local oleada = 0
+	while infinito or oleada < Oleadas.MAX_OLEADAS do
+		oleada += 1
 		fijar("Oleada", oleada)
 		fijar("Fase", "preparacion")
-		fijar("Mensaje", `Oleada {oleada}: desplegá héroes y apretá «Iniciar oleada»`)
+		fijar("Mensaje", `{prefijo}Oleada {oleada}: desplegá héroes y apretá «Iniciar oleada»`)
 		iniciarPedido = false
 		repeat
 			task.wait(0.1)
@@ -538,9 +556,9 @@ local function partida(id: number)
 		for _, u in unidades do
 			table.insert(equipo, u.config)
 		end
-		local cola, mod = Oleadas.preparar(oleada, enemigosDatos, NIVEL, INDICE_NIVEL, equipo)
+		local cola, mod = Oleadas.preparar(oleada, enemigosDatos, NIVEL, INDICE_NIVEL, equipo, modoPartida)
 		fijar("Fase", "combate")
-		fijar("Mensaje", `Oleada {oleada}: {mod.nombre}`)
+		fijar("Mensaje", `{prefijo}Oleada {oleada}: {mod.nombre}`)
 		for _, entrada in cola do
 			task.wait(entrada.espera)
 			if not sigue() or estado:GetAttribute("Vidas") <= 0 then
@@ -556,12 +574,25 @@ local function partida(id: number)
 		end
 		if estado:GetAttribute("Vidas") <= 0 then
 			fijar("Fase", "fin")
-			fijar("Mensaje", `Derrota en la oleada {oleada}`)
+			fijar("Mensaje", `{prefijo}Derrota en la oleada {oleada}` .. (if infinito then ` · {puntaje} puntos` else ""))
 			return
 		end
-		-- Oleada superada: mejor oleada y estrellas del mapa, como mapProgress del 2D.
 		local perfil = dueno and Perfiles.de(dueno)
-		if perfil then
+		if infinito then
+			-- onWaveFinished del 2D: puntaje, récord y hito de +300 cada cinco oleadas.
+			puntaje += math.round(100 * oleada + estado:GetAttribute("Vidas") * 12)
+			if perfil then
+				local r = perfil.modeRecords.survival
+				r.bestWave = math.max(r.bestWave, oleada)
+				r.bestScore = math.max(r.bestScore, puntaje)
+				Perfiles.marcar(dueno)
+			end
+			if oleada % 5 == 0 then
+				fijar("Creditos", estado:GetAttribute("Creditos") + BONO_HITO)
+				aviso:FireAllClients(`Hito {oleada}: +{BONO_HITO} créditos`)
+			end
+		elseif perfil then
+			-- Oleada superada: mejor oleada y estrellas del mapa, como mapProgress del 2D.
 			local p = perfil.mapProgress[NIVEL.id] or { bestWave = 0, stars = 0 }
 			p.bestWave = math.max(p.bestWave, oleada)
 			p.stars = math.max(p.stars, p.bestWave)
@@ -573,7 +604,7 @@ local function partida(id: number)
 	fijar("Mensaje", "¡Victoria! Base Avengers defendida")
 end
 
-local function iniciarPartida(jugador: Player)
+local function iniciarPartida(jugador: Player, modo: string)
 	local perfil = Perfiles.de(jugador)
 	if not perfil then
 		return
@@ -587,9 +618,11 @@ local function iniciarPartida(jugador: Player)
 	partidaActual += 1
 	limpiar()
 	dueno = jugador
+	modoPartida = modo
+	creditosIntactos = modo == "survival"
 	fijar("Vidas", VIDAS_INICIALES)
 	fijar("Modo", "batalla")
-	fijar("Creditos", perfil.credits)
+	fijar("Creditos", if modo == "survival" then CREDITOS_INFINITO else perfil.credits)
 	task.spawn(partida, partidaActual)
 end
 
@@ -611,14 +644,18 @@ end
 local hub = Hub.construir(function(jugador, estacion)
 	if estacion == "story" then
 		if estado:GetAttribute("Modo") == "hub" then
-			iniciarPartida(jugador)
+			iniciarPartida(jugador, "campaign")
 		elseif dueno ~= jugador then
 			aviso:FireClient(jugador, `{dueno and dueno.DisplayName or "Otro jugador"} está en una misión`)
 		end
 	elseif estacion == "summon" then
 		abrirPanel:FireClient(jugador, "invocaciones")
+	elseif estacion == "infinite" then
+		-- Antes de entrar, el cliente explica la regla de créditos y pide confirmar.
+		local perfil = Perfiles.de(jugador)
+		abrirPanel:FireClient(jugador, "infinito", perfil and perfil.modeRecords.survival)
 	else
-		-- Infinito espera su port; traits y grades, las reglas del usuario.
+		-- Traits y grades esperan las reglas del usuario.
 		aviso:FireClient(jugador, "Próximamente")
 	end
 end)
@@ -670,6 +707,20 @@ local function resumen(perfil)
 		iniciales = Reclutamiento.INICIALES,
 		garantia = perfil.shop.heroPity >= 4,
 	}
+end
+
+local entrar = Instance.new("RemoteFunction")
+entrar.Name = "Entrar"
+entrar.Parent = ReplicatedStorage
+entrar.OnServerInvoke = function(jugador, modo)
+	if modo ~= "survival" then
+		return "Modo desconocido"
+	end
+	if estado:GetAttribute("Modo") ~= "hub" then
+		return `{dueno and dueno.DisplayName or "Otro jugador"} está en una misión`
+	end
+	iniciarPartida(jugador, modo)
+	return nil
 end
 
 local coleccion = Instance.new("RemoteFunction")

@@ -1,6 +1,6 @@
 -- Perfil persistente por jugador (DataStore). Subconjunto del estado de ProgressionManager del 2D,
 -- con los mismos nombres de campo para poder importar perfiles: credits, heroUpgrades, mapProgress,
--- unlockedHeroIds, activeTeamIds y shop.
+-- unlockedHeroIds, activeTeamIds, shop y modeRecords (sólo supervivencia).
 local DataStoreService = game:GetService("DataStoreService")
 local heroes = require(game:GetService("ReplicatedStorage").Shared.Data.heroes)
 
@@ -28,6 +28,7 @@ function Perfiles.normalizar(crudo)
 		unlockedHeroIds = {},
 		activeTeamIds = {},
 		shop = { heroPity = 0, heroBoxCost = 500 },
+		modeRecords = { survival = { bestWave = 0, bestScore = 0 } },
 	}
 	local c = tonumber(datos.credits)
 	if c and c == c and c >= 0 and c < math.huge then
@@ -69,6 +70,11 @@ function Perfiles.normalizar(crudo)
 	end, 6)
 	if #p.activeTeamIds == 0 and #p.unlockedHeroIds > 0 then
 		p.activeTeamIds = { p.unlockedHeroIds[1] }
+	end
+	local r = type(datos.modeRecords) == "table" and datos.modeRecords.survival
+	if type(r) == "table" then
+		p.modeRecords.survival.bestWave = math.max(0, math.floor(tonumber(r.bestWave) or 0))
+		p.modeRecords.survival.bestScore = math.max(0, math.floor(tonumber(r.bestScore) or 0))
 	end
 	if type(datos.shop) == "table" then
 		p.shop.heroPity = math.max(0, math.floor(tonumber(datos.shop.heroPity) or 0))

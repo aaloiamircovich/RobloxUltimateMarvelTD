@@ -102,15 +102,6 @@ local function copiar(t)
 	return c
 end
 
-local function esFinal(w)
-	return w == Oleadas.MAX_OLEADAS
-end
-local function esMiniJefe(w)
-	return w < Oleadas.MAX_OLEADAS and w % INTERVALO_MINI_JEFE == 0
-end
-local function esJefe(w)
-	return esFinal(w) or esMiniJefe(w)
-end
 
 function Oleadas.curvaVida(oleada: number, jefe: boolean?): number
 	local w = math.max(1, math.floor(oleada))
@@ -181,10 +172,22 @@ end
 -- prepareNextWave
 --------------------------------------------------------------------------------
 -- datos: enemies.json ({ normal, bosses }); nivel: entrada de levels.json; equipo: configs de héroes.
+-- modo: "campaign" (por defecto) o "survival" (Infinito: sin límite, sin aperturas ni jefe final).
 -- Devuelve cola { { enemigo = config escalada, espera = segundos } } y el modificador.
-function Oleadas.preparar(oleada: number, datos, nivel, indiceNivel: number, equipo)
-	if oleada > Oleadas.MAX_OLEADAS then
+function Oleadas.preparar(oleada: number, datos, nivel, indiceNivel: number, equipo, modo: string?)
+	local supervivencia = modo == "survival"
+	local maximo = if supervivencia then math.huge else Oleadas.MAX_OLEADAS
+	if oleada > maximo then
 		return nil
+	end
+	local function esFinal(w)
+		return w == maximo
+	end
+	local function esMiniJefe(w)
+		return w < maximo and w % INTERVALO_MINI_JEFE == 0
+	end
+	local function esJefe(w)
+		return esFinal(w) or esMiniJefe(w)
 	end
 	local tema = nivel.theme and nivel.theme.id or "new-york"
 	local faccion = FACCIONES[tema] or FACCIONES["new-york"]
@@ -204,7 +207,7 @@ function Oleadas.preparar(oleada: number, datos, nivel, indiceNivel: number, equ
 	-- getOpeningScript: oleadas 1–5 que no sean de ramas (las de ramas son múltiplos de 4).
 	local guion
 	local hayRamas = oleada >= 4 and oleada % 4 == 0 and not esJefe(oleada)
-	if oleada <= 5 and not hayRamas then
+	if not supervivencia and oleada <= 5 and not hayRamas then
 		guion = (APERTURAS[tema] or {})[oleada]
 		if not guion then
 			local p1 = faccion.plantel[1][1]
