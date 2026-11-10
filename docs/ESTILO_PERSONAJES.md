@@ -19,3 +19,9 @@ thin eyebrows, small mouth, <PELO>; <TRAJE Y COLORES>, <ACCESORIOS>, standing in
 ```
 
 Ejemplo (arquero): `<PELO>` = `spiky blond anime hair`; `<TRAJE>` = `black tactical suit with a purple chevron on the chest, purple forearm guards, black gloves and boots`; `<ACCESORIOS>` = `small quiver on the back`.
+
+## Enemigos
+
+Plantillas en `ServerStorage.Plantillas.Enemigos/<id del enemigo>` (se guardan en el lugar, no en Git). Proceso: `generate_mesh` con "blocky Roblox-style …" describiendo el aspecto sin nombres de Marvel, escalar a su altura (normales ~3.5 studs, voladores ~2, tanques ~5.5) y comprobar que el frente mire a −Z. Si una malla sale sin textura (gris), regenerarla. El juego mueve el modelo con `PivotTo`; no hace falta esqueleto.
+
+Hechos (facción Base Avengers): `ultron_drone`, `doombot`, `aim_scientist`, `chitauri_warrior`, `skrull_infiltrator`, `sentinel`.
