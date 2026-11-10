@@ -39,6 +39,18 @@
       "value": "estilo cómic marcado, tonos rojos y amarillos, fuente Bangers; HUD del lobby como Anime Galaxy/ASTD",
       "by": "user",
       "date": "2026-11-10"
+    },
+    {
+      "topic": "creditos_modelos",
+      "date": "2026-11-10",
+      "by": "system",
+      "value": "ForgeGUI sin créditos para modelos 3D (4000 req, 2632 disp.): portón, arbusto, flores, roca rechazados sin cobro; farol, banco, barrera, vehículo sin pedir"
+    },
+    {
+      "topic": "modelos_sin_creditos",
+      "date": "2026-11-10",
+      "by": "user",
+      "value": "Usar el generador de Roblox (generate_mesh) para los 8 modelos de decoración y el portón"
     }
   ],
   "publishing_destination": {
@@ -585,6 +597,104 @@
       "moderation": "approved",
       "studio_path": "ServerStorage.Plantillas.Mapas.avengers.base",
       "notas": "insertado directo en ServerStorage: sin giro; borde_* y base con pivote girado 180°"
+    },
+    {
+      "id": "tex_mapa_techo",
+      "kind": "texture",
+      "request_id": "umtd-mapa-tex-techo-v1",
+      "job_id": "66bd2e55-8303-4aa2-ab1a-601231109d91",
+      "prepare_job_id": "2d8ca6d6-b457-4693-ba0d-76fa85f37868",
+      "publication_id": "8dd4131c-ad02-4cc8-8b97-2b3cf4552e5a",
+      "status": "inserted",
+      "roblox_asset_id": "96343710388043",
+      "moderation": "approved",
+      "studio_path": "MaterialService.Hub_techo",
+      "notas": "resize cover 1024; StudsPerTile 8 (Hub.TEXTURAS)"
+    },
+    {
+      "id": "tex_mapa_fachada",
+      "kind": "texture",
+      "request_id": "umtd-mapa-tex-fachada-v1",
+      "job_id": "a0d9ff0e-3697-4e4f-861e-1f061175e385",
+      "prepare_job_id": "eb0118b6-edbb-4d19-b2f0-ecf9a9111d3c",
+      "publication_id": "3f27bffc-aa82-449a-99ba-f845aaa8a405",
+      "status": "inserted",
+      "roblox_asset_id": "99733207278881",
+      "moderation": "approved",
+      "studio_path": "MaterialService.Hub_fachada",
+      "notas": "resize cover 1024; StudsPerTile 10 (Hub.TEXTURAS)"
+    },
+    {
+      "id": "tex_mapa_hangar",
+      "kind": "texture",
+      "request_id": "umtd-mapa-tex-hangar-v1",
+      "job_id": "510f869c-6b4f-4c5b-8871-9f86bdec74b7",
+      "prepare_job_id": "7b1d3a54-63f3-46cf-824c-37169e42b75e",
+      "publication_id": "0590f859-a435-4766-98d4-8e537372422e",
+      "status": "inserted",
+      "roblox_asset_id": "78292620747020",
+      "moderation": "approved",
+      "studio_path": "MaterialService.Hub_hangar",
+      "notas": "resize cover 1024; StudsPerTile 16 (Hub.TEXTURAS)"
+    },
+    {
+      "id": "deco_porton",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.avengers.porton",
+      "roblox_asset_id": "88883941697660",
+      "notas": "pivote girado 180° (el generador lo hizo mirando a +Z)"
+    },
+    {
+      "id": "deco_vehiculo",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.avengers.vehiculo",
+      "roblox_asset_id": "127988771913397"
+    },
+    {
+      "id": "deco_barrera",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.avengers.barrera"
+    },
+    {
+      "id": "deco_arbusto",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Deco.arbusto"
+    },
+    {
+      "id": "deco_flores",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Deco.flores"
+    },
+    {
+      "id": "deco_roca",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Deco.roca"
+    },
+    {
+      "id": "deco_farol",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Deco.farol"
+    },
+    {
+      "id": "deco_banco",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Deco.banco"
     }
   ],
   "notas_importacion": "Los modelos de ForgeGUI llegan con un giro de ~10° alrededor de Y; enderezar al múltiplo de 90° más cercano antes de guardarlos como plantilla."

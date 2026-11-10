@@ -7,7 +7,7 @@ local kit, clonarKit, agregarDecorado -- decorado del mapa (más abajo)
 
 local Mapa = {}
 
-Mapa.ESCALA = 3 / 8 -- studs por píxel del 2D: una baldosa de 32 px mide 12 studs (mapas caminables, docs/PARTIDA.md)
+Mapa.ESCALA = 1 / 4 -- studs por píxel del 2D: el mapa mide 200×150 studs y una baldosa de 32 px, 8 (docs/PARTIDA.md)
 Mapa.ORIGEN = Vector3.new(300, 0, -40) -- lejos del HUB, que está en el centro
 Mapa.ANCHO, Mapa.ALTO = 800, 600 -- tamaño lógico del 2D (combat-data.js)
 Mapa.JUGABLES = { "level_1", "level_2", "level_3", "level_4" } -- PLAYABLE_MISSIONS del 3D
@@ -16,20 +16,22 @@ Mapa.JUGABLES = { "level_1", "level_2", "level_3", "level_4" } -- PLAYABLE_MISSI
 local AGUA, PASTO, CAMINO, MONTANA, BOSQUE, BLOQUEADO, VEREDA, DETALLE = 0, 1, 2, 3, 4, 5, 11, 12
 local LEYENDA = { W = AGUA, G = PASTO, S = VEREDA, P = CAMINO, M = MONTANA, B = BLOQUEADO, X = BLOQUEADO }
 
--- Relieve real: alto = altura de la superficie (studs). La montaña es una plataforma elevada (techos,
--- rocas) a la que se suben las unidades de altura; el agua es agua de terreno; lo bloqueado lleva
--- estructuras encima. variante: MaterialVariant del HUB (Hub.crearMateriales) si existe.
+-- Relieve real: alto = altura de la superficie (studs). La montaña son edificios de techo plano donde se
+-- paran las unidades de altura; el agua es agua de terreno; lo bloqueado lleva estructuras encima.
+-- variante: MaterialVariant del HUB (Hub.crearMateriales) si existe; techo: variante de la losa de arriba.
+-- terreno: en vez de baldosa, terreno de Roblox (pasto 3D con Terrain.Decoration).
 local ASPECTO = {
 	[AGUA] = { color = Color3.fromRGB(70, 60, 50), alto = -3, material = Enum.Material.Sand },
 	[BLOQUEADO] = { color = Color3.fromRGB(150, 150, 158), alto = 1.4, material = Enum.Material.Concrete, variante = "Hub_vereda" },
-	[CAMINO] = { color = Color3.fromRGB(150, 145, 140), alto = 1, material = Enum.Material.Concrete, variante = "Hub_vereda" },
-	[PASTO] = { color = Color3.fromRGB(255, 255, 255), alto = 1.4, material = Enum.Material.Grass, variante = "Hub_pasto" },
-	[MONTANA] = { color = Color3.fromRGB(255, 255, 255), alto = 6, material = Enum.Material.Metal, variante = "Hub_metal" },
-	[BOSQUE] = { color = Color3.fromRGB(255, 255, 255), alto = 1.4, material = Enum.Material.Grass, variante = "Hub_selva" },
+	[CAMINO] = { color = Color3.fromRGB(255, 255, 255), alto = 1, material = Enum.Material.Metal, variante = "Hub_hangar" },
+	[PASTO] = { color = Color3.fromRGB(255, 255, 255), alto = 1.4, material = Enum.Material.Grass, terreno = true },
+	[MONTANA] = { color = Color3.fromRGB(255, 255, 255), alto = 9, material = Enum.Material.Concrete, variante = "Hub_fachada", techo = "Hub_techo" },
+	[BOSQUE] = { color = Color3.fromRGB(255, 255, 255), alto = 1.4, material = Enum.Material.Grass, terreno = true },
 	[VEREDA] = { color = Color3.fromRGB(255, 255, 255), alto = 1.3, material = Enum.Material.Concrete, variante = "Hub_vereda" },
 	[DETALLE] = { color = Color3.fromRGB(255, 255, 255), alto = 1.4, material = Enum.Material.Metal, variante = "Hub_metal" },
 }
 Mapa.NIVEL_AGUA = 0.6 -- superficie del agua
+local DESFASE = 2 -- el pasto de terreno se ve 2 studs más arriba que el tope de su relleno (el agua no; medido en Studio)
 
 -- Altura de la superficie en un punto (px del 2D), relativa al origen: para apoyar unidades y la vista previa.
 function Mapa.alturaSuelo(nivel, x: number, y: number): number
@@ -164,7 +166,7 @@ end
 -- "estructura_*" sobre lo bloqueado, "borde_*" alrededor del mapa, "arbol" y "base".
 -- Sin kit, bloques simples. Las plantillas miran a −Z con el pivote en el centro de su caja.
 --------------------------------------------------------------------------------
-Mapa.MARGEN = 40 -- studs de borde caminable alrededor del área jugable
+Mapa.MARGEN = 28 -- studs de borde caminable alrededor del área jugable
 
 local function kits(nivel, prefijo: string): { Model }
 	if not (RunService:IsServer() or RunService:IsEdit()) then -- el cliente no ve ServerStorage
@@ -185,8 +187,15 @@ local function kits(nivel, prefijo: string): { Model }
 	return r
 end
 
+-- Modelo del kit del tema o, si no tiene, de la decoración común (Plantillas.Deco: arbusto, flores, roca, farol, banco).
 kit = function(nivel, nombre: string): Model?
-	return kits(nivel, nombre)[1]
+	local propio = kits(nivel, nombre)[1]
+	if propio or not (RunService:IsServer() or RunService:IsEdit()) then
+		return propio
+	end
+	local p = game:GetService("ServerStorage"):FindFirstChild("Plantillas")
+	local comun = p and p:FindFirstChild("Deco")
+	return comun and comun:FindFirstChild(nombre)
 end
 
 clonarKit = function(m: Model, eje: string, medida: number): Model
@@ -195,6 +204,7 @@ clonarKit = function(m: Model, eje: string, medida: number): Model
 	for _, d in c:GetDescendants() do
 		if d:IsA("BasePart") then
 			d.Anchored = true
+			d.CanQuery = false -- el mouse apunta al suelo a través del decorado (colocar unidades)
 		end
 	end
 	return c
@@ -209,9 +219,48 @@ local function hash(a: number, b: number): number
 	return (a * 73856093 + b * 19349663) % 1000
 end
 
-agregarDecorado = function(nivel, carpeta: Model, celdas, lado: number, origen: Vector3, grilla)
+
+local AMARILLO, NEGRO = Color3.fromRGB(255, 196, 0), Color3.fromRGB(25, 25, 28)
+local LADOS = { { -1, 0 }, { 1, 0 }, { 0, -1 }, { 0, 1 } } -- (fila, columna) vecinas
+
+local function bloque(padre: Instance, cf: CFrame, tam: Vector3, color: Color3, material: Enum.Material, variante: string?): Part
+	local p = Instance.new("Part")
+	p.Anchored = true
+	p.CFrame = cf
+	p.Size = tam
+	p.Color = color
+	p.Material = material
+	if variante and MaterialService:FindFirstChild(variante) then
+		p.MaterialVariant = variante
+	end
+	p.TopSurface, p.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
+	p.Parent = padre
+	return p
+end
+
+-- Franja de peligro amarilla y negra en el piso, de `a` a `b` (tramos de ~2 studs).
+local function franjaPeligro(padre: Instance, a: Vector3, b: Vector3, ancho: number)
+	local largo = (b - a).Magnitude
+	local n = math.max(1, math.floor(largo / 2))
+	for i = 1, n do
+		local pos = a + (b - a) * ((i - 0.5) / n)
+		local p = bloque(padre, CFrame.lookAt(pos, pos + (b - a)), Vector3.new(ancho, 0.1, largo / n), if i % 2 == 0 then NEGRO else AMARILLO, Enum.Material.SmoothPlastic)
+		p.CanCollide = false
+	end
+end
+
+-- Celda vecina (código) o nil fuera de la grilla.
+local function vecina(grilla, f: number, c: number): number?
+	return grilla[f] and grilla[f][c]
+end
+
+agregarDecorado = function(nivel, carpeta: Model, celdas, lado: number, origen: Vector3, ruta: { Vector3 }, anchoCamino: number, grilla)
 	local deco = Instance.new("Model")
 	deco.Name = "Decorado"
+	local flora = {}
+	for _, n in { "arbusto", "flores", "roca", "farol", "banco", "barrera", "vehiculo" } do
+		flora[n] = kit(nivel, n)
+	end
 	local estructuras = kits(nivel, "estructura")
 	local arbol = kit(nivel, "arbol")
 	if not arbol and (RunService:IsServer() or RunService:IsEdit()) then
@@ -232,59 +281,80 @@ agregarDecorado = function(nivel, carpeta: Model, celdas, lado: number, origen: 
 					apoyar(m, celda.centro, (h % 4) * math.pi / 2)
 					m.Parent = deco
 				else
-					local b = Instance.new("Part")
-					b.Anchored = true
-					b.Size = Vector3.new(lado * 0.7, 3 + h % 4, lado * 0.7)
-					b.Position = celda.centro + Vector3.new(0, b.Size.Y / 2, 0)
-					b.Color = Color3.fromRGB(120, 125, 135)
-					b.Material = Enum.Material.Concrete
-					b.Parent = deco
+					local alto = 2 + h % 3
+					bloque(deco, CFrame.new(celda.centro + Vector3.new(0, alto / 2, 0)), Vector3.new(lado * 0.7, alto, lado * 0.7), Color3.fromRGB(120, 125, 135), Enum.Material.Concrete)
 				end
 			end
 		elseif celda.codigo == BOSQUE and arbol then
-			local m = clonarKit(arbol, "Y", 8 + h % 4)
+			local m = clonarKit(arbol, "Y", 6 + h % 3)
 			apoyar(m, celda.centro, h / 1000 * math.pi * 2)
 			m.Parent = deco
 		end
+		if celda.codigo == PASTO or celda.codigo == BOSQUE then
+			-- Plantas sueltas y faroles con banco al borde del camino.
+			local g = hash(celda.c * 7 + 3, celda.f * 13 + 1)
+			local suelto = (g / 1000 - 0.5) * lado * 0.6
+			local planta = if g < 150 then "arbusto" elseif g < 300 then "flores" elseif g < 340 then "roca" else nil
+			if planta and flora[planta] then
+				local m = clonarKit(flora[planta], "Y", ({ arbusto = 2.4, flores = 1, roca = 1.8 })[planta] * (0.8 + (g % 5) / 10))
+				apoyar(m, celda.centro + Vector3.new(suelto, 0, -suelto * 0.7), g / 1000 * math.pi * 2)
+				m.Parent = deco
+			end
+			for _, d in LADOS do
+				if vecina(grilla, celda.f + d[1], celda.c + d[2]) == CAMINO and (celda.f * 3 + celda.c) % 4 == 0 and flora.farol then
+					local normal = Vector3.new(d[2], 0, d[1])
+					local pie = celda.centro + normal * (lado / 2 - 1)
+					local m = clonarKit(flora.farol, "Y", 6)
+					m:PivotTo(CFrame.lookAt(pie, pie + normal) * CFrame.new(0, m:GetExtentsSize().Y / 2, 0))
+					local luz = Instance.new("PointLight")
+					luz.Color, luz.Range, luz.Brightness = Color3.fromRGB(255, 226, 170), 14, 1.4
+					luz.Parent = m.PrimaryPart or m:FindFirstChildWhichIsA("BasePart", true)
+					m.Parent = deco
+					if flora.banco and g % 2 == 0 then
+						local b = clonarKit(flora.banco, "X", 3.6)
+						local lugar = pie + Vector3.new(d[1], 0, d[2]) * 3 - normal * 0.6
+						b:PivotTo(CFrame.lookAt(lugar, lugar + normal) * CFrame.new(0, b:GetExtentsSize().Y / 2, 0))
+						b.Parent = deco
+					end
+					break
+				end
+			end
+		end
 	end
 
-	-- Borde caminable alrededor del área jugable y un anillo de edificios del tema.
+	-- Anillo de edificios del tema y árboles alrededor, salvo frente al portón y a la base.
 	local ancho, alto = Mapa.ANCHO * Mapa.ESCALA, Mapa.ALTO * Mapa.ESCALA
 	local m = Mapa.MARGEN
 	local suelo = ASPECTO[PASTO]
-	for _, franja in {
-		{ Vector3.new(ancho / 2, 0, -m / 2), Vector3.new(ancho + 2 * m, 0, m) },
-		{ Vector3.new(ancho / 2, 0, alto + m / 2), Vector3.new(ancho + 2 * m, 0, m) },
-		{ Vector3.new(-m / 2, 0, alto / 2), Vector3.new(m, 0, alto) },
-		{ Vector3.new(ancho + m / 2, 0, alto / 2), Vector3.new(m, 0, alto) },
-	} do
-		local p = Instance.new("Part")
-		p.Anchored = true
-		p.Size = franja[2] + Vector3.new(0, suelo.alto + 6, 0)
-		p.Position = origen + franja[1] + Vector3.new(0, (suelo.alto - 6) / 2, 0)
-		p.Material = suelo.material
-		p.Color = suelo.color
-		if MaterialService:FindFirstChild(suelo.variante) then
-			p.MaterialVariant = suelo.variante
-		end
-		p.Parent = deco
-	end
 	local bordes = kits(nivel, "borde")
-	local paso = 34
+	local paso = 26
 	local i = 0
+	local libre = anchoCamino / 2 + 16
 	local function ponerBorde(x: number, z: number, mira: Vector3)
-		i += 1
 		local pos = origen + Vector3.new(x, suelo.alto, z)
+		local plano = Vector3.new(1, 0, 1)
+		if ((pos - ruta[1]) * plano).Magnitude < libre or ((pos - ruta[#ruta]) * plano).Magnitude < libre then
+			return
+		end
+		i += 1
 		local h = hash(math.floor(x), math.floor(z))
 		local plantilla = if #bordes > 0 then bordes[h % #bordes + 1] else nil
 		if plantilla and i % 3 ~= 0 then
-			local b = clonarKit(plantilla, "Y", 18 + h % 12)
+			local b = clonarKit(plantilla, "Y", 14 + h % 8)
 			b:PivotTo(CFrame.lookAt(pos, Vector3.new(mira.X, pos.Y, mira.Z)) * CFrame.new(0, b:GetExtentsSize().Y / 2, 0))
 			b.Parent = deco
 		elseif arbol then
-			local t = clonarKit(arbol, "Y", 9 + h % 4)
+			local t = clonarKit(arbol, "Y", 7 + h % 3)
 			apoyar(t, pos, h / 1000 * math.pi * 2)
 			t.Parent = deco
+		end
+		-- Un arbusto o una roca más adentro, en el pasto del borde.
+		local planta = flora[if h % 3 == 0 then "roca" else "arbusto"]
+		if planta and h % 2 == 0 then
+			local hacia = ((mira - pos) * Vector3.new(1, 0, 1)).Unit
+			local p = clonarKit(planta, "Y", 2 + h % 2)
+			apoyar(p, pos + hacia * 7 + Vector3.new(hacia.Z, 0, -hacia.X) * (h % 9 - 4), h / 160)
+			p.Parent = deco
 		end
 	end
 	local centro = origen + Vector3.new(ancho / 2, 0, alto / 2)
@@ -296,7 +366,101 @@ agregarDecorado = function(nivel, carpeta: Model, celdas, lado: number, origen: 
 		ponerBorde(-m * 0.6, z, centro)
 		ponerBorde(ancho + m * 0.6, z, centro)
 	end
+
+	-- Barreras a los lados de la entrada y de la base; vehículos estacionados junto al portón.
+	for k, extremo in { { ruta[1], ruta[2] }, { ruta[#ruta], ruta[#ruta - 1] } } do
+		local dir = ((extremo[2] - extremo[1]) * Vector3.new(1, 0, 1)).Unit
+		local costado = Vector3.new(-dir.Z, 0, dir.X)
+		local piso = Vector3.new(extremo[1].X, origen.Y + suelo.alto, extremo[1].Z)
+		for _, s in { -1, 1 } do
+			if flora.barrera then
+				for j = 0, 1 do
+					local p = piso + dir * (8 + j * 5) + costado * s * (anchoCamino / 2 + 2)
+					local b = clonarKit(flora.barrera, "X", 4)
+					b:PivotTo(CFrame.lookAt(p, p + dir) * CFrame.Angles(0, math.pi / 2, 0) * CFrame.new(0, b:GetExtentsSize().Y / 2, 0))
+					b.Parent = deco
+				end
+			end
+			if flora.vehiculo and k == 1 then
+				local p = piso - dir * 4 + costado * s * (anchoCamino / 2 + 15)
+				local v = clonarKit(flora.vehiculo, "Z", 8)
+				v:PivotTo(CFrame.lookAt(p, p + dir + costado * s * 0.4) * CFrame.new(0, v:GetExtentsSize().Y / 2, 0))
+				v.Parent = deco
+			end
+		end
+	end
+
+	-- Luciérnagas sobre el mapa (partículas suaves).
+	local aire = bloque(deco, CFrame.new(centro + Vector3.new(0, 5, 0)), Vector3.new(ancho, 1, alto), Color3.new(1, 1, 1), Enum.Material.SmoothPlastic)
+	aire.Name = "Ambiente"
+	aire.Transparency, aire.CanCollide, aire.CanQuery, aire.CanTouch = 1, false, false, false
+	local motas = Instance.new("ParticleEmitter")
+	motas.Color = ColorSequence.new(Color3.fromRGB(255, 236, 150))
+	motas.LightEmission = 0.8
+	motas.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.5, 0.25), NumberSequenceKeypoint.new(1, 0) })
+	motas.Lifetime = NumberRange.new(6, 10)
+	motas.Rate = 8
+	motas.Speed = NumberRange.new(0.3, 1)
+	motas.SpreadAngle = Vector2.new(180, 180)
+	motas.Parent = aire
 	deco.Parent = carpeta
+end
+
+-- Portón de hangar por donde entran los enemigos: frente en `pos` + 2 studs hacia el mapa, mirando a `dir`.
+-- Con el modelo "porton" del kit lo usa (la abertura ocupa ~60% del ancho); si no, lo arma con bloques.
+local function porton(nivel, padre: Instance, pos: Vector3, dir: Vector3, ancho: number)
+	local cf = CFrame.lookAt(pos, pos + dir) * CFrame.new(0, 0, -2) -- cara del frente, a la altura del piso
+	local modelo = kit(nivel, "porton")
+	if modelo then
+		local m = clonarKit(modelo, "X", ancho * 1.6)
+		m.Name = "Porton"
+		local tam = m:GetExtentsSize()
+		m:PivotTo(cf * CFrame.new(0, tam.Y / 2, tam.Z / 2))
+		-- Fondo oscuro para que los enemigos salgan de adentro y no se vea el pasto de atrás.
+		local fondo = bloque(m, cf * CFrame.new(0, tam.Y * 0.35, tam.Z - 1), Vector3.new(ancho, tam.Y * 0.7, 1), NEGRO, Enum.Material.SmoothPlastic)
+		fondo.CanQuery = false
+		m.Parent = padre
+		return m
+	end
+	local m = Instance.new("Model")
+	m.Name = "Porton"
+	local H, D = 12, 14
+	local gris = Color3.fromRGB(200, 205, 212)
+	local function local_(x, y, z)
+		return cf * CFrame.new(x, y, z)
+	end
+	for _, lado in { -1, 1 } do
+		bloque(m, local_(lado * (ancho / 2 + 2), H / 2, D / 2), Vector3.new(4, H, D), gris, Enum.Material.Metal, "Hub_metal")
+		-- Baliza roja arriba de cada columna.
+		local luz = bloque(m, local_(lado * (ancho / 2 + 2), H + 3.6, -0.2), Vector3.new(1.2, 1.2, 1.2), Color3.fromRGB(255, 40, 30), Enum.Material.Neon)
+		local l = Instance.new("PointLight")
+		l.Color, l.Range, l.Brightness = Color3.fromRGB(255, 60, 40), 16, 2
+		l.Parent = luz
+	end
+	bloque(m, local_(0, H + 1.5, D / 2), Vector3.new(ancho + 8, 3, D), gris, Enum.Material.Metal, "Hub_metal")
+	bloque(m, local_(0, H / 2, D - 0.5), Vector3.new(ancho, H, 1), NEGRO, Enum.Material.SmoothPlastic)
+	bloque(m, local_(0, -0.5, D / 2), Vector3.new(ancho, 1, D), Color3.new(1, 1, 1), Enum.Material.Metal, "Hub_hangar")
+	-- Cortina a medio subir con franjas de peligro.
+	local n = math.max(2, math.floor(ancho / 2))
+	for k = 1, n do
+		bloque(m, local_(-ancho / 2 + (k - 0.5) * ancho / n, H - 1.5, 0.3), Vector3.new(ancho / n, 3, 0.4), if k % 2 == 0 then NEGRO else AMARILLO, Enum.Material.SmoothPlastic)
+	end
+	-- Cartel sobre el portón.
+	local frente = bloque(m, local_(0, H + 1.5, -0.05), Vector3.new(ancho + 8, 3, 0.1), Color3.fromRGB(190, 25, 30), Enum.Material.SmoothPlastic)
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Front
+	gui.PixelsPerStud = 40
+	local t = Instance.new("TextLabel")
+	t.Size = UDim2.fromScale(1, 1)
+	t.BackgroundTransparency = 1
+	t.Text = "HANGAR"
+	t.TextScaled = true
+	t.Font = Enum.Font.Bangers
+	t.TextColor3 = Color3.new(1, 1, 1)
+	t.Parent = gui
+	gui.Parent = frente
+	m.Parent = padre
+	return m
 end
 
 -- Construye el terreno, las zonas de la misión y la base en `origen`, dentro de `padre`;
@@ -304,38 +468,110 @@ end
 function Mapa.construir(nivel, origen: Vector3, padre: Instance): ({ Vector3 }, Model)
 	local carpeta = Instance.new("Model")
 	carpeta.Name = "Mapa"
-	local agua, celdas = {}, {}
+	local agua, pasto, huecos, celdas = {}, {}, {}, {}
+	local fondo = -6 -- cada baldosa es un bloque desde 6 studs bajo el piso hasta su superficie
 
 	local grilla, ladoPx = Mapa.terreno(nivel)
 	local lado = ladoPx * Mapa.ESCALA
+	local filas, cols = #grilla, #grilla[1]
+	local blanco = Color3.new(1, 1, 1)
 	for f, fila in grilla do
 		for c, codigo in fila do
 			local t = ASPECTO[codigo] or ASPECTO[PASTO]
-			-- Cada baldosa es un bloque desde 6 studs bajo el piso hasta su superficie (sin huecos entre alturas).
-			local fondo = -6
-			local p = Instance.new("Part")
-			p.Anchored = true
-			p.Size = Vector3.new(lado, t.alto - fondo, lado)
-			p.Position = origen + Vector3.new((c - 0.5) * lado, (t.alto + fondo) / 2, (f - 0.5) * lado)
-			p.Color = t.color
-			p.Material = t.material
-			if t.variante and MaterialService:FindFirstChild(t.variante) then
-				p.MaterialVariant = t.variante
+			local centro = origen + Vector3.new((c - 0.5) * lado, 0, (f - 0.5) * lado)
+			if t.terreno then
+				table.insert(pasto, { CFrame.new(centro + Vector3.new(0, (t.alto - DESFASE + fondo) / 2, 0)), Vector3.new(lado, t.alto - DESFASE - fondo, lado) })
+			else
+				local tope = if t.techo then t.alto - 0.4 else t.alto
+				bloque(carpeta, CFrame.new(centro + Vector3.new(0, (tope + fondo) / 2, 0)), Vector3.new(lado, tope - fondo, lado), t.color, t.material, t.variante)
 			end
-			p.TopSurface = Enum.SurfaceType.Smooth
-			p.Parent = carpeta
+			if t.techo then
+				-- Edificio: losa del techo, y en cada lado que da afuera un parapeto y una banda roja.
+				bloque(carpeta, CFrame.new(centro + Vector3.new(0, t.alto - 0.2, 0)), Vector3.new(lado, 0.4, lado), blanco, Enum.Material.Metal, t.techo)
+				for _, d in LADOS do
+					if vecina(grilla, f + d[1], c + d[2]) ~= codigo then
+						local normal = Vector3.new(d[2], 0, d[1])
+						local tangente = Vector3.new(math.abs(d[1]), 0, math.abs(d[2]))
+						local borde = centro + normal * (lado / 2)
+						local p1 = borde - normal * 0.2 + Vector3.new(0, t.alto + 0.6, 0)
+						bloque(carpeta, CFrame.lookAt(p1, p1 + tangente), Vector3.new(0.4, 1.2, lado), Color3.fromRGB(225, 228, 232), Enum.Material.Concrete)
+						local p2 = borde + normal * 0.05 + Vector3.new(0, t.alto - 1.2, 0)
+						bloque(carpeta, CFrame.lookAt(p2, p2 + tangente), Vector3.new(0.1, 0.6, lado), Color3.fromRGB(200, 30, 35), Enum.Material.SmoothPlastic)
+					end
+				end
+			elseif codigo == CAMINO then
+				-- Piso de hangar: franjas de peligro donde termina el camino; en el borde del mapa sigue hasta el portón y la base.
+				for _, d in LADOS do
+					local otra = vecina(grilla, f + d[1], c + d[2])
+					local normal = Vector3.new(d[2], 0, d[1])
+					local tangente = Vector3.new(math.abs(d[1]), 0, math.abs(d[2]))
+					local y = Vector3.new(0, t.alto + 0.05, 0)
+					if otra ~= nil and otra ~= CAMINO then
+						local b = centro + normal * (lado / 2 - 0.5) + y
+						franjaPeligro(carpeta, b - tangente * lado / 2, b + tangente * lado / 2, 0.8)
+					elseif otra == nil then
+						local m = Mapa.MARGEN
+						local ext = centro + normal * (lado / 2 + m / 2)
+						bloque(carpeta, CFrame.lookAt(ext + Vector3.new(0, (t.alto + fondo) / 2, 0), ext + Vector3.new(0, (t.alto + fondo) / 2, 0) + normal), Vector3.new(lado, t.alto - fondo, m), t.color, t.material, t.variante)
+						table.insert(huecos, { CFrame.new(ext + Vector3.new(0, 1, 0)), Vector3.new(if d[2] ~= 0 then m else lado, 14, if d[1] ~= 0 then m else lado) })
+						for _, s in { -1, 1 } do
+							if vecina(grilla, f + s * math.abs(d[2]), c + s * math.abs(d[1])) ~= CAMINO then
+								local b = centro + tangente * s * (lado / 2 - 0.5) + y
+								franjaPeligro(carpeta, b + normal * lado / 2, b + normal * (lado / 2 + m), 0.8)
+							end
+						end
+					end
+				end
+			end
 			if codigo == AGUA then
-				table.insert(agua, { CFrame.new(origen + Vector3.new((c - 0.5) * lado, (t.alto + Mapa.NIVEL_AGUA) / 2, (f - 0.5) * lado)), Vector3.new(lado, Mapa.NIVEL_AGUA - t.alto, lado) })
+				table.insert(agua, { CFrame.new(centro + Vector3.new(0, (t.alto + Mapa.NIVEL_AGUA) / 2, 0)), Vector3.new(lado, Mapa.NIVEL_AGUA - t.alto, lado) })
 			end
-			table.insert(celdas, { codigo = codigo, centro = origen + Vector3.new((c - 0.5) * lado, t.alto, (f - 0.5) * lado), f = f, c = c })
+			table.insert(celdas, { codigo = codigo, centro = centro + Vector3.new(0, t.alto, 0), f = f, c = c })
 		end
 	end
-	-- Agua de terreno (se borra con Mapa.limpiar).
+
+	local ruta = {}
+	for _, punto in Mapa.rutaPixeles(nivel) do
+		table.insert(ruta, Mapa.aMundo(punto.x, punto.y, origen))
+	end
+	-- Ancho del camino donde entra: celdas de camino contiguas en el borde, a lo ancho de la entrada.
+	local entrada = Mapa.rutaPixeles(nivel)[2]
+	local fe = math.clamp(math.floor(entrada.y / ladoPx) + 1, 1, filas)
+	local ce = math.clamp(math.floor(entrada.x / ladoPx) + 1, 1, cols)
+	local horizontal = ruta[2].X ~= ruta[1].X
+	local anchoCeldas = 0
+	for k = -10, 10 do
+		if vecina(grilla, if horizontal then fe + k else fe, if horizontal then ce else ce + k) == CAMINO then
+			anchoCeldas += 1
+		end
+	end
+	local anchoCamino = math.max(1, anchoCeldas) * lado
+
+	-- Terreno: pasto 3D en el mapa y en el borde caminable, agua, y huecos donde el hangar sale del mapa.
+	local ancho, alto = Mapa.ANCHO * Mapa.ESCALA, Mapa.ALTO * Mapa.ESCALA
+	local m = Mapa.MARGEN
+	local suelo = ASPECTO[PASTO]
+	for _, franja in {
+		{ Vector3.new(ancho / 2, 0, -m / 2), Vector3.new(ancho + 2 * m, 0, m) },
+		{ Vector3.new(ancho / 2, 0, alto + m / 2), Vector3.new(ancho + 2 * m, 0, m) },
+		{ Vector3.new(-m / 2, 0, alto / 2), Vector3.new(m, 0, alto) },
+		{ Vector3.new(ancho + m / 2, 0, alto / 2), Vector3.new(m, 0, alto) },
+	} do
+		table.insert(pasto, { CFrame.new(origen + franja[1] + Vector3.new(0, (suelo.alto - DESFASE + fondo) / 2, 0)), franja[2] + Vector3.new(0, suelo.alto - DESFASE - fondo, 0) })
+	end
+	local terreno = workspace.Terrain
+	for _, r in pasto do
+		terreno:FillBlock(r[1], r[2], Enum.Material.Grass)
+	end
+	for _, r in huecos do
+		terreno:FillBlock(r[1], r[2], Enum.Material.Air)
+	end
 	for _, r in agua do
-		workspace.Terrain:FillBlock(r[1], r[2], Enum.Material.Water)
+		terreno:FillBlock(r[1], r[2], Enum.Material.Water)
 	end
 	carpeta:SetAttribute("Agua", #agua)
-	agregarDecorado(nivel, carpeta, celdas, lado, origen, grilla)
+	agregarDecorado(nivel, carpeta, celdas, lado, origen, ruta, anchoCamino, grilla)
+	porton(nivel, carpeta, ruta[1] - Vector3.new(0, 1 - ASPECTO[CAMINO].alto, 0), ((ruta[2] - ruta[1]) * Vector3.new(1, 0, 1)).Unit, anchoCamino)
 
 	-- Zonas de la misión (runas de Sanctum): discos de luz con su radio.
 	local mecanica = nivel.mission and nivel.mission.mechanic or {}
@@ -352,45 +588,27 @@ function Mapa.construir(nivel, origen: Vector3, padre: Instance): ({ Vector3 }, 
 		d.Parent = carpeta
 	end
 
-	local ruta = {}
-	for _, punto in Mapa.rutaPixeles(nivel) do
-		table.insert(ruta, Mapa.aMundo(punto.x, punto.y, origen))
-	end
-
 	-- Base que defienden: modelo "base" del kit del mapa o un bloque de luz.
 	local kitBase = kit(nivel, "base")
 	if kitBase then
-		local m = clonarKit(kitBase, "Y", 14)
-		m:PivotTo(CFrame.lookAt(ruta[#ruta], ruta[#ruta - 1] * Vector3.new(1, 0, 1) + Vector3.new(0, ruta[#ruta].Y, 0)) * CFrame.new(0, m:GetExtentsSize().Y / 2 - 1, 0))
-		m.Name = "Base"
-		m.Parent = carpeta
+		local b = clonarKit(kitBase, "Y", 11)
+		b:PivotTo(CFrame.lookAt(ruta[#ruta], ruta[#ruta - 1] * Vector3.new(1, 0, 1) + Vector3.new(0, ruta[#ruta].Y, 0)) * CFrame.new(0, b:GetExtentsSize().Y / 2 - 1, 0))
+		b.Name = "Base"
+		b.Parent = carpeta
 	else
-		local base = Instance.new("Part")
+		local base = bloque(carpeta, CFrame.new(ruta[#ruta] + Vector3.new(0, 5, 0)), Vector3.new(6, 10, 6), Color3.fromRGB(240, 170, 40), Enum.Material.Neon)
 		base.Name = "Base"
-		base.Anchored = true
-		base.Size = Vector3.new(8, 12, 8)
-		base.Position = ruta[#ruta] + Vector3.new(0, 6, 0)
-		base.Color = Color3.fromRGB(240, 170, 40)
-		base.Material = Enum.Material.Neon
-		base.Parent = carpeta
 	end
 
 	carpeta.Parent = padre
 	return ruta, carpeta
 end
 
--- Borra el agua de terreno de un mapa construido (el resto se borra con el modelo).
-function Mapa.limpiar(nivel, origen: Vector3)
-	local grilla, ladoPx = Mapa.terreno(nivel)
-	local lado = ladoPx * Mapa.ESCALA
-	for f, fila in grilla do
-		for c, codigo in fila do
-			if codigo == AGUA then
-				local t = ASPECTO[AGUA]
-				workspace.Terrain:FillBlock(CFrame.new(origen + Vector3.new((c - 0.5) * lado, (t.alto + Mapa.NIVEL_AGUA) / 2, (f - 0.5) * lado)), Vector3.new(lado, Mapa.NIVEL_AGUA - t.alto + 0.2, lado), Enum.Material.Air)
-			end
-		end
-	end
+-- Borra el terreno (pasto y agua) de un mapa construido; el resto se borra con el modelo.
+function Mapa.limpiar(_nivel, origen: Vector3)
+	local m = Mapa.MARGEN + 8
+	local ancho, alto = Mapa.ANCHO * Mapa.ESCALA, Mapa.ALTO * Mapa.ESCALA
+	workspace.Terrain:FillBlock(CFrame.new(origen + Vector3.new(ancho / 2, 0, alto / 2)), Vector3.new(ancho + 2 * m, 24, alto + 2 * m), Enum.Material.Air)
 end
 
 return Mapa

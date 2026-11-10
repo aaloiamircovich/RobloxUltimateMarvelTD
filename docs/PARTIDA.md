@@ -25,7 +25,7 @@ Reemplaza el flujo actual (un mapa a la vez para todo el servidor, cámara fija,
 
 ## Mapa y cámara
 - **Cámara libre**: el jugador camina por el mapa con su personaje (sin cámara fija ni vista aérea).
-- **Mapas grandes y decorados**: se rehacen los 4 con el mismo recorrido del 2D a escala ~3× y decorado
+- **Mapas grandes y decorados**: se rehacen los 4 con el mismo recorrido del 2D a escala ×2 (200×150 studs) y decorado
   temático generado con ForgeGUI (base Vengadores, Manhattan, Wakanda, Sanctum).
 - **Colocar donde apunta el mouse**, en cualquier parte del mapa, **sin grilla**: no sobre el camino ni pegado a
   otra unidad. Se mantienen las reglas de terreno del 2D (unidades de montaña/altura y de agua).

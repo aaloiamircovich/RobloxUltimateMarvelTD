@@ -19,6 +19,10 @@ local TEXTURAS = {
 	metal = { id = "76077020809858", base = Enum.Material.Metal, tile = 12 },
 	madera = { id = "90645111155656", base = Enum.Material.WoodPlanks, tile = 12 },
 	roca = { id = "106184400863615", base = Enum.Material.Rock, tile = 12 },
+	-- Mapas de batalla (Mapa.luau): techo y fachada de los edificios, piso del hangar.
+	techo = { id = "96343710388043", base = Enum.Material.Metal, tile = 8 },
+	fachada = { id = "99733207278881", base = Enum.Material.Concrete, tile = 10 },
+	hangar = { id = "78292620747020", base = Enum.Material.Metal, tile = 16 },
 }
 local SELLO = "132807365750031" -- imagen del sello del portal (ForgeGUI)
 Hub.sellos = {}
@@ -54,6 +58,7 @@ local function ambientar()
 			warn(`Falta el MaterialVariant Hub_{nombre}: correr Hub.crearMateriales() en Studio y guardar.`)
 		end
 	end
+	workspace.Terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(96, 150, 62))
 	local Lighting = game:GetService("Lighting")
 	for _, s in Lighting:GetChildren() do
 		if s:IsA("Sky") then
@@ -165,10 +170,33 @@ local function enIsla(isla, angulo: number, r: number): Vector3
 	return isla.pos + Vector3.new(math.cos(a) * r, 0, math.sin(a) * r)
 end
 
--- Isla: tapa de terreno, borde y una raíz de roca que se afina hacia abajo.
+-- Isla: tapa de terreno, borde y una raíz de roca que se afina hacia abajo. Las de pasto llevan encima
+-- pasto 3D de terreno (Terrain.Decoration, activado en el lugar) y luciérnagas.
 local function isla(padre, datos)
 	local m = Instance.new("Model")
-	texturar(disco(m, datos.color, datos.pos, datos.radio * 2, 3), datos.textura)
+	local pasto = TEXTURAS[datos.textura].base == Enum.Material.Grass
+	-- En las de pasto la tapa queda 2 studs abajo: la superficie es el terreno, que se ve 2 studs más arriba que su relleno.
+	local tapa = disco(m, datos.color, datos.pos - Vector3.new(0, if pasto then 2 else 0, 0), datos.radio * 2, 3)
+	texturar(tapa, datos.textura)
+	if pasto then
+		-- Franjas de 4 studs (un voxel): FillCylinder llena voxeles enteros y dejaría el pasto 3 studs más alto.
+		local r = datos.radio - 1
+		-- Franjas alineadas a la grilla del mundo: si no, los voxeles quedan a medias y el pasto se hunde.
+		local cx = datos.pos.X
+		for x = math.ceil((cx - r) / 4) * 4 + 2, cx + r - 2, 4 do
+			local cuerda = 2 * math.sqrt(math.max(0, r * r - (x - cx) ^ 2))
+			workspace.Terrain:FillBlock(CFrame.new(x, datos.pos.Y - 4, datos.pos.Z), Vector3.new(4, 4, cuerda), Enum.Material.Grass)
+		end
+		local motas = Instance.new("ParticleEmitter")
+		motas.Color = ColorSequence.new(Color3.fromRGB(255, 236, 150))
+		motas.LightEmission = 0.8
+		motas.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.5, 0.25), NumberSequenceKeypoint.new(1, 0) })
+		motas.Lifetime = NumberRange.new(6, 10)
+		motas.Rate = 4
+		motas.Speed = NumberRange.new(0.3, 1)
+		motas.SpreadAngle = Vector2.new(180, 180)
+		motas.Parent = tapa
+	end
 	texturar(disco(m, "ffffff", datos.pos - Vector3.new(0, 3, 0), datos.radio * 2 - 1, 3), "roca")
 	for i, f in { 0.82, 0.62, 0.42, 0.24 } do
 		texturar(disco(m, if i % 2 == 0 then "d9d2c8" else "ffffff", datos.pos - Vector3.new(0, 2 + i * 5, 0), datos.radio * 2 * f, 5.5), "roca")
@@ -477,6 +505,21 @@ local function arbol(padre, pos: Vector3, copa: string, id: string, alto: number
 	c.Shape = Enum.PartType.Ball
 end
 
+-- Decoración común (ServerStorage.Plantillas.Deco): apoyada en `pos`, mirando a `mira` si se da.
+local function adorno(padre, id: string, pos: Vector3, alto: number, mira: Vector3?): Model?
+	local p = ServerStorage:FindFirstChild("Plantillas")
+	local d = p and p:FindFirstChild("Deco")
+	local m = d and d:FindFirstChild(id)
+	if not m then
+		return nil
+	end
+	local c = clonar(m, "Y", alto)
+	local giro = if mira then CFrame.lookAt(pos, Vector3.new(mira.X, pos.Y, mira.Z)) else CFrame.new(pos) * CFrame.Angles(0, (pos.X * 7 + pos.Z * 13) % 6.28, 0)
+	c:PivotTo(giro * CFrame.new(0, c:GetExtentsSize().Y / 2, 0))
+	c.Parent = padre
+	return c
+end
+
 function Hub.construir(alUsar: (Player, string) -> ())
 	local viejo = workspace:FindFirstChild("Hub")
 	if viejo then
@@ -534,6 +577,31 @@ function Hub.construir(alUsar: (Player, string) -> ())
 	end
 	for _, a in { 100, 140, 180, 220, 260, 300 } do
 		arbol(hub, enIsla(ISLAS.wakanda, a, 25), "2f7a2c", "arbol_selva", 9)
+	end
+
+	-- Faroles a cada lado de la salida de los puentes y del portal, plantas en el borde y bancos.
+	for _, destino in { ISLAS.asgard, ISLAS.wakanda, ISLAS.nuevaYork, ISLAS.baxter, ida } do
+		local d = if typeof(destino) == "Vector3" then destino else destino.pos
+		local a = math.deg(math.atan2(d.Z - c.pos.Z, d.X - c.pos.X))
+		for _, s in { -11, 11 } do
+			local f = adorno(hub, "farol", enIsla(c, a + s, 34), 6, c.pos)
+			local base = f and f:FindFirstChildWhichIsA("BasePart", true)
+			if base then
+				local luz = Instance.new("PointLight")
+				luz.Color, luz.Range, luz.Brightness = Color3.fromRGB(255, 226, 170), 16, 1.4
+				luz.Parent = base
+			end
+		end
+	end
+	for i, a in { -118, -62, -32, 18, 36, 78, 100, 150, 168, 215, 238 } do
+		adorno(hub, if i % 3 == 0 then "flores" elseif i % 3 == 1 then "arbusto" else "roca", enIsla(c, a, 37), if i % 3 == 0 then 1.1 elseif i % 3 == 1 then 2.4 else 1.6)
+		adorno(hub, "flores", enIsla(c, a + 6, 36), 1)
+	end
+	for _, a in { 70, 250 } do
+		adorno(hub, "banco", enIsla(c, a, 17), 2.2, c.pos + (enIsla(c, a, 17) - c.pos) * 2)
+	end
+	for i, a in { 90, 130, 170, 210, 250, 290 } do
+		adorno(hub, if i % 2 == 0 then "roca" else "arbusto", enIsla(ISLAS.wakanda, a + 20, 22), if i % 2 == 0 then 1.8 else 2.6)
 	end
 
 	-- Aparición al pie de la torre, mirando hacia afuera: las estaciones miran al centro, o sea al jugador.
