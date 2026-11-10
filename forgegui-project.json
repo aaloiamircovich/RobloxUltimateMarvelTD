@@ -838,6 +838,90 @@
       "source": "roblox_generate_mesh",
       "status": "inserted",
       "studio_path": "ServerStorage.Plantillas.Mapas.new-york.borde_3"
+    },
+    {
+      "id": "mat_Mapa_rocavioleta",
+      "kind": "material",
+      "source": "roblox_generate_material",
+      "status": "inserted",
+      "studio_path": "MaterialService.AssistantMaterials.*.Mapa_rocavioleta"
+    },
+    {
+      "id": "mat_Mapa_tierraroja",
+      "kind": "material",
+      "source": "roblox_generate_material",
+      "status": "inserted",
+      "studio_path": "MaterialService.AssistantMaterials.*.Mapa_tierraroja"
+    },
+    {
+      "id": "wak_porton",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.wakanda.porton"
+    },
+    {
+      "id": "wak_base",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.wakanda.base"
+    },
+    {
+      "id": "wak_borde_1",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.wakanda.borde_1"
+    },
+    {
+      "id": "wak_borde_2",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.wakanda.borde_2"
+    },
+    {
+      "id": "wak_borde_3",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.wakanda.borde_3"
+    },
+    {
+      "id": "wak_farol",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.wakanda.farol"
+    },
+    {
+      "id": "wak_cristal",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.wakanda.cristal"
+    },
+    {
+      "id": "wak_helecho",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.wakanda.helecho"
+    },
+    {
+      "id": "wak_barrera",
+      "kind": "model_3d",
+      "source": "roblox_generate_mesh",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.wakanda.barrera"
+    },
+    {
+      "id": "wak_arbol",
+      "kind": "model_3d",
+      "source": "copia de Plantillas.Hub.arbol_selva",
+      "status": "inserted",
+      "studio_path": "ServerStorage.Plantillas.Mapas.wakanda.arbol"
     }
   ],
   "notas_importacion": "Los modelos de ForgeGUI llegan con un giro de ~10° alrededor de Y; enderezar al múltiplo de 90° más cercano antes de guardarlos como plantilla."

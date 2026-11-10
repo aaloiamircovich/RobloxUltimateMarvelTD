@@ -55,6 +55,22 @@ local TEMAS = {
 		sueltos = { { "hidrante", 1.8, 50 }, { "basurero", 2, 60 }, { "arbol", 7, 110 }, { "estructura_2", 3.6, 30 }, { "estructura_3", 4, 30 } },
 		vapor = true,
 	},
+	-- Wakanda: casi todo es selva (bloqueada); las unidades van en mesetas de roca violeta y en el agua.
+	wakanda = {
+		aspecto = {
+			[CAMINO] = { color = Color3.fromRGB(255, 255, 255), alto = 1, material = Enum.Material.Ground, variante = "Mapa_tierraroja" },
+			[BLOQUEADO] = { color = Color3.fromRGB(255, 255, 255), alto = 1.4, material = Enum.Material.Grass, terreno = true },
+			[MONTANA] = { color = Color3.fromRGB(255, 255, 255), alto = 6, material = Enum.Material.Rock, variante = "Mapa_rocavioleta", techo = "Mapa_rocavioleta", techoMaterial = Enum.Material.Rock },
+			[PASTO] = { color = Color3.fromRGB(255, 255, 255), alto = 1.4, material = Enum.Material.Grass, terreno = true },
+		},
+		parapeto = false,
+		bancos = false,
+		banda = Color3.fromRGB(170, 90, 255), -- veta de vibranium
+		bandaMaterial = Enum.Material.Neon,
+		sueltosEn = { BLOQUEADO, PASTO },
+		sueltos = { { "arbol", 9, 300 }, { "arbusto", 2.8, 220 }, { "helecho", 2.2, 160 }, { "cristal", 2, 50 } },
+		motas = Color3.fromRGB(190, 140, 255),
+	},
 }
 
 local function tema(nivel)
@@ -320,7 +336,7 @@ agregarDecorado = function(nivel, carpeta: Model, celdas, lado: number, origen: 
 					end
 					apoyar(m, celda.centro, (h % 4) * math.pi / 2)
 					m.Parent = deco
-				else
+				elseif not table.find(estilo.sueltosEn or {}, BLOQUEADO) then
 					local alto = 2 + h % 3
 					bloque(deco, CFrame.new(celda.centro + Vector3.new(0, alto / 2, 0)), Vector3.new(lado * 0.7, alto, lado * 0.7), Color3.fromRGB(120, 125, 135), Enum.Material.Concrete)
 				end
@@ -330,7 +346,7 @@ agregarDecorado = function(nivel, carpeta: Model, celdas, lado: number, origen: 
 			apoyar(m, celda.centro, h / 1000 * math.pi * 2)
 			m.Parent = deco
 		end
-		if celda.codigo == PASTO or celda.codigo == BOSQUE then
+		if table.find(estilo.sueltosEn or { PASTO, BOSQUE }, celda.codigo) then
 			-- Plantas sueltas y faroles con banco al borde del camino.
 			local g = hash(celda.c * 7 + 3, celda.f * 13 + 1)
 			local suelto = (g / 1000 - 0.5) * lado * 0.6
@@ -356,7 +372,7 @@ agregarDecorado = function(nivel, carpeta: Model, celdas, lado: number, origen: 
 					luz.Color, luz.Range, luz.Brightness = Color3.fromRGB(255, 226, 170), 14, 1.4
 					luz.Parent = m.PrimaryPart or m:FindFirstChildWhichIsA("BasePart", true)
 					m.Parent = deco
-					if flora.banco and g % 2 == 0 then
+					if flora.banco and estilo.bancos ~= false and g % 2 == 0 then
 						local b = clonarKit(flora.banco, "X", 3.6)
 						local lugar = pie + Vector3.new(d[1], 0, d[2]) * 3 - normal * 0.6
 						b:PivotTo(CFrame.lookAt(lugar, lugar + normal) * CFrame.new(0, b:GetExtentsSize().Y / 2, 0))
@@ -446,7 +462,7 @@ agregarDecorado = function(nivel, carpeta: Model, celdas, lado: number, origen: 
 	aire.Name = "Ambiente"
 	aire.Transparency, aire.CanCollide, aire.CanQuery, aire.CanTouch = 1, false, false, false
 	local motas = Instance.new("ParticleEmitter")
-	motas.Color = ColorSequence.new(Color3.fromRGB(255, 236, 150))
+	motas.Color = ColorSequence.new(if typeof(estilo.motas) == "Color3" then estilo.motas else Color3.fromRGB(255, 236, 150))
 	motas.LightEmission = 0.8
 	motas.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.5, 0.25), NumberSequenceKeypoint.new(1, 0) })
 	motas.Lifetime = NumberRange.new(6, 10)
@@ -532,7 +548,7 @@ function Mapa.construir(nivel, origen: Vector3, padre: Instance): ({ Vector3 }, 
 		if estilo.orilla == "cordon" then
 			local medio = (a + b) / 2 + Vector3.new(0, 0.2, 0)
 			bloque(padre, CFrame.lookAt(medio, medio + (b - a)), Vector3.new(0.6, 0.5, (b - a).Magnitude), Color3.fromRGB(205, 205, 200), Enum.Material.Concrete)
-		else
+		elseif estilo.orilla == "peligro" then
 			franjaPeligro(padre, a, b, 0.8)
 		end
 	end
@@ -541,7 +557,7 @@ function Mapa.construir(nivel, origen: Vector3, padre: Instance): ({ Vector3 }, 
 			local t = aspecto(nivel, codigo)
 			local centro = origen + Vector3.new((c - 0.5) * lado, 0, (f - 0.5) * lado)
 			if t.terreno then
-				table.insert(pasto, { CFrame.new(centro + Vector3.new(0, (t.alto - DESFASE + fondo) / 2, 0)), Vector3.new(lado, t.alto - DESFASE - fondo, lado) })
+				table.insert(pasto, { CFrame.new(centro + Vector3.new(0, (t.alto - DESFASE + fondo) / 2, 0)), Vector3.new(lado, t.alto - DESFASE - fondo, lado), t.terrenoMaterial })
 			else
 				local tope = if t.techo then t.alto - 0.4 else t.alto
 				bloque(carpeta, CFrame.new(centro + Vector3.new(0, (tope + fondo) / 2, 0)), Vector3.new(lado, tope - fondo, lado), t.color, t.material, t.variante)
@@ -555,9 +571,11 @@ function Mapa.construir(nivel, origen: Vector3, padre: Instance): ({ Vector3 }, 
 						local tangente = Vector3.new(math.abs(d[1]), 0, math.abs(d[2]))
 						local borde = centro + normal * (lado / 2)
 						local p1 = borde - normal * 0.2 + Vector3.new(0, t.alto + 0.6, 0)
-						bloque(carpeta, CFrame.lookAt(p1, p1 + tangente), Vector3.new(0.4, 1.2, lado), Color3.fromRGB(225, 228, 232), Enum.Material.Concrete)
+						if estilo.parapeto ~= false then
+							bloque(carpeta, CFrame.lookAt(p1, p1 + tangente), Vector3.new(0.4, 1.2, lado), Color3.fromRGB(225, 228, 232), Enum.Material.Concrete)
+						end
 						local p2 = borde + normal * 0.05 + Vector3.new(0, t.alto - 1.2, 0)
-						bloque(carpeta, CFrame.lookAt(p2, p2 + tangente), Vector3.new(0.1, 0.6, lado), estilo.banda, Enum.Material.SmoothPlastic)
+						bloque(carpeta, CFrame.lookAt(p2, p2 + tangente), Vector3.new(0.1, 0.6, lado), estilo.banda, estilo.bandaMaterial or Enum.Material.SmoothPlastic)
 					end
 				end
 			elseif codigo == CAMINO then
@@ -624,14 +642,16 @@ function Mapa.construir(nivel, origen: Vector3, padre: Instance): ({ Vector3 }, 
 		table.insert(ruta, Mapa.aMundo(punto.x, punto.y, origen))
 	end
 	-- Ancho del camino donde entra: celdas de camino contiguas en el borde, a lo ancho de la entrada.
-	local entrada = Mapa.rutaPixeles(nivel)[2]
-	local fe = math.clamp(math.floor(entrada.y / ladoPx) + 1, 1, filas)
-	local ce = math.clamp(math.floor(entrada.x / ladoPx) + 1, 1, cols)
+	local rp = Mapa.rutaPixeles(nivel)
+	local fe = math.clamp(math.floor((rp[1].y + rp[2].y) / 2 / ladoPx) + 1, 1, filas)
+	local ce = math.clamp(math.floor((rp[1].x + rp[2].x) / 2 / ladoPx) + 1, 1, cols)
 	local horizontal = ruta[2].X ~= ruta[1].X
-	local anchoCeldas = 0
-	for k = -10, 10 do
-		if vecina(grilla, if horizontal then fe + k else fe, if horizontal then ce else ce + k) == CAMINO then
+	local anchoCeldas = if vecina(grilla, fe, ce) == CAMINO then 1 else 0
+	for _, s in { -1, 1 } do
+		local k = s
+		while vecina(grilla, if horizontal then fe + k else fe, if horizontal then ce else ce + k) == CAMINO do
 			anchoCeldas += 1
+			k += s
 		end
 	end
 	local anchoCamino = math.max(1, anchoCeldas) * lado
@@ -647,7 +667,7 @@ function Mapa.construir(nivel, origen: Vector3, padre: Instance): ({ Vector3 }, 
 		{ Vector3.new(ancho + m / 2, 0, alto / 2), Vector3.new(m, 0, alto) },
 	} do
 		if suelo.terreno then
-			table.insert(pasto, { CFrame.new(origen + franja[1] + Vector3.new(0, (suelo.alto - DESFASE + fondo) / 2, 0)), franja[2] + Vector3.new(0, suelo.alto - DESFASE - fondo, 0) })
+			table.insert(pasto, { CFrame.new(origen + franja[1] + Vector3.new(0, (suelo.alto - DESFASE + fondo) / 2, 0)), franja[2] + Vector3.new(0, suelo.alto - DESFASE - fondo, 0), suelo.terrenoMaterial })
 		else
 			-- Vereda de bloques: rectángulos de la franja menos los huecos por donde sale el camino.
 			local c0 = origen + franja[1]
@@ -681,7 +701,7 @@ function Mapa.construir(nivel, origen: Vector3, padre: Instance): ({ Vector3 }, 
 	end
 	local terreno = workspace.Terrain
 	for _, r in pasto do
-		terreno:FillBlock(r[1], r[2], Enum.Material.Grass)
+		terreno:FillBlock(r[1], r[2], r[3] or Enum.Material.Grass)
 	end
 	for _, r in huecos do
 		terreno:FillBlock(r[1], r[2], Enum.Material.Air)
