@@ -188,10 +188,11 @@ local function portal(padre, pos: Vector3, mira: Vector3, destino: CFrame)
 	local m = Instance.new("Model")
 	m.Name = "Portal"
 	local cf = CFrame.lookAt(pos + Vector3.new(0, 5, 0), mira + Vector3.new(0, 5, 0))
-	local aro = parte(m, "ff9a2e", cf * CFrame.Angles(0, math.rad(90), 0), Vector3.new(0.6, 9.5, 9.5), Enum.Material.Neon)
+	local aro = parte(m, "ff6a00", cf * CFrame.Angles(0, math.rad(90), 0), Vector3.new(0.6, 9.5, 9.5), Enum.Material.Neon)
 	aro.Shape = Enum.PartType.Cylinder
-	local centro = parte(m, "ffcf8a", cf * CFrame.Angles(0, math.rad(90), 0), Vector3.new(0.8, 8.6, 8.6), Enum.Material.ForceField)
+	local centro = parte(m, "ff7a1a", cf * CFrame.Angles(0, math.rad(90), 0), Vector3.new(0.8, 8.6, 8.6), Enum.Material.Neon)
 	centro.Shape = Enum.PartType.Cylinder
+	centro.Transparency = 0.65
 	centro.CanCollide = false
 	aro.CanCollide = false
 	local chispas = Instance.new("ParticleEmitter")
@@ -260,7 +261,7 @@ local function salas(padre, islaId: string, modo: string, anguloCentro: number, 
 		local pos = enIsla(datos, angulo, 19)
 		local base = disco(padre, "1d2633", pos + Vector3.new(0, 0.3, 0), 4.4, 0.3)
 		base.Name = `Sala_{modo}_{i}`
-		disco(padre, "ffffff", pos + Vector3.new(0, 0.33, 0), 4, 0.03, Enum.Material.Neon).Color = Color3.fromHex(if modo == "infinite" then "6fb5ff" else "ff8f3d")
+		disco(padre, if modo == "infinite" then "3a7bd5" else "c2571a", pos + Vector3.new(0, 0.33, 0), 4, 0.03)
 		letrero(padre, pos + Vector3.new(0, 3, 0), `SALA {i}`, "0/4", Color3.new(1, 1, 1), 4)
 		local prompt = Instance.new("ProximityPrompt")
 		prompt.ActionText = "Crear sala"

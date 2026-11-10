@@ -1,0 +1,146 @@
+{
+  "version": 2,
+  "game_style": "roblox",
+  "art_direction": "Roblox estilizado, formas limpias y algo exageradas, colores saturados, bordes biselados; edificios que se leen desde lejos sobre islas flotantes con cielo abierto.",
+  "material_language": "metal pulido y vidrio azulado en lo tecnológico (Torre Vengadores, Baxter); piedra dorada en Asgard; madera oscura y vitrales en el Sanctum; piedra púrpura, oro y vegetación en Wakanda; ladrillo y piedra art déco en Nueva York.",
+  "decisions": [
+    {
+      "topic": "generador",
+      "value": "ForgeGUI para edificios y texturas del HUB",
+      "by": "user",
+      "date": "2026-11-10"
+    },
+    {
+      "topic": "alcance",
+      "value": "islas, conexiones, edificios y estaciones ya; funciones nuevas (bailes, eventos, ranking, monturas, pets, raids, banners por hora, salas de 8) después, una por una",
+      "by": "user",
+      "date": "2026-11-10"
+    },
+    {
+      "topic": "puente_baxter",
+      "value": "pasarela futurista de vidrio con luces azules y el 4",
+      "by": "user",
+      "date": "2026-11-10"
+    },
+    {
+      "topic": "gasto",
+      "value": "generación paga autorizada, sin tope",
+      "by": "user",
+      "date": "2026-11-10"
+    },
+    {
+      "topic": "ruta_importacion",
+      "value": "publish/roblox con la conexión Personal @TPS_Xe0K",
+      "by": "user",
+      "date": "2026-11-10"
+    }
+  ],
+  "publishing_destination": {
+    "platform": "roblox",
+    "connection_id": "5750cf10-faba-45d6-b72c-78b0c4256d55",
+    "creator": {
+      "type": "user",
+      "id": "1966214264"
+    }
+  },
+  "assets": [
+    {
+      "id": "torre_vengadores",
+      "kind": "model_3d",
+      "request_id": "umtd-hub-torre_vengadores-v2",
+      "job_id": "ad9a0a6f-d1d0-4f50-9f12-39502a4c675a",
+      "delivery": "publish",
+      "status": "inserted",
+      "destino": "ServerStorage.Plantillas.Hub/torre_vengadores",
+      "publication_id": "1f9cc164-0563-44e4-80cc-92506ea2e132",
+      "roblox_asset_id": "113182769100403",
+      "moderation": "approved",
+      "studio_path": "ServerStorage.Plantillas.Hub.torre_vengadores",
+      "notas": "frente original a +Z; WorldPivot girado 180° para mirar a -Z"
+    },
+    {
+      "id": "castillo_asgard",
+      "kind": "model_3d",
+      "request_id": "umtd-hub-castillo_asgard-v1",
+      "job_id": "ee63aad9-0d6d-4dd3-97af-3bed96ad7542",
+      "delivery": "publish",
+      "status": "inserted",
+      "destino": "ServerStorage.Plantillas.Hub/castillo_asgard",
+      "roblox_asset_id": "89457158188361",
+      "publication_id": "4764518c-d9e3-4df8-9ff6-36f6b6ae1d18",
+      "moderation": "approved",
+      "studio_path": "ServerStorage.Plantillas.Hub.castillo_asgard",
+      "notas": "WorldPivot girado 180° para mirar a -Z"
+    },
+    {
+      "id": "empire_state",
+      "kind": "model_3d",
+      "request_id": "umtd-hub-empire_state-v1",
+      "job_id": "ff7d42ac-e8e4-404c-957c-aa876293bb0c",
+      "delivery": "publish",
+      "status": "inserted",
+      "destino": "ServerStorage.Plantillas.Hub/empire_state",
+      "roblox_asset_id": "78088508708502",
+      "publication_id": "97d4cf18-dd3a-47f9-845f-d25e1711a8fd",
+      "moderation": "approved",
+      "studio_path": "ServerStorage.Plantillas.Hub.empire_state",
+      "notas": "ya miraba a -Z"
+    },
+    {
+      "id": "sanctum",
+      "kind": "model_3d",
+      "request_id": "umtd-hub-sanctum-v1",
+      "job_id": "64876d5d-a710-40f0-8466-30f636ed5722",
+      "delivery": "publish",
+      "status": "inserted",
+      "destino": "ServerStorage.Plantillas.Hub/sanctum",
+      "roblox_asset_id": "103119437806396",
+      "publication_id": "4fafcb85-43c1-473a-ae32-0d811c54ca8a",
+      "moderation": "approved",
+      "studio_path": "ServerStorage.Plantillas.Hub.sanctum",
+      "notas": "WorldPivot girado 180° para mirar a -Z"
+    },
+    {
+      "id": "torre_baxter",
+      "kind": "model_3d",
+      "request_id": "umtd-hub-torre_baxter-v1",
+      "job_id": "fc6c60a8-165c-4862-bbab-1e49240d920f",
+      "delivery": "publish",
+      "status": "inserted",
+      "destino": "ServerStorage.Plantillas.Hub/torre_baxter",
+      "roblox_asset_id": "78553768597713",
+      "publication_id": "ea913c7e-452b-4027-8ef8-e7106f546039",
+      "moderation": "approved",
+      "studio_path": "ServerStorage.Plantillas.Hub.torre_baxter",
+      "notas": "WorldPivot girado 180° para mirar a -Z"
+    },
+    {
+      "id": "palacio_wakanda",
+      "kind": "model_3d",
+      "request_id": "umtd-hub-palacio_wakanda-v1",
+      "job_id": "293d0ddf-d1a6-4f38-8ec9-0c0384009016",
+      "delivery": "publish",
+      "status": "inserted",
+      "destino": "ServerStorage.Plantillas.Hub/palacio_wakanda",
+      "roblox_asset_id": "111764346371784",
+      "publication_id": "26c78625-ee63-46e8-b21e-51fe1a68b673",
+      "moderation": "approved",
+      "studio_path": "ServerStorage.Plantillas.Hub.palacio_wakanda",
+      "notas": "WorldPivot girado 180° para mirar a -Z"
+    },
+    {
+      "id": "daily_bugle",
+      "kind": "model_3d",
+      "request_id": "umtd-hub-daily_bugle-v1",
+      "job_id": "7fe6ae2f-e040-4c1e-9248-db27b830be95",
+      "delivery": "publish",
+      "status": "inserted",
+      "destino": "ServerStorage.Plantillas.Hub/daily_bugle",
+      "roblox_asset_id": "70642028673397",
+      "publication_id": "5af066a9-fdb6-48c8-bfd8-a042e66e0d77",
+      "moderation": "approved",
+      "studio_path": "ServerStorage.Plantillas.Hub.daily_bugle",
+      "notas": "WorldPivot girado 180° para mirar a -Z"
+    }
+  ]
+}
