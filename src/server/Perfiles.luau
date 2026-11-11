@@ -10,6 +10,7 @@ local Temporada = require(Shared.Temporada)
 local Evento = require(Shared.Evento)
 local Raid = require(Shared.Raid)
 local Rasgos = require(Shared.Rasgos)
+local Mascotas = require(Shared.Mascotas)
 local items = require(Shared.Data.items)
 
 local Perfiles = {}
@@ -56,6 +57,7 @@ function Perfiles.normalizar(crudo)
 		fichasRasgo = entero(datos.fichasRasgo, 0, 1e6, 0), -- docs/RASGOS.md
 		cristales = entero(datos.cristales, 0, 1e6, 0),
 		pityRasgo = entero(datos.pityRasgo, 0, 1000, 0),
+		mascotas = Mascotas.normalizar(datos.mascotas), -- docs/MASCOTAS.md
 	}
 	local c = tonumber(datos.credits)
 	if c and c == c and c >= 0 and c < math.huge then

@@ -17,6 +17,7 @@ local Temporada = require(Shared.Temporada)
 local Evento = require(Shared.Evento)
 local Raid = require(Shared.Raid)
 local Rasgos = require(Shared.Rasgos)
+local Mascotas = require(Shared.Mascotas)
 local Hub = require(script.Parent.Hub)
 local Perfiles = require(script.Parent.Perfiles)
 local Reclutamiento = require(script.Parent.Reclutamiento)
@@ -43,6 +44,7 @@ local temporada = remoto("RemoteFunction", "Temporada")
 local eventoRemoto = remoto("RemoteFunction", "Evento")
 local raidRemoto = remoto("RemoteFunction", "Raid")
 local rasgosRemoto = remoto("RemoteFunction", "Rasgos")
+local mascotasRemoto = remoto("RemoteFunction", "Mascotas")
 
 --------------------------------------------------------------------------------
 -- Partidas: cada una en su arena, lejos del HUB
@@ -55,6 +57,14 @@ do
 		local retratos = heroes:Clone()
 		retratos.Name = "Retratos"
 		retratos.Parent = ReplicatedStorage
+	end
+	-- Modelos de mascotas: los clientes los clonan para dibujar las que siguen a cada jugador.
+	local mascotas = game:GetService("ServerStorage"):FindFirstChild("Plantillas")
+	mascotas = mascotas and mascotas:FindFirstChild("Mascotas")
+	if mascotas then
+		local copia = mascotas:Clone()
+		copia.Name = "ModelosMascotas"
+		copia.Parent = ReplicatedStorage
 	end
 end
 
@@ -436,6 +446,8 @@ local function usarEstacion(jugador: Player, estacion: string)
 		abrirPanel:FireClient(jugador, "invocaciones", { pestana = "banner" })
 	elseif estacion == "tienda" then
 		abrirPanel:FireClient(jugador, "invocaciones", { pestana = "tienda" })
+	elseif estacion == "pets" then
+		abrirPanel:FireClient(jugador, "mascotas", {})
 	elseif estacion == "traits" or estacion == "grades" then
 		abrirPanel:FireClient(jugador, "rasgos", { pestana = estacion })
 	elseif estacion == "raids" or estacion == "misiones_raid" then
@@ -491,6 +503,7 @@ end
 local function alEntrar(jugador: Player)
 	local perfil, problema = Perfiles.cargar(jugador)
 	publicarSaldo(jugador, perfil)
+	jugador:SetAttribute("Mascotas", Mascotas.texto(perfil))
 	-- Récords que ya tenía: entran al ranking aunque no juegue en esta sesión.
 	if perfil.modeRecords.survival.bestWave > 0 then
 		Ranking.anotar("infinito", jugador.UserId, perfil.modeRecords.survival.bestWave)
@@ -521,6 +534,36 @@ task.spawn(function()
 		Perfiles.guardarTodos()
 	end
 end)
+
+--------------------------------------------------------------------------------
+-- Mascotas (docs/MASCOTAS.md): huevos, equipar y fusionar sobre el propio perfil
+--------------------------------------------------------------------------------
+mascotasRemoto.OnServerInvoke = function(jugador, nombre, a)
+	local perfil = Perfiles.de(jugador)
+	if not perfil then
+		return { error = "Tu perfil todavía no cargó" }
+	end
+	local err, nueva
+	if nombre ~= "estado" then
+		if partidaDe[jugador] then
+			err = "Terminá o abandoná la partida primero" -- los bonos se fijan al empezar
+		elseif nombre == "abrir" and type(a) == "string" then
+			nueva, err = Mascotas.abrir(perfil, a, math.random)
+		elseif nombre == "equipar" and type(a) == "number" then
+			err = Mascotas.equipar(perfil, a)
+		elseif nombre == "fusionar" and type(a) == "number" then
+			nueva, err = Mascotas.fusionar(perfil, a)
+		else
+			err = "Acción desconocida"
+		end
+		if not err then
+			Perfiles.marcar(jugador)
+			publicarSaldo(jugador, perfil)
+			jugador:SetAttribute("Mascotas", Mascotas.texto(perfil))
+		end
+	end
+	return { error = err, nueva = nueva, lista = perfil.mascotas.lista, equipadas = perfil.mascotas.equipadas, bonos = Mascotas.bonos(perfil), gemas = perfil.gems, huevos = Mascotas.HUEVOS }
+end
 
 --------------------------------------------------------------------------------
 -- Rasgos y grados (docs/RASGOS.md): tiradas sobre las unidades del propio perfil

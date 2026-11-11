@@ -18,6 +18,8 @@ local eventoRemoto = ReplicatedStorage:WaitForChild("Evento")
 local raidRemoto = ReplicatedStorage:WaitForChild("Raid")
 local salaRemota = ReplicatedStorage:WaitForChild("Sala")
 local rasgosRemoto = ReplicatedStorage:WaitForChild("Rasgos")
+local mascotasRemoto = ReplicatedStorage:WaitForChild("Mascotas")
+local Mascotas = require(Shared.Mascotas)
 local Rasgos = require(Shared.Rasgos)
 local abrirPanelRemoto = ReplicatedStorage:WaitForChild("AbrirPanel")
 local items = require(Shared.Data.items)
@@ -488,6 +490,108 @@ local function abrirRasgos()
 	end
 end
 
+-- Mascotas (docs/MASCOTAS.md): abrir huevos, equipar hasta 3 y fusionar 3 copias en una dorada.
+local COLOR_MASCOTA = { ["Común"] = Color3.fromRGB(190, 190, 200), Raro = Color3.fromRGB(80, 160, 255), ["Épico"] = Color3.fromRGB(180, 100, 255), Legendario = Color3.fromRGB(255, 190, 60), ["Mítico"] = Color3.fromRGB(255, 90, 110) }
+local cuerpoMascotas
+local elegidaMascota
+local armarMascotas
+do
+	local p, cuerpo = Comic.panel(gui, "MASCOTAS", UDim2.fromOffset(880, 500))
+	paneles.mascotas = p
+	cuerpoMascotas = cuerpo
+end
+local function pedirMascotas(nombre: string, a)
+	armarMascotas(mascotasRemoto:InvokeServer(nombre, a))
+end
+
+function armarMascotas(res)
+	cuerpoMascotas:ClearAllChildren()
+	if not res.lista then
+		Comic.texto({ Text = res.error or "", Size = UDim2.fromScale(1, 1), TextSize = 22, Font = Comic.TEXTO }, cuerpoMascotas)
+		return
+	end
+	local b = res.bonos
+	Comic.texto({ Text = `💎 {res.gemas}   ·   bonos equipados: +{math.floor(b.dinero * 100 + 0.5)}% dinero · +{math.floor(b.xp * 100 + 0.5)}% XP · +{math.floor(b.gemas * 100 + 0.5)}% gemas · +{math.floor(b.dano * 100 + 0.5)}% daño`, Size = UDim2.new(1, 0, 0, 26), TextSize = 20, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Left }, cuerpoMascotas)
+	local nuevaTxt = ""
+	if res.nueva then
+		local d = Mascotas.de(res.nueva.id)
+		nuevaTxt = `¡{if res.nueva.dorada then "Dorada: " else ""}{d.nombre} ({d.rareza})!`
+	end
+	Comic.texto({ Text = res.error or nuevaTxt, Position = UDim2.new(0, 0, 1, -26), Size = UDim2.new(1, 0, 0, 24), TextSize = if res.error then 16 else 24, Font = if res.error then Comic.TEXTO else Comic.TITULO, TextColor3 = Comic.AMARILLO }, cuerpoMascotas)
+
+	-- Izquierda: huevos.
+	for i, h in res.huevos do
+		local f = Comic.crear("Frame", { Position = UDim2.fromOffset(0, 36 + (i - 1) * 196), Size = UDim2.fromOffset(220, 184), BackgroundColor3 = if h.id == "cosmico" then Color3.fromRGB(70, 30, 120) else Comic.ROJO, Rotation = if i == 1 then -1.5 else 1.5 }, cuerpoMascotas)
+		Comic.borde(f, 4)
+		Comic.texto({ Text = `🥚 {string.upper(h.nombre)}`, Position = UDim2.fromOffset(8, 6), Size = UDim2.new(1, -16, 0, 32), TextSize = 26, TextColor3 = Comic.AMARILLO }, f)
+		local probs = {}
+		for _, r in Mascotas.RAREZAS do
+			if (h.prob[r] or 0) > 0 then
+				table.insert(probs, `{r} {h.prob[r]}%`)
+			end
+		end
+		Comic.texto({ Text = table.concat(probs, " · "), Position = UDim2.fromOffset(8, 42), Size = UDim2.new(1, -16, 0, 70), TextSize = 15, Font = Comic.TEXTO, TextWrapped = true }, f)
+		Comic.boton(`ABRIR  💎 {h.precio}`, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -10), Size = UDim2.new(1, -20, 0, 50), TextSize = 26, BackgroundColor3 = if res.gemas >= h.precio then Comic.VERDE else Comic.GRIS }, f, function()
+			pedirMascotas("abrir", h.id)
+		end)
+	end
+
+	-- Derecha: inventario y acciones.
+	local der = Comic.crear("Frame", { Position = UDim2.fromOffset(240, 36), Size = UDim2.fromOffset(600, 400), BackgroundTransparency = 1 }, cuerpoMascotas)
+	local grilla = Comic.crear("ScrollingFrame", { Size = UDim2.fromOffset(600, 300), BackgroundTransparency = 1, ScrollBarThickness = 6, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new() }, der)
+	Comic.crear("UIGridLayout", { CellSize = UDim2.fromOffset(110, 92), CellPadding = UDim2.fromOffset(8, 8) }, grilla)
+	local sel
+	for _, x in res.lista do
+		if x.uid == elegidaMascota then
+			sel = x
+		end
+	end
+	sel = sel or res.lista[1]
+	elegidaMascota = sel and sel.uid
+	for _, x in res.lista do
+		local d = Mascotas.de(x.id)
+		local equipada = table.find(res.equipadas, x.uid) ~= nil
+		local boton = Comic.boton(`{if x.dorada then "★ " else ""}{d.nombre}{if equipada then "\n[EQUIPADA]" else ""}`, { TextSize = 15, BackgroundColor3 = if x == sel then Comic.AMARILLO elseif equipada then Color3.fromRGB(40, 110, 50) else Comic.ROJO_OSCURO, TextColor3 = if x == sel then Comic.ROJO_OSCURO else Comic.CREMA }, grilla, function()
+			elegidaMascota = x.uid
+			armarMascotas(res)
+		end)
+		local borde = boton:FindFirstChildOfClass("UIStroke")
+		borde.Color = if x.dorada then Color3.fromRGB(255, 200, 40) else COLOR_MASCOTA[d.rareza]
+		borde.Thickness = if x.dorada then 5 else 3
+	end
+	if #res.lista == 0 then
+		Comic.texto({ Text = "Todavía no tenés mascotas: abrí un huevo", Size = UDim2.fromOffset(600, 40), TextSize = 20, Font = Comic.TEXTO }, der)
+	end
+	if not sel then
+		return
+	end
+	local d = Mascotas.de(sel.id)
+	local equipada = table.find(res.equipadas, sel.uid) ~= nil
+	local copias = 0
+	for _, x in res.lista do
+		if x.id == sel.id and not x.dorada then
+			copias += 1
+		end
+	end
+	Comic.texto({ Text = `{if sel.dorada then "★ DORADA · " else ""}{string.upper(d.nombre)} · {d.rareza}\n{Mascotas.descripcion(sel.id, sel.dorada)}`, Position = UDim2.fromOffset(0, 306), Size = UDim2.fromOffset(300, 56), TextSize = 20, TextColor3 = COLOR_MASCOTA[d.rareza], TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true }, der)
+	Comic.boton(if equipada then "DESEQUIPAR" else `EQUIPAR ({#res.equipadas}/{Mascotas.MAX_EQUIPADAS})`, { Position = UDim2.fromOffset(310, 308), Size = UDim2.fromOffset(140, 50), TextSize = 20, BackgroundColor3 = if equipada then Comic.GRIS else Comic.VERDE }, der, function()
+		pedirMascotas("equipar", sel.uid)
+	end)
+	local puedeFusionar = not sel.dorada and copias >= Mascotas.COPIAS_FUSION
+	Comic.boton(if sel.dorada then "YA ES DORADA" else `FUSIONAR ({copias}/{Mascotas.COPIAS_FUSION})`, { Position = UDim2.fromOffset(460, 308), Size = UDim2.fromOffset(140, 50), TextSize = 20, BackgroundColor3 = if puedeFusionar then Color3.fromRGB(200, 150, 20) else Comic.GRIS }, der, function()
+		if puedeFusionar then
+			pedirMascotas("fusionar", sel.uid)
+		end
+	end)
+end
+
+local function abrirMascotas()
+	pedirMascotas("estado")
+	if not paneles.mascotas.Visible then
+		abrir("mascotas")
+	end
+end
+
 -- Desafío semanal, tienda de fichas y rankings (docs/EVENTO.md).
 local cuerpoEvento
 local pestanaEvento = "desafio"
@@ -577,6 +681,8 @@ end
 abrirPanelRemoto.OnClientEvent:Connect(function(nombre, datos)
 	if nombre == "evento" or nombre == "ranking" then
 		abrirEvento(if nombre == "ranking" then "ranking" else "desafio")
+	elseif nombre == "mascotas" then
+		abrirMascotas()
 	elseif nombre == "rasgos" then
 		abrirRasgos()
 	elseif nombre == "raid" then

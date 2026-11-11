@@ -25,6 +25,7 @@ local Temporada = require(Shared.Temporada)
 local Evento = require(Shared.Evento)
 local Raid = require(Shared.Raid)
 local Rasgos = require(Shared.Rasgos)
+local Mascotas = require(Shared.Mascotas)
 local Perfiles = require(script.Parent.Perfiles)
 local Ranking = require(script.Parent.Ranking)
 
@@ -268,7 +269,8 @@ function Partida.nueva(op)
 	local function agregar(j: Player)
 		local perfil = Perfiles.de(j)
 		local esc, texto = escuadronDe(perfil)
-		p.jugadores[j] = { escuadron = esc, listo = false, saltar = false, auto = false }
+		-- Bonos de las mascotas equipadas, fijos durante la partida (docs/MASCOTAS.md).
+		p.jugadores[j] = { escuadron = esc, listo = false, saltar = false, auto = false, bonos = if perfil then Mascotas.bonos(perfil) else Mascotas.bonos({ mascotas = Mascotas.nuevo() }) }
 		j:SetAttribute("Partida", op.id)
 		j:SetAttribute("Dinero", if esRaid then Raid.DINERO else math.floor(Mejoras.DINERO_INICIAL * efectos.dinero))
 		j:SetAttribute("Escuadron", texto)
@@ -298,6 +300,7 @@ function Partida.nueva(op)
 
 	local function dar(j: Player?, n: number)
 		if j and p.jugadores[j] then
+			n = math.floor(n * (1 + p.jugadores[j].bonos.dinero) + 0.5)
 			j:SetAttribute("Dinero", (j:GetAttribute("Dinero") or 0) + n)
 		end
 	end
@@ -437,6 +440,8 @@ function Partida.nueva(op)
 		s.range *= 1 + m.alcance
 		s.fireRate *= 1 + m.cadencia
 		Rasgos.aplicar(s, u) -- rasgo y grados (docs/RASGOS.md)
+		local d = p.jugadores[u.dueno]
+		s.damage *= 1 + (if d then d.bonos.dano else 0) -- mascotas
 		u.kit.activa = m.habilidad
 		u.kit.potencia = m.potencia
 		-- Lo que muestra el panel de la unidad (alcance en studs).
@@ -905,6 +910,9 @@ function Partida.nueva(op)
 				local perfil = Perfiles.de(j)
 				if perfil then
 					local premio = Raid.terminar(perfil, gano, danoJefe[j] or 0, os.time(), math.random)
+					local extra = math.floor(premio.gemas * p.jugadores[j].bonos.gemas + 0.5) -- mascotas
+					perfil.gems += extra
+					premio.gemas += extra
 					Perfiles.marcar(j)
 					j:SetAttribute("Gemas", perfil.gems)
 					j:SetAttribute("Nucleos", perfil.cores)
@@ -960,14 +968,14 @@ function Partida.nueva(op)
 			local perfil = Perfiles.de(j)
 			if perfil then
 				local premios = {}
-				local xp = math.floor(XP_OLEADA * (if Oleadas.dificultad(NIVEL) == "hard" then 1.5 else 1))
+				local xp = math.floor(XP_OLEADA * (if Oleadas.dificultad(NIVEL) == "hard" then 1.5 else 1) * (1 + d.bonos.xp))
 				for _, e in d.escuadron do
 					local u = Unidades.buscar(perfil, e.uid)
 					if u then
 						Unidades.ganarXP(u, xp)
 					end
 				end
-				if Cuenta.ganarXP(perfil, if infinito then Cuenta.XP_OLEADA_INFINITO else Cuenta.XP_OLEADA) > 0 then
+				if Cuenta.ganarXP(perfil, math.floor((if infinito then Cuenta.XP_OLEADA_INFINITO else Cuenta.XP_OLEADA) * (1 + d.bonos.xp))) > 0 then
 					table.insert(premios, `¡Nivel de cuenta {perfil.level}!`)
 				end
 				if infinito then
@@ -975,8 +983,9 @@ function Partida.nueva(op)
 					r.bestWave = math.max(r.bestWave, n)
 					Ranking.anotar("infinito", j.UserId, r.bestWave)
 					if n % 5 == 0 then
-						perfil.gems += GEMAS_INFINITO
-						table.insert(premios, `+{GEMAS_INFINITO} gemas`)
+						local gemas = math.floor(GEMAS_INFINITO * (1 + d.bonos.gemas) + 0.5)
+						perfil.gems += gemas
+						table.insert(premios, `+{gemas} gemas`)
 					end
 					if n % NUCLEO_INFINITO == 0 then
 						perfil.cores += 1
@@ -1111,6 +1120,9 @@ function Partida.nueva(op)
 			local perfil = Perfiles.de(j)
 			if perfil then
 				local premio = Actos.ganar(perfil, NIVEL.id, op.acto, pesadilla)
+				local extra = math.floor(premio.gemas * p.jugadores[j].bonos.gemas + 0.5) -- mascotas
+				perfil.gems += extra
+				premio.gemas += extra
 				evento(j, "acto", 1, Temporada.XP_ACTO)
 				Cuenta.ganarXP(perfil, Cuenta.XP_MAPA)
 				Perfiles.marcar(j)

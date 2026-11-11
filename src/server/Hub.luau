@@ -94,7 +94,7 @@ Hub.ESTACIONES = {
 	{ id = "banner_3", nombre = "BANNER 3", subtitulo = "Próximamente", color = "ffcf72", isla = "asgard", angulo = 60, r = 16 },
 	{ id = "traits", nombre = "RASGOS", subtitulo = "Fichas de rasgo", color = "7eefa9", isla = "wakanda", angulo = -40, r = 17 },
 	{ id = "grades", nombre = "GRADOS", subtitulo = "Cristales de grado", color = "ff8faa", isla = "wakanda", angulo = 0, r = 19 },
-	{ id = "pets", nombre = "PETS", subtitulo = "Próximamente", color = "b69aff", isla = "wakanda", angulo = 40, r = 17 },
+	{ id = "pets", nombre = "MASCOTAS", subtitulo = "Huevos", color = "b69aff", isla = "wakanda", angulo = 40, r = 17 },
 	{ id = "raids", nombre = "RAIDS", subtitulo = "Jefe de la semana", color = "ff6b6b", isla = "nuevaYork", angulo = 220, r = 17 },
 	{ id = "misiones_raid", nombre = "MISIONES DE RAID", subtitulo = "Semanales", color = "ff9f6b", isla = "nuevaYork", angulo = 180, r = 20 },
 	{ id = "tienda", nombre = "TIENDA", subtitulo = "Objetos", color = "40c9ff", isla = "nuevaYork", angulo = 140, r = 17 },

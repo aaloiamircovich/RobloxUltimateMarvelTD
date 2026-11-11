@@ -69,6 +69,12 @@
       "date": "2026-11-10",
       "by": "system",
       "value": "Mapa_adoquin generado tenía musgo verde lima en las 4 variantes: se borró y se usa Cobblestone de Roblox gris"
+    },
+    {
+      "topic": "mascotas",
+      "date": "2026-11-11",
+      "by": "user",
+      "value": "Criaturas originales que siguen al jugador con bonos pasivos; huevos con gemas; hasta 3 equipadas; fusión dorada"
     }
   ],
   "publishing_destination": {
@@ -991,6 +997,78 @@
       "source": "copia de Plantillas.Mapas.new-york.farol",
       "status": "inserted",
       "studio_path": "ServerStorage.Plantillas.Mapas.sanctum.farol"
+    },
+    {
+      "name": "mascota_dron",
+      "kind": "model_3d",
+      "source": "roblox generate_mesh",
+      "roblox_asset_id": "112811380385862",
+      "studio_path": "ServerStorage.Plantillas.Mascotas.dron",
+      "status": "inserted",
+      "date": "2026-11-11"
+    },
+    {
+      "name": "mascota_gatito",
+      "kind": "model_3d",
+      "source": "roblox generate_mesh",
+      "roblox_asset_id": "70672013822234",
+      "studio_path": "ServerStorage.Plantillas.Mascotas.gatito",
+      "status": "inserted",
+      "date": "2026-11-11"
+    },
+    {
+      "name": "mascota_golem",
+      "kind": "model_3d",
+      "source": "roblox generate_mesh",
+      "roblox_asset_id": "114056664951148",
+      "studio_path": "ServerStorage.Plantillas.Mascotas.golem",
+      "status": "inserted",
+      "date": "2026-11-11"
+    },
+    {
+      "name": "mascota_buho",
+      "kind": "model_3d",
+      "source": "roblox generate_mesh",
+      "roblox_asset_id": "108405430570833",
+      "studio_path": "ServerStorage.Plantillas.Mascotas.buho",
+      "status": "inserted",
+      "date": "2026-11-11"
+    },
+    {
+      "name": "mascota_pulpo",
+      "kind": "model_3d",
+      "source": "roblox generate_mesh",
+      "roblox_asset_id": "93556896120046",
+      "studio_path": "ServerStorage.Plantillas.Mascotas.pulpo",
+      "status": "inserted",
+      "date": "2026-11-11"
+    },
+    {
+      "name": "mascota_lobo",
+      "kind": "model_3d",
+      "source": "roblox generate_mesh",
+      "roblox_asset_id": "139952549670233",
+      "studio_path": "ServerStorage.Plantillas.Mascotas.lobo",
+      "status": "inserted",
+      "date": "2026-11-11"
+    },
+    {
+      "name": "mascota_dragon",
+      "kind": "model_3d",
+      "source": "roblox generate_mesh",
+      "roblox_asset_id": "77490950404895",
+      "studio_path": "ServerStorage.Plantillas.Mascotas.dragon",
+      "status": "inserted",
+      "date": "2026-11-11"
+    },
+    {
+      "name": "mascota_fenix",
+      "kind": "model_3d",
+      "source": "roblox generate_mesh",
+      "roblox_asset_id": "121370257906165",
+      "studio_path": "ServerStorage.Plantillas.Mascotas.fenix",
+      "status": "inserted",
+      "date": "2026-11-11"
     }
   ],
   "notas_importacion": "Los modelos de ForgeGUI llegan con un giro de ~10° alrededor de Y; enderezar al múltiplo de 90° más cercano antes de guardarlos como plantilla."
