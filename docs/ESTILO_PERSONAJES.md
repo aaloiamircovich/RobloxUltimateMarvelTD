@@ -33,4 +33,11 @@ Moderación: palabras como "jaw", "teeth" o "beast" pueden bloquear la generaci�
 
 Plantillas en `ServerStorage.Plantillas.Heroes/<id del héroe>` (en el lugar, no en Git): el R15 de `auto_setup_avatar` con atributos opcionales `AnimacionAtaque` (rbxassetid), `VelocidadAtaque` y `Efecto` (`flecha`, `rayo` o `impacto`). El servidor posiciona por la `HumanoidRootPart`, no por el pivote del modelo (están desfasados ~2 studs). Sin plantilla, el héroe aparece como bloque.
 
-Hechos: `odin` y `knull` (exclusivos, docs/EXCLUSIVOS.md), `hawkeye` (arco y disparo, flecha), `black_widow` (ojos verdes, golpe cruzado con bastones, rayo), `korg` (roca con cara anime, puñetazo, impacto). Las animaciones de la IA duran ~2 s y se reproducen ×2.
+Hechos (20): los 8 Míticos (`thor`, `hulk`, `jean_grey`, `silver_surfer`, `magneto`, `adam_warlock`, `sentry`,
+`profesor_x`), `scarlet_witch`, `iron_man`, `doctor_strange`, `spiderman`, `capitan_america`, `black_panther`, `wolverine`
+(11/11/2026, cada uno con animación de ataque propia), `odin` y `knull` (exclusivos, docs/EXCLUSIVOS.md), `hawkeye` (arco y disparo, flecha), `black_widow` (ojos verdes, golpe cruzado con bastones, rayo), `korg` (roca con cara anime, puñetazo, impacto). Las animaciones de la IA duran ~2 s y se reproducen ×2.
+Las **evoluciones** tienen modelo propio: `Plantillas.Heroes/<id de la evolución>`; si no existe, se usa el del
+personaje base (servidor y retratos). Hulk es ×1,25 más alto que el resto.
+
+`auto_setup_avatar` suele devolver *timeout* aunque el armado siga en Studio: esperar ~3 min y revisar si apareció
+`<nombre>_autosetup`; si no, volver a pedirlo (a veces sale recién al segundo intento). No lanzar varios a la vez.

@@ -209,7 +209,7 @@ local function refrescar()
 			retratoUid = modo.uid
 			marcoRetrato:ClearAllChildren()
 			Comic.borde(marcoRetrato, 3)
-			Comic.retrato(marcoRetrato, Personajes.base(id), config.name, Comic.AMARILLO)
+			Comic.retrato(marcoRetrato, id, config.name, Comic.AMARILLO, Personajes.base(id))
 		end
 		nombreUnidad.Text = string.upper(config.name)
 		marcoRetrato:FindFirstChildOfClass("UIStroke").Color = Comic.RAREZA[config.rarity] or Comic.NEGRO
@@ -301,7 +301,7 @@ local function tarjeta(i: number, ranura: number, id: string, nivel: number, lim
 	crear("UIScale", {}, t)
 	crear("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), color:Lerp(Color3.new(0, 0, 0), 0.4)) }, t)
 	local foto = crear("Frame", { Position = UDim2.fromOffset(4, 4), Size = UDim2.new(1, -8, 0, 80), BackgroundTransparency = 1, ClipsDescendants = true }, t)
-	Comic.retrato(foto, Personajes.base(id), config.name, color)
+	Comic.retrato(foto, id, config.name, color, Personajes.base(id))
 	texto({ Text = config.name, Position = UDim2.fromOffset(4, 66), Size = UDim2.new(1, -8, 0, 18), TextSize = 16 }, t)
 	texto({ Text = `Nv {nivel}`, Position = UDim2.fromOffset(6, 4), Size = UDim2.fromOffset(50, 16), TextSize = 15, TextXAlignment = Enum.TextXAlignment.Left }, t)
 	texto({ Name = "Puestas", Position = UDim2.new(1, -46, 0, 4), Size = UDim2.fromOffset(40, 16), TextSize = 15, TextXAlignment = Enum.TextXAlignment.Right }, t)

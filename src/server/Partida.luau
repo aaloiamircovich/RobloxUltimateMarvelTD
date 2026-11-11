@@ -131,11 +131,12 @@ local function modeloProvisional(config): Model
 	return m
 end
 
--- Plantilla de ServerStorage.Plantillas.Heroes/<id base>: R15 con atributos AnimacionAtaque y VelocidadAtaque.
+-- Plantilla de ServerStorage.Plantillas.Heroes/<id> (o la del id base): R15 con atributos AnimacionAtaque y VelocidadAtaque.
 local function crearModelo(config): (Model, BasePart, AnimationTrack?, number)
 	local plantillas = ServerStorage:FindFirstChild("Plantillas")
 	local carpeta = plantillas and plantillas:FindFirstChild("Heroes")
-	local plantilla = carpeta and carpeta:FindFirstChild(Personajes.base(config.id))
+	-- Primero el modelo propio (las evoluciones tienen el suyo); si no hay, el del personaje base.
+	local plantilla = carpeta and (carpeta:FindFirstChild(config.id) or carpeta:FindFirstChild(Personajes.base(config.id)))
 	local modelo = if plantilla then plantilla:Clone() else modeloProvisional(config)
 	local raiz = modelo:FindFirstChild("HumanoidRootPart") :: BasePart
 	raiz.Anchored = true

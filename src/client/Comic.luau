@@ -44,27 +44,7 @@ function Comic.texto(props, padre)
 	props.TextStrokeTransparency = props.TextStrokeTransparency or 0
 	props.TextStrokeColor3 = Comic.NEGRO
 	props.TextScaled = if props.TextSize then false else true
-	-- Retrato 3D del personaje (modelo de ReplicatedStorage.Retratos) o, si no tiene modelo, sus iniciales.
-function Comic.retrato(padre: GuiObject, base: string, nombre: string, color: Color3)
-	local plantilla = game:GetService("ReplicatedStorage"):FindFirstChild("Retratos")
-	plantilla = plantilla and plantilla:FindFirstChild(base)
-	if not plantilla then
-		local iniciales = string.upper(string.gsub(nombre, "(%w)%w*%s*", "%1"))
-		return Comic.texto({ Text = string.sub(iniciales, 1, 3), TextColor3 = color, Size = UDim2.fromScale(1, 1) }, padre)
-	end
-	local vista = Comic.crear("ViewportFrame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Ambient = Color3.fromRGB(200, 200, 200), LightDirection = Vector3.new(-1, -1, -1) }, padre)
-	local m = plantilla:Clone()
-	m.Parent = vista
-	local cf, tam = m:GetBoundingBox()
-	-- Plano medio: cabeza y torso, de frente (los modelos miran hacia su LookVector).
-	local foco = cf.Position + Vector3.new(0, tam.Y * 0.22, 0)
-	local camara = Comic.crear("Camera", { FieldOfView = 30 }, vista)
-	camara.CFrame = CFrame.lookAt(foco + m:GetPivot().LookVector * tam.Y * 1.5, foco)
-	vista.CurrentCamera = camara
-	return vista
-end
-
-return Comic.crear("TextLabel", props, padre)
+	return Comic.crear("TextLabel", props, padre)
 end
 
 -- Botón con ícono grande y rótulo abajo (como los botones del lobby de los TD de Roblox).
@@ -139,9 +119,10 @@ function Comic.panel(gui: Instance, titulo: string, tamano: UDim2)
 end
 
 -- Retrato 3D del personaje (modelo de ReplicatedStorage.Retratos) o, si no tiene modelo, sus iniciales.
-function Comic.retrato(padre: GuiObject, base: string, nombre: string, color: Color3)
-	local plantilla = game:GetService("ReplicatedStorage"):FindFirstChild("Retratos")
-	plantilla = plantilla and plantilla:FindFirstChild(base)
+function Comic.retrato(padre: GuiObject, id: string, nombre: string, color: Color3, respaldo: string?)
+	local retratos = game:GetService("ReplicatedStorage"):FindFirstChild("Retratos")
+	-- Modelo propio (las evoluciones tienen el suyo) o el del personaje base.
+	local plantilla = retratos and (retratos:FindFirstChild(id) or (respaldo and retratos:FindFirstChild(respaldo)))
 	if not plantilla then
 		local iniciales = string.upper(string.gsub(nombre, "(%w)%w*%s*", "%1"))
 		return Comic.texto({ Text = string.sub(iniciales, 1, 3), TextColor3 = color, Size = UDim2.fromScale(1, 1) }, padre)
