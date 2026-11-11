@@ -8,6 +8,16 @@ Comic.FONDO = Color3.fromRGB(28, 8, 12)
 Comic.AMARILLO = Color3.fromRGB(255, 214, 40)
 Comic.CREMA = Color3.fromRGB(255, 244, 222)
 Comic.NEGRO = Color3.new(0, 0, 0)
+Comic.VERDE = Color3.fromRGB(40, 150, 60)
+Comic.GRIS = Color3.fromRGB(70, 70, 80)
+Comic.RAREZA = {
+	Common = Color3.fromRGB(170, 175, 185),
+	Rare = Color3.fromRGB(80, 160, 255),
+	Epic = Color3.fromRGB(180, 100, 255),
+	Legendary = Color3.fromRGB(255, 190, 60),
+	Mythic = Color3.fromRGB(255, 90, 110),
+	Secret = Color3.fromRGB(80, 255, 220),
+}
 Comic.TITULO = Enum.Font.Bangers
 Comic.TEXTO = Enum.Font.GothamBold
 
@@ -34,7 +44,27 @@ function Comic.texto(props, padre)
 	props.TextStrokeTransparency = props.TextStrokeTransparency or 0
 	props.TextStrokeColor3 = Comic.NEGRO
 	props.TextScaled = if props.TextSize then false else true
-	return Comic.crear("TextLabel", props, padre)
+	-- Retrato 3D del personaje (modelo de ReplicatedStorage.Retratos) o, si no tiene modelo, sus iniciales.
+function Comic.retrato(padre: GuiObject, base: string, nombre: string, color: Color3)
+	local plantilla = game:GetService("ReplicatedStorage"):FindFirstChild("Retratos")
+	plantilla = plantilla and plantilla:FindFirstChild(base)
+	if not plantilla then
+		local iniciales = string.upper(string.gsub(nombre, "(%w)%w*%s*", "%1"))
+		return Comic.texto({ Text = string.sub(iniciales, 1, 3), TextColor3 = color, Size = UDim2.fromScale(1, 1) }, padre)
+	end
+	local vista = Comic.crear("ViewportFrame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Ambient = Color3.fromRGB(200, 200, 200), LightDirection = Vector3.new(-1, -1, -1) }, padre)
+	local m = plantilla:Clone()
+	m.Parent = vista
+	local cf, tam = m:GetBoundingBox()
+	-- Plano medio: cabeza y torso, de frente (los modelos miran hacia su LookVector).
+	local foco = cf.Position + Vector3.new(0, tam.Y * 0.22, 0)
+	local camara = Comic.crear("Camera", { FieldOfView = 30 }, vista)
+	camara.CFrame = CFrame.lookAt(foco + m:GetPivot().LookVector * tam.Y * 1.5, foco)
+	vista.CurrentCamera = camara
+	return vista
+end
+
+return Comic.crear("TextLabel", props, padre)
 end
 
 -- Botón con ícono grande y rótulo abajo (como los botones del lobby de los TD de Roblox).
@@ -97,6 +127,26 @@ function Comic.panel(gui: Instance, titulo: string, tamano: UDim2)
 	end)
 	local cuerpo = Comic.crear("Frame", { Position = UDim2.fromOffset(20, 46), Size = UDim2.new(1, -40, 1, -64), BackgroundTransparency = 1 }, p)
 	return p, cuerpo
+end
+
+-- Retrato 3D del personaje (modelo de ReplicatedStorage.Retratos) o, si no tiene modelo, sus iniciales.
+function Comic.retrato(padre: GuiObject, base: string, nombre: string, color: Color3)
+	local plantilla = game:GetService("ReplicatedStorage"):FindFirstChild("Retratos")
+	plantilla = plantilla and plantilla:FindFirstChild(base)
+	if not plantilla then
+		local iniciales = string.upper(string.gsub(nombre, "(%w)%w*%s*", "%1"))
+		return Comic.texto({ Text = string.sub(iniciales, 1, 3), TextColor3 = color, Size = UDim2.fromScale(1, 1) }, padre)
+	end
+	local vista = Comic.crear("ViewportFrame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Ambient = Color3.fromRGB(200, 200, 200), LightDirection = Vector3.new(-1, -1, -1) }, padre)
+	local m = plantilla:Clone()
+	m.Parent = vista
+	local cf, tam = m:GetBoundingBox()
+	-- Plano medio: cabeza y torso, de frente (los modelos miran hacia su LookVector).
+	local foco = cf.Position + Vector3.new(0, tam.Y * 0.22, 0)
+	local camara = Comic.crear("Camera", { FieldOfView = 30 }, vista)
+	camara.CFrame = CFrame.lookAt(foco + m:GetPivot().LookVector * tam.Y * 1.5, foco)
+	vista.CurrentCamera = camara
+	return vista
 end
 
 return Comic

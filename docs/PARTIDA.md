@@ -45,3 +45,7 @@ Reemplaza el flujo actual (un mapa a la vez para todo el servidor, cámara fija,
 - Abajo: escuadrón con costo de colocar y dinero de partida.
 - Al tocar una unidad: stats, próxima mejora con precio, **Vender (devuelve 50 % de lo invertido)** y
   **prioridad de objetivo**: Primero / Último / Más fuerte / Más débil.
+- Estilo cómic (Comic.luau): viñeta amarilla arriba con barra de vida y círculos de oleada y reloj; tarjetas
+  del escuadrón con retrato 3D, borde del color de la rareza y teclas 1–6; panel de la unidad a la izquierda
+  con anillo de alcance; cartel «¡OLEADA n!» / «¡JEFE!», pantalla de victoria/derrota con premios, números
+  de daño y «+💰» al ganar dinero. Se achica sola en pantallas chicas.

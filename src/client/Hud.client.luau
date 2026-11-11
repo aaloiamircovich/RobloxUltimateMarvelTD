@@ -15,14 +15,7 @@ local usarHud = ReplicatedStorage:WaitForChild("UsarHud")
 local teletransportar = ReplicatedStorage:WaitForChild("Teletransportar")
 local jugador = Players.LocalPlayer
 
-local COLOR_RAREZA = {
-	Common = Color3.fromRGB(170, 175, 185),
-	Rare = Color3.fromRGB(80, 160, 255),
-	Epic = Color3.fromRGB(180, 100, 255),
-	Legendary = Color3.fromRGB(255, 190, 60),
-	Mythic = Color3.fromRGB(255, 90, 110),
-	Secret = Color3.fromRGB(80, 255, 220),
-}
+local COLOR_RAREZA = Comic.RAREZA
 
 local gui = Comic.crear("ScreenGui", { Name = "Hud", ResetOnSpawn = false, IgnoreGuiInset = false, DisplayOrder = 1 })
 

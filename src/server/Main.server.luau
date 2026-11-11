@@ -38,6 +38,17 @@ local coleccion = remoto("RemoteFunction", "Coleccion")
 --------------------------------------------------------------------------------
 -- Partidas: cada una en su arena, lejos del HUB
 --------------------------------------------------------------------------------
+-- Copia de los modelos de héroes para los retratos 3D de la interfaz.
+do
+	local heroes = game:GetService("ServerStorage"):FindFirstChild("Plantillas")
+	heroes = heroes and heroes:FindFirstChild("Heroes")
+	if heroes then
+		local retratos = heroes:Clone()
+		retratos.Name = "Retratos"
+		retratos.Parent = ReplicatedStorage
+	end
+end
+
 local partidas = {} -- [id] = partida
 local partidaDe = {} -- [Player] = partida
 local arenas = {} -- [índice] = id de la partida que la ocupa

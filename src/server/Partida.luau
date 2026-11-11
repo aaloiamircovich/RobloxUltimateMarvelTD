@@ -313,6 +313,7 @@ function Partida.nueva(op)
 		e.altura = if config.flying then 4 else tam / 2
 		e.cuerpo = cuerpo
 		e.barra = cartel(cuerpo, config.name, tam / 2 + 1)
+		cuerpo:SetAttribute("Vida", math.ceil(e.vida)) -- el cliente dibuja los números de daño
 		moverEnemigo(e, CFrame.new(puntoEnRuta(e.avance) + Vector3.new(0, e.altura, 0)))
 		cuerpo.Parent = carpetaEnemigos
 		table.insert(enemigos, e)
@@ -332,6 +333,7 @@ function Partida.nueva(op)
 			return
 		end
 		e.barra.Size = UDim2.fromScale(math.max(0, e.vida / e.vidaMax), 1)
+		e.cuerpo:SetAttribute("Vida", math.max(0, math.ceil(e.vida)))
 		if e.vida <= 0 then
 			dar(e.ultimoAtacante, e.config.reward or 0)
 			quitarEnemigo(e)
@@ -370,6 +372,10 @@ function Partida.nueva(op)
 		s.fireRate *= 1 + m.cadencia
 		u.kit.activa = m.habilidad
 		u.kit.potencia = m.potencia
+		-- Lo que muestra el panel de la unidad (alcance en studs).
+		u.modelo:SetAttribute("Dano", math.floor(s.damage + 0.5))
+		u.modelo:SetAttribute("Alcance", math.floor(s.range * Mapa.ESCALA + 0.5))
+		u.modelo:SetAttribute("Cadencia", math.floor(s.fireRate * 100 + 0.5) / 100)
 		return s
 	end
 
@@ -461,6 +467,7 @@ function Partida.nueva(op)
 		modelo:SetAttribute("Dueno", j.UserId)
 		modelo:SetAttribute("Heroe", e.heroId)
 		modelo:SetAttribute("Ranura", ranura)
+		modelo:SetAttribute("NivelUnidad", e.nivel)
 		modelo:SetAttribute("Mejora", 0)
 		modelo:SetAttribute("Invertido", costo)
 		modelo:SetAttribute("Prioridad", "primero")
@@ -813,6 +820,7 @@ function Partida.nueva(op)
 
 	local function terminar(mensaje: string)
 		terminada = true
+		fijar("Resultado", if string.sub(mensaje, 1, 7) == "Derrota" then "derrota" else "victoria")
 		fijar("Fase", "fin")
 		fijar("Mensaje", mensaje)
 		for j in p.jugadores do
@@ -953,7 +961,7 @@ function Partida.nueva(op)
 				j:SetAttribute("Nucleos", perfil.cores)
 				j:SetAttribute("Nivel", perfil.level)
 				j:SetAttribute("XP", perfil.xp)
-				aviso(`¡Acto {op.acto} superado! +{premio.gemas} gemas` .. (if premio.nucleos > 0 then ` · +{premio.nucleos} núcleo` else "") .. (if premio.primera then " (primera vez)" else ""), j)
+				j:SetAttribute("PremioActo", `+{premio.gemas} gemas` .. (if premio.nucleos > 0 then ` · +{premio.nucleos} núcleo` else "") .. (if premio.primera then " (primera vez)" else "") .. ` · +{Cuenta.XP_MAPA} XP`)
 			end
 		end
 		terminar(`¡Victoria! {NIVEL.name} · Acto {op.acto}` .. (if pesadilla then " · Pesadilla" else ""))
@@ -975,7 +983,7 @@ function Partida.nueva(op)
 			end
 		end
 		p.jugadores[j] = nil
-		for _, a in { "Partida", "Dinero", "Escuadron", "Listo", "Auto" } do
+		for _, a in { "Partida", "Dinero", "Escuadron", "Listo", "Auto", "PremioActo" } do
 			j:SetAttribute(a, nil)
 		end
 		task.spawn(Perfiles.guardar, j)
