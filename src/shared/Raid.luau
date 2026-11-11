@@ -15,7 +15,11 @@ Raid.JEFES = {
 	{ id = "apocalypse", mapa = "level_3" },
 	{ id = "dormammu", mapa = "level_4" },
 }
-Raid.VIDA, Raid.VIDA_POR_JUGADOR = 3, 0.6 -- vida del 2D × 3, +60 % por cada jugador extra
+-- Vida del jefe: daño (antes de armadura) que tiene que hacer un jugador solo bien armado, descontando la
+-- armadura del jefe para que todos sean igual de duros; +60 % por jugador extra (el daño crece 100 %).
+-- Medido: con 1 jugador, 6 oleadas y 3.000 de dinero inicial se hacen ~4.000–7.000 de daño crudo.
+Raid.OBJETIVO, Raid.VIDA_POR_JUGADOR = 6000, 0.6
+Raid.DINERO = 3000 -- dinero inicial de la raid (una partida normal empieza con 1.200)
 Raid.VELOCIDAD_JEFE = 0.45
 Raid.FASES = { 0.66, 0.33 } -- al bajar de cada umbral: refuerzos y furia
 Raid.REFUERZOS, Raid.FURIA = 6, 1.3
@@ -28,7 +32,7 @@ Raid.EXCLUSIVA = nil :: string?
 Raid.MISIONES = {
 	{ id = "ganar", texto = "Ganá %d raids", meta = 3 },
 	{ id = "jugar", texto = "Jugá %d raids", meta = 5 },
-	{ id = "dano", texto = "Hacé %d de daño a jefes de raid", meta = 150000 },
+	{ id = "dano", texto = "Hacé %d de daño a jefes de raid", meta = 30000 }, -- ~3.000 por raid con la vida actual
 }
 Raid.PREMIO_MISION = { gemas = 80, fragmentos = 10 }
 
@@ -40,8 +44,13 @@ function Raid.jefe(semana: number)
 	return Raid.JEFES[semana % #Raid.JEFES + 1]
 end
 
-function Raid.vidaJefe(vidaBase: number, jugadores: number): number
-	return math.floor(vidaBase * Raid.VIDA * (1 + Raid.VIDA_POR_JUGADOR * (math.max(1, jugadores) - 1)))
+function Raid.vidaJefe(armadura: number?, jugadores: number): number
+	local a = armadura or 0
+	if a > 1 then
+		a /= 100 -- como Combate.recibir: algunos datos del 2D la traen en porcentaje
+	end
+	local vida = Raid.OBJETIVO * (1 - math.clamp(a, 0, 0.85)) * (1 + Raid.VIDA_POR_JUGADOR * (math.max(1, jugadores) - 1))
+	return math.floor(vida / 100 + 0.5) * 100
 end
 
 -- Umbrales de fase cruzados al pasar de `antes` a `ahora` (fracciones de vida).

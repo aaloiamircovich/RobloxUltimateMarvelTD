@@ -12,7 +12,8 @@ return function()
 		assert(enemigos.bosses[j.id], "el jefe existe en el 2D: " .. j.id)
 	end
 	assert(Raid.jefe(Raid.semana(T)).id ~= Raid.jefe(Raid.semana(T) + 1).id, "rota cada semana")
-	assert(Raid.vidaJefe(10000, 1) == 30000 and Raid.vidaJefe(10000, 4) == 84000, "vida de raid por jugadores")
+	assert(Raid.vidaJefe(0, 1) == Raid.OBJETIVO and Raid.vidaJefe(0.5, 1) == Raid.OBJETIVO / 2, "vida según armadura")
+	assert(Raid.vidaJefe(0, 4) == math.floor(Raid.OBJETIVO * 2.8 / 100 + 0.5) * 100 and Raid.vidaJefe(42, 1) == Raid.vidaJefe(0.42, 1), "por jugadores y armadura en %")
 	assert(Raid.fasesCruzadas(0.7, 0.5) == 1 and Raid.fasesCruzadas(0.7, 0.2) == 2 and Raid.fasesCruzadas(0.5, 0.4) == 0, "fases")
 
 	-- Llaves: 3 por día, se renuevan al día siguiente.
@@ -42,7 +43,7 @@ return function()
 	local f = p.raid.fragmentos
 	assert(Raid.reclamar(p, "jugar", T + Temporada.DIA) == nil and p.raid.fragmentos == f + 10, "misión jugar")
 	assert(Raid.reclamar(p, "jugar", T + Temporada.DIA) ~= nil, "una sola vez")
-	assert(p.raid.progreso.dano == 53000, "daño acumulado")
+	assert(p.raid.progreso.dano == 30000, "daño acumulado (tope en la meta)")
 
 	-- Semana nueva: misiones a cero, fragmentos se conservan.
 	Raid.actualizar(p, T + Temporada.SEMANA)

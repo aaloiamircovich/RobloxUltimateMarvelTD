@@ -269,7 +269,7 @@ function Partida.nueva(op)
 		local esc, texto = escuadronDe(perfil)
 		p.jugadores[j] = { escuadron = esc, listo = false, saltar = false, auto = false }
 		j:SetAttribute("Partida", op.id)
-		j:SetAttribute("Dinero", math.floor(Mejoras.DINERO_INICIAL * efectos.dinero))
+		j:SetAttribute("Dinero", if esRaid then Raid.DINERO else math.floor(Mejoras.DINERO_INICIAL * efectos.dinero))
 		j:SetAttribute("Escuadron", texto)
 		j:SetAttribute("Listo", false)
 		j:SetAttribute("Auto", false)
@@ -1007,7 +1007,7 @@ function Partida.nueva(op)
 			for _, u in unidades do
 				table.insert(equipo, u.config)
 			end
-			local oleada2D = if sinFin then n elseif esRaid then 15 + n * 3 else Actos.oleada2D(op.acto, n)
+			local oleada2D = if sinFin then n elseif esRaid then n * 2 else Actos.oleada2D(op.acto, n)
 			local jefe = if sinFin then nil elseif esRaid or n ~= Actos.OLEADAS then false else op.acto
 			local cola, mod = Oleadas.preparar(oleada2D, enemigosDatos, NIVEL, INDICE_NIVEL, equipo, modo, jefe)
 			fijar("Mensaje", `Oleada {n}: {mod.nombre}` .. (if n == Actos.OLEADAS and not sinFin and not esRaid then " · ¡JEFE!" else ""))
@@ -1019,7 +1019,7 @@ function Partida.nueva(op)
 				for _ in p.jugadores do
 					cuantos += 1
 				end
-				config.hp = Raid.vidaJefe(base.hp, cuantos)
+				config.hp = Raid.vidaJefe(base.armor, cuantos)
 				config.speed = base.speed * Raid.VELOCIDAD_JEFE
 				config.reward = 0
 				config.isBoss = true
