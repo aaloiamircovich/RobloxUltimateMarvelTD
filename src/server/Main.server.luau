@@ -14,10 +14,12 @@ local Banner = require(Shared.Banner)
 local Cuenta = require(Shared.Cuenta)
 local Actos = require(Shared.Actos)
 local Temporada = require(Shared.Temporada)
+local Evento = require(Shared.Evento)
 local Hub = require(script.Parent.Hub)
 local Perfiles = require(script.Parent.Perfiles)
 local Reclutamiento = require(script.Parent.Reclutamiento)
 local Partida = require(script.Parent.Partida)
+local Ranking = require(script.Parent.Ranking)
 
 local niveles = require(Data.levels)
 local enemigosDatos = require(Data.enemies)
@@ -36,6 +38,7 @@ local teletransportar = remoto("RemoteEvent", "Teletransportar")
 local salaRemota = remoto("RemoteFunction", "Sala")
 local coleccion = remoto("RemoteFunction", "Coleccion")
 local temporada = remoto("RemoteFunction", "Temporada")
+local eventoRemoto = remoto("RemoteFunction", "Evento")
 
 --------------------------------------------------------------------------------
 -- Partidas: cada una en su arena, lejos del HUB
@@ -148,7 +151,7 @@ local function resolverVotos(p)
 		local problema
 		for _, j in miembros do
 			local perfil = Perfiles.de(j)
-			problema = problema or (if perfil then Actos.puedeJugar(perfil, mapa, acto, conPesadilla) else "Perfil no cargado")
+			problema = problema or (if not perfil then "Perfil no cargado" elseif acto == "evento" then nil else Actos.puedeJugar(perfil, mapa, acto, conPesadilla))
 		end
 		if not problema then
 			if pesadilla and not conPesadilla then
@@ -413,6 +416,8 @@ local function usarEstacion(jugador: Player, estacion: string)
 		abrirPanel:FireClient(jugador, "invocaciones", { pestana = "banner" })
 	elseif estacion == "tienda" then
 		abrirPanel:FireClient(jugador, "invocaciones", { pestana = "tienda" })
+	elseif estacion == "evento" or estacion == "ranking" or estacion == "misiones" then
+		abrirPanel:FireClient(jugador, estacion, {}) -- los abre el HUD del lobby
 	else
 		-- Traits, grades, pets, bailes, monturas, raids, banners 2 y 3, etc. esperan sus reglas.
 		aviso:FireClient(jugador, "Próximamente")
@@ -462,6 +467,13 @@ end
 local function alEntrar(jugador: Player)
 	local perfil, problema = Perfiles.cargar(jugador)
 	publicarSaldo(jugador, perfil)
+	-- Récords que ya tenía: entran al ranking aunque no juegue en esta sesión.
+	if perfil.modeRecords.survival.bestWave > 0 then
+		Ranking.anotar("infinito", jugador.UserId, perfil.modeRecords.survival.bestWave)
+	end
+	if perfil.evento.semana == Evento.semana(os.time()) and perfil.evento.mejor > 0 then
+		Ranking.anotar("evento", jugador.UserId, perfil.evento.mejor)
+	end
 	if problema then
 		aviso:FireClient(jugador, problema)
 	end
@@ -483,6 +495,157 @@ task.spawn(function()
 	while true do
 		task.wait(60)
 		Perfiles.guardarTodos()
+	end
+end)
+
+--------------------------------------------------------------------------------
+-- Desafío semanal y rankings (docs/EVENTO.md)
+--------------------------------------------------------------------------------
+local function datosEvento(jugador: Player, perfil)
+	local res = Evento.resumen(perfil, os.time())
+	res.ranking = {}
+	for _, tabla in Ranking.TABLAS do
+		res.ranking[tabla] = Ranking.top(tabla)
+	end
+	res.mios = { evento = perfil.evento.mejor, infinito = perfil.modeRecords.survival.bestWave, nivel = perfil.level }
+	res.nombreMapa = niveles[indiceNivel(res.mapa)].name
+	return res
+end
+
+eventoRemoto.OnServerInvoke = function(jugador, nombre, a)
+	local perfil = Perfiles.de(jugador)
+	if not perfil then
+		return { error = "Tu perfil todavía no cargó" }
+	end
+	local err
+	if nombre == "jugar" then
+		if partidaDe[jugador] then
+			err = "Ya estás en una partida"
+		else
+			salirDeSala(jugador)
+			err = iniciarPartida({ jugador }, jugador, Evento.desafio(Evento.semana(os.time())).mapa, "evento", false)
+		end
+	elseif nombre == "comprar" and type(a) == "string" then
+		err = Evento.comprar(perfil, a, os.time())
+		if not err then
+			Perfiles.marcar(jugador)
+			publicarSaldo(jugador, perfil)
+		end
+	elseif nombre ~= "estado" then
+		err = "Acción desconocida"
+	end
+	local res = datosEvento(jugador, perfil)
+	res.error = err
+	res.empezo = nombre == "jugar" and not err
+	return res
+end
+
+-- Cartel del top 10 sobre la estación RANKING de la Torre Vengadores.
+local cartelRanking
+do
+	local est = hub:FindFirstChild("Estacion_ranking", true)
+	local base = est and est:FindFirstChild("Base")
+	if base then
+		local pos = base.Position
+		local cartel = Instance.new("Part")
+		cartel.Name = "CartelRanking"
+		cartel.Anchored = true
+		cartel.Size = Vector3.new(18, 11, 0.6)
+		cartel.Color = Color3.fromRGB(110, 10, 18)
+		cartel.Material = Enum.Material.SmoothPlastic
+		cartel.CFrame = CFrame.lookAt(pos + Vector3.new(0, 14, 0), Vector3.new(0, pos.Y + 14, 0)) * CFrame.new(0, 0, 3)
+		cartel.Parent = est
+		local sg = Instance.new("SurfaceGui")
+		sg.Face = Enum.NormalId.Front
+		sg.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		sg.PixelsPerStud = 40
+		sg.LightInfluence = 0
+		sg.Parent = cartel
+		cartelRanking = sg
+	end
+end
+
+local function textoTop(tabla: string, unidad: string): string
+	local lineas = {}
+	for i, f in Ranking.top(tabla) do
+		table.insert(lineas, `{i}. {f.nombre}  ·  {f.valor}{unidad}`)
+	end
+	return if #lineas > 0 then table.concat(lineas, "\n") else "Todavía nadie"
+end
+
+local function pintarCartel()
+	if not cartelRanking then
+		return
+	end
+	cartelRanking:ClearAllChildren()
+	local marco = Instance.new("Frame")
+	marco.Size = UDim2.fromScale(1, 1)
+	marco.BackgroundTransparency = 1
+	local borde = Instance.new("UIStroke")
+	borde.Thickness = 14
+	borde.Color = Color3.new(0, 0, 0)
+	borde.Parent = marco
+	marco.Parent = cartelRanking
+	local d = Evento.desafio(Evento.semana(os.time()))
+	local function columna(x: number, titulo: string, cuerpo: string)
+		local t = Instance.new("TextLabel")
+		t.BackgroundTransparency = 1
+		t.Position = UDim2.new(x, 20, 0, 70)
+		t.Size = UDim2.new(0.5, -40, 0, 50)
+		t.Font = Enum.Font.Bangers
+		t.TextScaled = true
+		t.TextColor3 = Color3.fromRGB(255, 214, 40)
+		t.TextStrokeTransparency = 0
+		t.Text = titulo
+		t.Parent = cartelRanking
+		local l = t:Clone()
+		l.Position = UDim2.new(x, 20, 0, 130)
+		l.Size = UDim2.new(0.5, -40, 1, -150)
+		l.Font = Enum.Font.GothamBold
+		l.TextScaled = false
+		l.TextSize = 24
+		l.TextColor3 = Color3.fromRGB(255, 244, 222)
+		l.TextXAlignment = Enum.TextXAlignment.Left
+		l.TextYAlignment = Enum.TextYAlignment.Top
+		l.Text = cuerpo
+		l.Parent = cartelRanking
+	end
+	local titulo = Instance.new("TextLabel")
+	titulo.BackgroundTransparency = 1
+	titulo.Size = UDim2.new(1, 0, 0, 64)
+	titulo.Font = Enum.Font.Bangers
+	titulo.TextScaled = true
+	titulo.TextColor3 = Color3.fromRGB(255, 244, 222)
+	titulo.TextStrokeTransparency = 0
+	titulo.Text = `RANKING · DESAFÍO EN {string.upper(niveles[indiceNivel(d.mapa)].name)}`
+	titulo.Parent = cartelRanking
+	columna(0, "DESAFÍO SEMANAL", textoTop("evento", " pts"))
+	columna(0.5, "INFINITO", textoTop("infinito", " oleadas"))
+end
+
+local function anotarNivel(jugador: Player)
+	local nivel = jugador:GetAttribute("Nivel")
+	if nivel then
+		Ranking.anotar("nivel", jugador.UserId, nivel)
+	end
+end
+Players.PlayerAdded:Connect(function(j)
+	j:GetAttributeChangedSignal("Nivel"):Connect(function()
+		anotarNivel(j)
+	end)
+end)
+for _, j in Players:GetPlayers() do
+	j:GetAttributeChangedSignal("Nivel"):Connect(function()
+		anotarNivel(j)
+	end)
+end
+task.spawn(function()
+	while true do
+		Ranking.revisarSemana()
+		Ranking.subir()
+		Ranking.refrescar()
+		pintarCartel()
+		task.wait(60)
 	end
 end)
 

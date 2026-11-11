@@ -14,6 +14,8 @@ local coleccion = ReplicatedStorage:WaitForChild("Coleccion")
 local usarHud = ReplicatedStorage:WaitForChild("UsarHud")
 local teletransportar = ReplicatedStorage:WaitForChild("Teletransportar")
 local temporadaRemota = ReplicatedStorage:WaitForChild("Temporada")
+local eventoRemoto = ReplicatedStorage:WaitForChild("Evento")
+local abrirPanelRemoto = ReplicatedStorage:WaitForChild("AbrirPanel")
 local items = require(Shared.Data.items)
 local jugador = Players.LocalPlayer
 
@@ -240,6 +242,101 @@ function armarPase(res)
 	Comic.texto({ Text = res.error or "", Position = UDim2.new(0, 0, 1, -22), Size = UDim2.new(1, 0, 0, 22), TextSize = 16, Font = Comic.TEXTO, TextColor3 = Comic.AMARILLO }, cuerpoPase)
 end
 
+-- Desafío semanal, tienda de fichas y rankings (docs/EVENTO.md).
+local cuerpoEvento
+local pestanaEvento = "desafio"
+local armarEvento
+do
+	local p, cuerpo = Comic.panel(gui, "EVENTO", UDim2.fromOffset(820, 480))
+	paneles.evento = p
+	cuerpoEvento = cuerpo
+end
+local function pedirEvento(nombre: string, a)
+	local res = eventoRemoto:InvokeServer(nombre, a)
+	if res.empezo then
+		paneles.evento.Visible = false
+		return
+	end
+	armarEvento(res)
+end
+
+function armarEvento(res)
+	cuerpoEvento:ClearAllChildren()
+	-- Pestañas.
+	for i, t in { { "desafio", "DESAFÍO" }, { "tienda", "TIENDA" }, { "ranking", "RANKING" } } do
+		Comic.boton(t[2], { Position = UDim2.fromOffset((i - 1) * 150, 0), Size = UDim2.fromOffset(140, 40), TextSize = 22, BackgroundColor3 = if pestanaEvento == t[1] then Comic.AMARILLO else Comic.ROJO_OSCURO, TextColor3 = if pestanaEvento == t[1] then Comic.ROJO_OSCURO else Comic.CREMA }, cuerpoEvento, function()
+			pestanaEvento = t[1]
+			armarEvento(res)
+		end)
+	end
+	Comic.texto({ Text = `🎟 {res.fichas} fichas  ·  termina en {duracion(res.fin)}`, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 6), Size = UDim2.fromOffset(300, 30), TextSize = 22, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Right }, cuerpoEvento)
+	local area = Comic.crear("Frame", { Position = UDim2.fromOffset(0, 52), Size = UDim2.new(1, 0, 1, -80), BackgroundTransparency = 1 }, cuerpoEvento)
+	Comic.texto({ Text = res.error or "", Position = UDim2.new(0, 0, 1, -24), Size = UDim2.new(1, 0, 0, 22), TextSize = 16, Font = Comic.TEXTO, TextColor3 = Comic.AMARILLO }, cuerpoEvento)
+
+	if pestanaEvento == "desafio" then
+		Comic.texto({ Text = `DESAFÍO SEMANAL · {string.upper(res.nombreMapa)}`, Size = UDim2.new(1, 0, 0, 40), TextSize = 34, TextXAlignment = Enum.TextXAlignment.Left }, area)
+		for i, m in res.modificadores do
+			local f = Comic.crear("Frame", { Position = UDim2.fromOffset((i - 1) * 390, 52), Size = UDim2.fromOffset(370, 96), BackgroundColor3 = Comic.ROJO, Rotation = if i == 1 then -1.5 else 1.5 }, area)
+			Comic.borde(f, 4)
+			Comic.texto({ Text = string.upper(m.nombre), Position = UDim2.fromOffset(12, 6), Size = UDim2.new(1, -24, 0, 36), TextSize = 30, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Left }, f)
+			Comic.texto({ Text = m.texto, Position = UDim2.fromOffset(12, 48), Size = UDim2.new(1, -24, 0, 40), TextSize = 18, Font = Comic.TEXTO, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left }, f)
+		end
+		Comic.texto({
+			Text = `Sobreviví hasta {res.oleadas} oleadas. 100 puntos por oleada + 1 por enemigo; vale tu mejor intento.\n1 ficha cada 100 puntos (hasta {res.topeFichas} por semana: llevás {res.ganadas}).`,
+			Position = UDim2.fromOffset(0, 162),
+			Size = UDim2.new(1, 0, 0, 60),
+			TextSize = 18,
+			Font = Comic.TEXTO,
+			TextWrapped = true,
+			TextXAlignment = Enum.TextXAlignment.Left,
+		}, area)
+		Comic.texto({ Text = `TU MEJOR PUNTAJE: {res.mejor}`, Position = UDim2.fromOffset(0, 236), Size = UDim2.fromOffset(420, 44), TextSize = 34, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Left }, area)
+		Comic.boton("¡JUGAR DESAFÍO!", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 230), Size = UDim2.fromOffset(300, 70), TextSize = 34, BackgroundColor3 = Comic.VERDE }, area, function()
+			pedirEvento("jugar")
+		end)
+	elseif pestanaEvento == "tienda" then
+		Comic.crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 14), HorizontalAlignment = Enum.HorizontalAlignment.Center }, area)
+		for _, prod in res.tienda do
+			local f = Comic.crear("Frame", { Size = UDim2.fromOffset(180, 290), BackgroundColor3 = Comic.ROJO_OSCURO }, area)
+			Comic.borde(f, 4)
+			Comic.texto({ Text = prod.nombre, Position = UDim2.fromOffset(8, 14), Size = UDim2.new(1, -16, 0, 90), TextSize = 28, TextWrapped = true, TextColor3 = Comic.AMARILLO }, f)
+			Comic.texto({ Text = `Quedan {prod.quedan} esta semana`, Position = UDim2.fromOffset(8, 120), Size = UDim2.new(1, -16, 0, 40), TextSize = 16, Font = Comic.TEXTO, TextWrapped = true }, f)
+			local puede = prod.quedan > 0 and res.fichas >= prod.precio
+			Comic.boton(if prod.quedan > 0 then `🎟 {prod.precio}` else "AGOTADO", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12), Size = UDim2.new(1, -24, 0, 50), TextSize = 26, AutoButtonColor = puede, BackgroundColor3 = if puede then Comic.VERDE else Comic.GRIS }, f, function()
+				if puede then
+					pedirEvento("comprar", prod.id)
+				end
+			end)
+		end
+	else
+		for i, t in { { "evento", "DESAFÍO SEMANAL", " pts" }, { "infinito", "INFINITO", " oleadas" }, { "nivel", "NIVEL DE CUENTA", "" } } do
+			local f = Comic.crear("Frame", { Position = UDim2.fromOffset((i - 1) * 262, 0), Size = UDim2.fromOffset(248, 360), BackgroundColor3 = Comic.ROJO_OSCURO }, area)
+			Comic.borde(f, 4)
+			Comic.texto({ Text = t[2], Position = UDim2.fromOffset(8, 6), Size = UDim2.new(1, -16, 0, 34), TextSize = 26, TextColor3 = Comic.AMARILLO }, f)
+			local lineas = {}
+			for n, fila in res.ranking[t[1]] do
+				table.insert(lineas, `{n}. {fila.nombre} · {fila.valor}{t[3]}`)
+			end
+			Comic.texto({ Text = if #lineas > 0 then table.concat(lineas, "\n") else "Todavía nadie", Position = UDim2.fromOffset(12, 48), Size = UDim2.new(1, -24, 1, -100), TextSize = 17, Font = Comic.TEXTO, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextWrapped = true }, f)
+			Comic.texto({ Text = `VOS: {res.mios[t[1]]}{t[3]}`, Position = UDim2.new(0, 8, 1, -44), Size = UDim2.new(1, -16, 0, 36), TextSize = 24 }, f)
+		end
+	end
+end
+
+local function abrirEvento(pestana: string)
+	pestanaEvento = pestana
+	pedirEvento("estado")
+	abrir("evento")
+end
+abrirPanelRemoto.OnClientEvent:Connect(function(nombre)
+	if nombre == "evento" or nombre == "ranking" then
+		abrirEvento(if nombre == "ranking" then "ranking" else "desafio")
+	elseif nombre == "misiones" then
+		pedirTemporada("estado")
+		abrir("misiones")
+	end
+end)
+
 -- Funciones que todavía no existen.
 local textoPronto
 do
@@ -298,7 +395,7 @@ for _, b in {
 		abrir("perfil")
 	end },
 	{ "EVENTO", "evento", function()
-		pronto("El evento")
+		abrirEvento("desafio")
 	end },
 	{ "NOVEDADES", "log", function()
 		abrir("log")

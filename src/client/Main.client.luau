@@ -244,7 +244,7 @@ local function refrescar()
 	local oleada = estado:GetAttribute("Oleada")
 	local base, baseMax = estado:GetAttribute("Base"), estado:GetAttribute("BaseMax")
 	local acto = estado:GetAttribute("Acto")
-	titulo.Text = string.upper(`{estado:GetAttribute("NombreNivel")} · {if acto == "Infinito" then "Infinito" else "Acto " .. acto}{if estado:GetAttribute("Pesadilla") then " · Pesadilla" else ""}`)
+	titulo.Text = string.upper(`{estado:GetAttribute("NombreNivel")} · {if acto == "Infinito" or acto == "Evento" then acto else "Acto " .. acto}{if estado:GetAttribute("Pesadilla") then " · Pesadilla" else ""}`)
 	barraVida.Size = UDim2.fromScale(math.clamp(base / baseMax, 0, 1), 1)
 	textoVida.Text = `🛡 {base} / {baseMax}`
 	textoOleada.Text = if total == 0 then tostring(oleada) else `{oleada}/{total}`
@@ -537,7 +537,7 @@ local function cambiarPartida()
 		table.insert(conexiones, estado.AttributeChanged:Connect(function(nombre)
 			if nombre == "Oleada" and (estado:GetAttribute("Oleada") or 0) > 0 then
 				local n, total = estado:GetAttribute("Oleada"), estado:GetAttribute("OleadasTotal")
-				cartelOleada(n, total > 0 and n == total)
+				cartelOleada(n, total > 0 and n == total and estado:GetAttribute("Acto") ~= "Evento")
 			elseif nombre == "Fase" and estado:GetAttribute("Fase") == "fin" then
 				task.delay(0.5, mostrarResultado) -- da tiempo a que llegue el premio del acto
 			elseif nombre == "Fase" then

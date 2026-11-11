@@ -84,10 +84,10 @@ end
 
 -- Estaciones: isla, ángulo (grados, 0 = +X, 90 = +Z) y distancia al centro de la isla. Miran al centro de su isla.
 Hub.ESTACIONES = {
-	{ id = "misiones", nombre = "MISIONES", subtitulo = "Próximamente", color = "64e5ff", isla = "central", angulo = 112, r = 24 },
+	{ id = "misiones", nombre = "MISIONES", subtitulo = "Diarias y semanales", color = "64e5ff", isla = "central", angulo = 112, r = 24 },
 	{ id = "bailes", nombre = "BAILES", subtitulo = "Próximamente", color = "ff8fd8", isla = "central", angulo = -135, r = 27 },
-	{ id = "evento", nombre = "EVENTO", subtitulo = "Próximamente", color = "ffb347", isla = "central", angulo = -45, r = 27 },
-	{ id = "ranking", nombre = "RANKING", subtitulo = "Próximamente", color = "ffe066", isla = "central", angulo = 20, r = 26 },
+	{ id = "evento", nombre = "EVENTO", subtitulo = "Desafío semanal", color = "ffb347", isla = "central", angulo = -45, r = 27 },
+	{ id = "ranking", nombre = "RANKING", subtitulo = "Top 10", color = "ffe066", isla = "central", angulo = 20, r = 26 },
 	{ id = "monturas", nombre = "MONTURAS", subtitulo = "Próximamente", color = "9be37a", isla = "central", angulo = 160, r = 26 },
 	{ id = "summon", nombre = "BANNER 1", subtitulo = "Invocaciones", color = "ffcf72", isla = "asgard", angulo = 120, r = 16 },
 	{ id = "banner_2", nombre = "BANNER 2", subtitulo = "Próximamente", color = "ffcf72", isla = "asgard", angulo = 90, r = 18 },

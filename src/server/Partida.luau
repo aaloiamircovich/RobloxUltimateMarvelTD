@@ -22,7 +22,9 @@ local Mejoras = require(Shared.Mejoras)
 local Cuenta = require(Shared.Cuenta)
 local Actos = require(Shared.Actos)
 local Temporada = require(Shared.Temporada)
+local Evento = require(Shared.Evento)
 local Perfiles = require(script.Parent.Perfiles)
+local Ranking = require(script.Parent.Ranking)
 
 local heroes = Personajes.todos
 local enemigosDatos = require(Data.enemies)
@@ -183,13 +185,22 @@ local function escuadronDe(perfil)
 	return r, table.concat(texto, ",")
 end
 
--- op: { id, indice (mapa en levels.json), acto (1–5 o "infinito"), pesadilla, jugadores, anfitrion, origen, aviso, alSalir }
+-- op: { id, indice (mapa en levels.json), acto (1–5, "infinito" o "evento"), pesadilla, jugadores, anfitrion, origen, aviso, alSalir }
 function Partida.nueva(op)
 	local p = {}
 	local NIVEL, INDICE_NIVEL = niveles[op.indice], op.indice - 1
 	local infinito = op.acto == "infinito"
-	local modo = if infinito then "survival" else "campaign"
-	local pesadilla = op.pesadilla and not infinito
+	-- Desafío semanal (docs/EVENTO.md): oleadas sin fin hasta Evento.OLEADAS con los modificadores de la semana.
+	local esEvento = op.acto == "evento"
+	local sinFin = infinito or esEvento
+	local efectos = if esEvento then Evento.efectos(Evento.desafio(Evento.semana(os.time()))) else Evento.efectos({ modificadores = {} })
+	local BASE = math.floor(Partida.BASE * efectos.base)
+	local modo = if sinFin then "survival" else "campaign"
+	local pesadilla = op.pesadilla and not sinFin
+	local superadas, derrotados = 0, 0 -- para el puntaje del evento
+	local function nombreActo(): string
+		return if infinito then "Infinito" elseif esEvento then "Evento" else tostring(op.acto)
+	end
 	local origen: Vector3 = op.origen
 	local terminada = false
 
@@ -217,14 +228,14 @@ function Partida.nueva(op)
 		estado:SetAttribute(nombre, valor)
 	end
 	fijar("Nivel", NIVEL.id)
-	fijar("NombreNivel", NIVEL.name)
-	fijar("Acto", if infinito then "Infinito" else tostring(op.acto))
+	fijar("NombreNivel", if esEvento then "Desafío · " .. NIVEL.name else NIVEL.name)
+	fijar("Acto", nombreActo())
 	fijar("Pesadilla", pesadilla)
 	fijar("Origen", origen)
-	fijar("Base", Partida.BASE)
-	fijar("BaseMax", Partida.BASE)
+	fijar("Base", BASE)
+	fijar("BaseMax", BASE)
 	fijar("Oleada", 0)
-	fijar("OleadasTotal", if infinito then 0 else Actos.OLEADAS)
+	fijar("OleadasTotal", if infinito then 0 elseif esEvento then Evento.OLEADAS else Actos.OLEADAS)
 	fijar("Fase", "listo")
 	fijar("Mensaje", "")
 	fijar("Velocidad", 1)
@@ -251,7 +262,7 @@ function Partida.nueva(op)
 		local esc, texto = escuadronDe(perfil)
 		p.jugadores[j] = { escuadron = esc, listo = false, saltar = false, auto = false }
 		j:SetAttribute("Partida", op.id)
-		j:SetAttribute("Dinero", Mejoras.DINERO_INICIAL)
+		j:SetAttribute("Dinero", math.floor(Mejoras.DINERO_INICIAL * efectos.dinero))
 		j:SetAttribute("Escuadron", texto)
 		j:SetAttribute("Listo", false)
 		j:SetAttribute("Auto", false)
@@ -310,6 +321,11 @@ function Partida.nueva(op)
 			config.hp = math.floor(config.hp * Actos.PESADILLA.vida + 0.5)
 			config.speed = config.speed * Actos.PESADILLA.velocidad
 		end
+		if esEvento then
+			config = table.clone(config)
+			config.hp = math.floor(config.hp * efectos.vida + 0.5)
+			config.speed = config.speed * efectos.velocidad
+		end
 		local tam = if config.isBoss then 4 elseif config.isElite then 2.6 else 2
 		local cuerpo = Instance.new("Part")
 		cuerpo.Name = config.id
@@ -350,6 +366,7 @@ function Partida.nueva(op)
 		if e.vida <= 0 then
 			dar(e.ultimoAtacante, e.config.reward or 0)
 			evento(e.ultimoAtacante, "derrota", 1)
+			derrotados += 1
 			quitarEnemigo(e)
 		end
 	end
@@ -375,7 +392,7 @@ function Partida.nueva(op)
 
 	local function vidasEquivalentes(): number
 		-- Los bonus "lowLife" del 2D valen con 10 vidas de 20: aquí, con la base al 50 % o menos.
-		return math.ceil(estado:GetAttribute("Base") / Partida.BASE * 20)
+		return math.ceil(estado:GetAttribute("Base") / BASE * 20)
 	end
 
 	local function statsUnidad(u)
@@ -509,6 +526,9 @@ function Partida.nueva(op)
 
 	-- Vender devuelve el 50 % de lo invertido (colocar + mejoras).
 	function ACCIONES.vender(j: Player, uid: number)
+		if efectos.sinVender then
+			return "En este desafío no se puede vender"
+		end
 		local u, i = suya(j, uid)
 		if not u then
 			return "Héroe no disponible"
@@ -838,11 +858,24 @@ function Partida.nueva(op)
 		terminada = true
 		local gano = string.sub(mensaje, 1, 7) ~= "Derrota"
 		fijar("Resultado", if gano then "victoria" else "derrota")
+		if esEvento then
+			-- Puntaje del intento: fichas, mejor puntaje y ranking de la semana.
+			local puntos = Evento.puntos(superadas, derrotados)
+			for j in p.jugadores do
+				local perfil = Perfiles.de(j)
+				if perfil then
+					local fichas, record = Evento.registrar(perfil, puntos, os.time())
+					Ranking.anotar("evento", j.UserId, perfil.evento.mejor)
+					Perfiles.marcar(j)
+					j:SetAttribute("PremioActo", `{puntos} puntos · +{fichas} fichas` .. (if record then " · ¡RÉCORD!" else ""))
+				end
+			end
+		end
 		-- Qué se puede votar en la pantalla final.
 		local opciones = {}
-		if gano and not infinito and op.acto < Actos.POR_MAPA then
+		if gano and not sinFin and op.acto < Actos.POR_MAPA then
 			table.insert(opciones, "siguiente")
-		elseif gano and not infinito and Actos.MAPAS[(table.find(Actos.MAPAS, NIVEL.id) or 0) + 1] then
+		elseif gano and not sinFin and Actos.MAPAS[(table.find(Actos.MAPAS, NIVEL.id) or 0) + 1] then
 			table.insert(opciones, "mapa")
 		end
 		table.insert(opciones, "repetir")
@@ -856,6 +889,7 @@ function Partida.nueva(op)
 
 	-- Premios de cada oleada superada: XP de unidades y de cuenta; en Infinito, gemas y núcleos.
 	local function premiarOleada(n: number)
+		superadas = n
 		for j, d in p.jugadores do
 			evento(j, "oleada", 1, Temporada.XP_OLEADA)
 			if infinito then
@@ -877,6 +911,7 @@ function Partida.nueva(op)
 				if infinito then
 					local r = perfil.modeRecords.survival
 					r.bestWave = math.max(r.bestWave, n)
+					Ranking.anotar("infinito", j.UserId, r.bestWave)
 					if n % 5 == 0 then
 						perfil.gems += GEMAS_INFINITO
 						table.insert(premios, `+{GEMAS_INFINITO} gemas`)
@@ -906,7 +941,7 @@ function Partida.nueva(op)
 		while not terminada and not todos("listo") and ahora() < estado:GetAttribute("FinTemporizador") do
 			task.wait(0.1)
 		end
-		local total = if infinito then math.huge else Actos.OLEADAS
+		local total = if infinito then math.huge elseif esEvento then Evento.OLEADAS else Actos.OLEADAS
 		local n = 0
 		local generando = 0 -- oleadas que todavía están sacando enemigos
 		while not terminada and n < total do
@@ -920,10 +955,10 @@ function Partida.nueva(op)
 			for _, u in unidades do
 				table.insert(equipo, u.config)
 			end
-			local oleada2D = if infinito then n else Actos.oleada2D(op.acto, n)
-			local jefe = if infinito then nil elseif n == Actos.OLEADAS then op.acto else false
+			local oleada2D = if sinFin then n else Actos.oleada2D(op.acto, n)
+			local jefe = if sinFin then nil elseif n == Actos.OLEADAS then op.acto else false
 			local cola, mod = Oleadas.preparar(oleada2D, enemigosDatos, NIVEL, INDICE_NIVEL, equipo, modo, jefe)
-			fijar("Mensaje", `Oleada {n}: {mod.nombre}` .. (if n == Actos.OLEADAS and not infinito then " · ¡JEFE!" else ""))
+			fijar("Mensaje", `Oleada {n}: {mod.nombre}` .. (if n == Actos.OLEADAS and not sinFin then " · ¡JEFE!" else ""))
 			generando += 1
 			local completa = false -- ya salieron todos los enemigos de esta oleada
 			task.spawn(function()
@@ -958,7 +993,7 @@ function Partida.nueva(op)
 				return
 			end
 			if derrota() then
-				terminar(`Derrota en la oleada {n}` .. (if infinito then "" else ` del acto {op.acto}`))
+				terminar(`Derrota en la oleada {n}` .. (if sinFin then "" else ` del acto {op.acto}`))
 				return
 			end
 			local bono = Mejoras.BONO_OLEADA + math.floor(estado:GetAttribute("Base") * Mejoras.BONO_VIDA / 25)
@@ -979,6 +1014,10 @@ function Partida.nueva(op)
 		end
 		if derrota() then
 			terminar(`Derrota en el acto {op.acto}`)
+			return
+		end
+		if esEvento then
+			terminar(`¡Desafío superado! {Evento.OLEADAS} oleadas`)
 			return
 		end
 		for j in p.jugadores do
@@ -1051,10 +1090,11 @@ function Partida.nueva(op)
 		for i = #enemigos, 1, -1 do
 			quitarEnemigo(enemigos[i])
 		end
-		op.acto, pesadilla = acto, conPesadilla and not infinito
-		fijar("Acto", if infinito then "Infinito" else tostring(acto))
+		op.acto, pesadilla = acto, conPesadilla and not sinFin
+		superadas, derrotados = 0, 0
+		fijar("Acto", nombreActo())
 		fijar("Pesadilla", pesadilla)
-		fijar("Base", Partida.BASE)
+		fijar("Base", BASE)
 		fijar("Oleada", 0)
 		for _, a in { "Resultado", "Opciones", "VotosTotal", "Votos_siguiente", "Votos_mapa", "Votos_repetir" } do
 			fijar(a, nil)
