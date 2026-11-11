@@ -17,6 +17,8 @@ local temporadaRemota = ReplicatedStorage:WaitForChild("Temporada")
 local eventoRemoto = ReplicatedStorage:WaitForChild("Evento")
 local raidRemoto = ReplicatedStorage:WaitForChild("Raid")
 local salaRemota = ReplicatedStorage:WaitForChild("Sala")
+local rasgosRemoto = ReplicatedStorage:WaitForChild("Rasgos")
+local Rasgos = require(Shared.Rasgos)
 local abrirPanelRemoto = ReplicatedStorage:WaitForChild("AbrirPanel")
 local items = require(Shared.Data.items)
 local jugador = Players.LocalPlayer
@@ -194,6 +196,10 @@ local function textoPremio(pr): string
 		return `🔷\n{pr.cantidad} núcleo{if pr.cantidad > 1 then "s" else ""}`
 	elseif pr.tipo == "objeto" then
 		return `🎁\n{items[pr.id] and items[pr.id].name or pr.id}`
+	elseif pr.tipo == "fichas" then
+		return `🎫\n{pr.cantidad} ficha{if pr.cantidad > 1 then "s" else ""} de rasgo`
+	elseif pr.tipo == "cristales" then
+		return `💠\n{pr.cantidad} cristales`
 	end
 	return "★ ???\nPersonaje exclusivo"
 end
@@ -377,6 +383,111 @@ task.spawn(function()
 	end
 end)
 
+-- Rasgos y grados (docs/RASGOS.md): elegir una unidad, tirar su rasgo con fichas y sus grados con cristales.
+local COLOR_RASGO = { ["Común"] = Color3.fromRGB(190, 190, 200), Raro = Color3.fromRGB(80, 160, 255), ["Épico"] = Color3.fromRGB(180, 100, 255), ["Mítico"] = Color3.fromRGB(255, 90, 110) }
+local COLOR_GRADO = { C = Color3.fromRGB(150, 150, 150), B = Color3.fromRGB(230, 230, 230), A = Color3.fromRGB(80, 200, 255), S = Color3.fromRGB(255, 200, 40), ["S+"] = Color3.fromRGB(255, 90, 110) }
+local NOMBRE_STAT = { dano = "DAÑO", alcance = "ALCANCE", cadencia = "CADENCIA" }
+local cuerpoRasgos
+local elegidaRasgo -- uid
+local bloqueos = {}
+local armarRasgos
+do
+	local p, cuerpo = Comic.panel(gui, "RASGOS Y GRADOS", UDim2.fromOffset(860, 500))
+	paneles.rasgos = p
+	cuerpoRasgos = cuerpo
+end
+local function pedirRasgos(nombre: string, uid: number?)
+	armarRasgos(rasgosRemoto:InvokeServer(nombre, uid, bloqueos))
+end
+
+function armarRasgos(res)
+	cuerpoRasgos:ClearAllChildren()
+	if res.error and not res.unidades then
+		Comic.texto({ Text = res.error, Size = UDim2.fromScale(1, 1), TextSize = 22, Font = Comic.TEXTO }, cuerpoRasgos)
+		return
+	end
+	Comic.texto({ Text = `🎫 {res.fichas} fichas de rasgo   💠 {res.cristales} cristales   ·   mítico garantizado en {res.garantia - res.pity} tiradas`, Size = UDim2.new(1, 0, 0, 28), TextSize = 22, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Left }, cuerpoRasgos)
+	Comic.texto({ Text = res.error or "", Position = UDim2.new(0, 0, 1, -24), Size = UDim2.new(1, 0, 0, 22), TextSize = 16, Font = Comic.TEXTO, TextColor3 = Comic.AMARILLO }, cuerpoRasgos)
+
+	-- Izquierda: unidades.
+	local lista = Comic.crear("ScrollingFrame", { Position = UDim2.fromOffset(0, 36), Size = UDim2.fromOffset(300, 380), BackgroundTransparency = 1, ScrollBarThickness = 6, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new() }, cuerpoRasgos)
+	Comic.crear("UIListLayout", { Padding = UDim.new(0, 6) }, lista)
+	local sel
+	for _, u in res.unidades do
+		if u.uid == elegidaRasgo then
+			sel = u
+		end
+	end
+	sel = sel or res.unidades[1]
+	elegidaRasgo = sel and sel.uid
+	for _, u in res.unidades do
+		local h = Personajes.todos[u.heroId]
+		local r = Rasgos.de(u.rasgo)
+		local b = Comic.boton(`{h.name} · Nv {u.nivel}\n{if r then r.nombre else "Sin rasgo"} · {u.grados.dano}/{u.grados.alcance}/{u.grados.cadencia}`, { Size = UDim2.new(1, -10, 0, 54), TextSize = 17, BackgroundColor3 = if u == sel then Comic.AMARILLO else Comic.ROJO_OSCURO, TextColor3 = if u == sel then Comic.ROJO_OSCURO else Comic.CREMA }, lista, function()
+			elegidaRasgo = u.uid
+			bloqueos = {}
+			armarRasgos(res)
+		end)
+		b:FindFirstChildOfClass("UIStroke").Color = COLOR_RAREZA[h.rarity] or Comic.NEGRO
+	end
+	if not sel then
+		return
+	end
+
+	-- Derecha: rasgo y grados de la unidad elegida.
+	local der = Comic.crear("Frame", { Position = UDim2.fromOffset(316, 36), Size = UDim2.fromOffset(504, 380), BackgroundTransparency = 1 }, cuerpoRasgos)
+	local r = Rasgos.de(sel.rasgo)
+	local caja = Comic.crear("Frame", { Size = UDim2.fromOffset(504, 150), BackgroundColor3 = Comic.ROJO, Rotation = -1 }, der)
+	Comic.borde(caja, 4)
+	Comic.texto({ Text = "RASGO", Position = UDim2.fromOffset(12, 6), Size = UDim2.fromOffset(200, 24), TextSize = 22, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Left }, caja)
+	Comic.texto({ Text = if r then `{string.upper(r.nombre)} · {r.rareza}` else "SIN RASGO", Position = UDim2.fromOffset(12, 32), Size = UDim2.fromOffset(300, 40), TextSize = 36, TextColor3 = if r then COLOR_RASGO[r.rareza] else Comic.CREMA, TextXAlignment = Enum.TextXAlignment.Left }, caja)
+	Comic.texto({ Text = Rasgos.descripcion(sel.rasgo), Position = UDim2.fromOffset(12, 78), Size = UDim2.fromOffset(300, 60), TextSize = 17, Font = Comic.TEXTO, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top }, caja)
+	Comic.boton("TIRAR RASGO\n🎫 1", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), Size = UDim2.fromOffset(170, 84), TextSize = 24, BackgroundColor3 = if res.fichas > 0 then Comic.VERDE else Comic.GRIS }, caja, function()
+		if Rasgos.rango(sel.rasgo) >= 3 then
+			-- Confirmar antes de perder un rasgo Épico o Mítico.
+			local aviso = Comic.crear("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Comic.NEGRO, BackgroundTransparency = 0.3, ZIndex = 5 }, cuerpoRasgos)
+			Comic.texto({ Text = `¿Seguro? Vas a perder {r.nombre} ({r.rareza}).`, Position = UDim2.fromScale(0, 0.3), Size = UDim2.new(1, 0, 0, 40), TextSize = 30, ZIndex = 6 }, aviso)
+			Comic.boton("SÍ, TIRAR", { Position = UDim2.new(0.5, -210, 0.5, 0), Size = UDim2.fromOffset(200, 56), TextSize = 26, BackgroundColor3 = Comic.VERDE, ZIndex = 6 }, aviso, function()
+				pedirRasgos("rasgo", sel.uid)
+			end)
+			Comic.boton("NO", { Position = UDim2.new(0.5, 10, 0.5, 0), Size = UDim2.fromOffset(200, 56), TextSize = 26, BackgroundColor3 = Comic.GRIS, ZIndex = 6 }, aviso, function()
+				aviso:Destroy()
+			end)
+		else
+			pedirRasgos("rasgo", sel.uid)
+		end
+	end)
+
+	Comic.texto({ Text = "GRADOS  ·  bloqueá hasta 2 (cada bloqueo duplica el costo)", Position = UDim2.fromOffset(0, 166), Size = UDim2.fromOffset(504, 24), TextSize = 20, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Left }, der)
+	local n = 0
+	for i, s in Rasgos.STATS do
+		if bloqueos[s] then
+			n += 1
+		end
+		local f = Comic.crear("Frame", { Position = UDim2.fromOffset((i - 1) * 170, 196), Size = UDim2.fromOffset(160, 110), BackgroundColor3 = Comic.ROJO_OSCURO }, der)
+		Comic.borde(f, 3)
+		Comic.texto({ Text = NOMBRE_STAT[s], Position = UDim2.fromOffset(0, 4), Size = UDim2.new(1, 0, 0, 22), TextSize = 20 }, f)
+		Comic.texto({ Text = sel.grados[s], Position = UDim2.fromOffset(0, 26), Size = UDim2.new(1, 0, 0, 44), TextSize = 44, TextColor3 = COLOR_GRADO[sel.grados[s]] }, f)
+		Comic.boton(if bloqueos[s] then "🔒 BLOQUEADO" else "🔓 bloquear", { Position = UDim2.new(0, 8, 1, -34), Size = UDim2.new(1, -16, 0, 28), TextSize = 15, BackgroundColor3 = if bloqueos[s] then Color3.fromRGB(200, 130, 20) else Comic.GRIS }, f, function()
+			bloqueos[s] = not bloqueos[s] or nil
+			armarRasgos(res)
+		end)
+	end
+	local costo = Rasgos.costoGrados(n)
+	Comic.boton(if n > 2 then "MÁXIMO 2 BLOQUEOS" else `TIRAR GRADOS  💠 {costo}`, { Position = UDim2.fromOffset(0, 318), Size = UDim2.fromOffset(500, 56), TextSize = 28, BackgroundColor3 = if n <= 2 and res.cristales >= costo then Comic.VERDE else Comic.GRIS }, der, function()
+		if n <= 2 then
+			pedirRasgos("grados", sel.uid)
+		end
+	end)
+end
+
+local function abrirRasgos()
+	pedirRasgos("estado")
+	if not paneles.rasgos.Visible then
+		abrir("rasgos")
+	end
+end
+
 -- Desafío semanal, tienda de fichas y rankings (docs/EVENTO.md).
 local cuerpoEvento
 local pestanaEvento = "desafio"
@@ -430,14 +541,14 @@ function armarEvento(res)
 			pedirEvento("jugar")
 		end)
 	elseif pestanaEvento == "tienda" then
-		Comic.crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 14), HorizontalAlignment = Enum.HorizontalAlignment.Center }, area)
+		Comic.crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 10), HorizontalAlignment = Enum.HorizontalAlignment.Center }, area)
 		for _, prod in res.tienda do
-			local f = Comic.crear("Frame", { Size = UDim2.fromOffset(180, 290), BackgroundColor3 = Comic.ROJO_OSCURO }, area)
+			local f = Comic.crear("Frame", { Size = UDim2.fromOffset(118, 290), BackgroundColor3 = Comic.ROJO_OSCURO }, area)
 			Comic.borde(f, 4)
-			Comic.texto({ Text = prod.nombre, Position = UDim2.fromOffset(8, 14), Size = UDim2.new(1, -16, 0, 90), TextSize = 28, TextWrapped = true, TextColor3 = Comic.AMARILLO }, f)
+			Comic.texto({ Text = prod.nombre, Position = UDim2.fromOffset(6, 14), Size = UDim2.new(1, -12, 0, 90), TextSize = 22, TextWrapped = true, TextColor3 = Comic.AMARILLO }, f)
 			Comic.texto({ Text = `Quedan {prod.quedan} esta semana`, Position = UDim2.fromOffset(8, 120), Size = UDim2.new(1, -16, 0, 40), TextSize = 16, Font = Comic.TEXTO, TextWrapped = true }, f)
 			local puede = prod.quedan > 0 and res.fichas >= prod.precio
-			Comic.boton(if prod.quedan > 0 then `🎟 {prod.precio}` else "AGOTADO", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12), Size = UDim2.new(1, -24, 0, 50), TextSize = 26, AutoButtonColor = puede, BackgroundColor3 = if puede then Comic.VERDE else Comic.GRIS }, f, function()
+			Comic.boton(if prod.quedan > 0 then `🎟 {prod.precio}` else "AGOTADO", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12), Size = UDim2.new(1, -16, 0, 50), TextSize = 22, AutoButtonColor = puede, BackgroundColor3 = if puede then Comic.VERDE else Comic.GRIS }, f, function()
 				if puede then
 					pedirEvento("comprar", prod.id)
 				end
@@ -466,6 +577,8 @@ end
 abrirPanelRemoto.OnClientEvent:Connect(function(nombre, datos)
 	if nombre == "evento" or nombre == "ranking" then
 		abrirEvento(if nombre == "ranking" then "ranking" else "desafio")
+	elseif nombre == "rasgos" then
+		abrirRasgos()
 	elseif nombre == "raid" then
 		abrirRaid(if datos and datos.pestana == "misiones" then "misiones" else "raid")
 	elseif nombre == "misiones" then

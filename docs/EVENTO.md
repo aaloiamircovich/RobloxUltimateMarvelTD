@@ -14,7 +14,7 @@ Sistema propio del port (el 2D no lo tiene). Lógica en `src/shared/Evento.luau`
 ## Fichas y tienda
 - **1 ficha cada 100 puntos** de cada intento, hasta **300 fichas por semana**.
 - Tienda con stock semanal: 100 gemas (40 🎟, ×5), 1 núcleo (120 🎟, ×2), 300 XP de pase (50 🎟, ×4) y un objeto
-  épico que no tengas (150 🎟, ×1).
+  épico que no tengas (150 🎟, ×1), 2 fichas de rasgo (60 🎟, ×3) y 4 cristales de grado (40 🎟, ×3).
 - Al cambiar la semana, el puntaje, las fichas y las compras vuelven a cero.
 
 ## Rankings

@@ -13,6 +13,7 @@ local Despliegue = require(Shared.Despliegue)
 local Progresion = require(Shared.Progresion)
 local Mejoras = require(Shared.Mejoras)
 local Kits = require(Shared.Kits)
+local Rasgos = require(Shared.Rasgos)
 local Personajes = require(Shared.Personajes)
 local heroes = Personajes.todos
 local niveles = require(Shared.Data.levels)
@@ -212,7 +213,9 @@ local function refrescar()
 		end
 		nombreUnidad.Text = string.upper(config.name)
 		marcoRetrato:FindFirstChildOfClass("UIStroke").Color = Comic.RAREZA[config.rarity] or Comic.NEGRO
-		statsUnidad.Text = `Nv {seleccion:GetAttribute("NivelUnidad") or 1}\n⚔ Daño <font color="#ffd628">{seleccion:GetAttribute("Dano") or "?"}</font>\n◎ Alcance <font color="#ffd628">{seleccion:GetAttribute("Alcance") or "?"}</font>\n⚡ Ataques/s <font color="#ffd628">{seleccion:GetAttribute("Cadencia") or "?"}</font>`
+		local rasgo = Rasgos.de(seleccion:GetAttribute("Rasgo"))
+		local nombreRasgo = if rasgo then rasgo.nombre else "Sin rasgo"
+		statsUnidad.Text = `Nv {seleccion:GetAttribute("NivelUnidad") or 1}\n⚔ Daño <font color="#ffd628">{seleccion:GetAttribute("Dano") or "?"}</font>\n◎ Alcance <font color="#ffd628">{seleccion:GetAttribute("Alcance") or "?"}</font>\n⚡ Ataques/s <font color="#ffd628">{seleccion:GetAttribute("Cadencia") or "?"}</font>\n<font color="#ff8fb0">{nombreRasgo}</font> · {seleccion:GetAttribute("Grados") or "B/B/B"}`
 		for _, pip in pips:GetChildren() do
 			if pip:IsA("Frame") then
 				pip.BackgroundColor3 = if tonumber(pip.Name) <= hecho then Comic.AMARILLO else Comic.GRIS

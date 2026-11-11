@@ -24,6 +24,7 @@ local Actos = require(Shared.Actos)
 local Temporada = require(Shared.Temporada)
 local Evento = require(Shared.Evento)
 local Raid = require(Shared.Raid)
+local Rasgos = require(Shared.Rasgos)
 local Perfiles = require(script.Parent.Perfiles)
 local Ranking = require(script.Parent.Ranking)
 
@@ -179,7 +180,7 @@ local function escuadronDe(perfil)
 	for _, uid in perfil.squad do
 		local u = Unidades.buscar(perfil, uid)
 		if u then
-			local e = { uid = uid, heroId = u.heroId, nivel = u.level, limite = Unidades.LIMITE_COLOCACION[heroes[u.heroId].rarity] or 1 }
+			local e = { uid = uid, heroId = u.heroId, nivel = u.level, limite = Unidades.LIMITE_COLOCACION[heroes[u.heroId].rarity] or 1, rasgo = u.rasgo, grados = u.grados }
 			table.insert(r, e)
 			table.insert(texto, `{e.uid}:{e.heroId}:{e.nivel}:{e.limite}`)
 		end
@@ -396,7 +397,9 @@ function Partida.nueva(op)
 			end
 		end
 		if e.vida <= 0 then
-			dar(e.ultimoAtacante, e.config.reward or 0)
+			-- Rasgo Mercenario: más dinero si el último golpe fue de esa unidad.
+			local extra = if e.ultimaUnidad then Rasgos.dinero(e.ultimaUnidad) else 0
+			dar(e.ultimoAtacante, math.floor((e.config.reward or 0) * (1 + extra) + 0.5))
 			evento(e.ultimoAtacante, "derrota", 1)
 			derrotados += 1
 			quitarEnemigo(e)
@@ -433,6 +436,7 @@ function Partida.nueva(op)
 		s.damage *= (1 + m.dano) * Unidades.bonoDano(u.nivelUnidad)
 		s.range *= 1 + m.alcance
 		s.fireRate *= 1 + m.cadencia
+		Rasgos.aplicar(s, u) -- rasgo y grados (docs/RASGOS.md)
 		u.kit.activa = m.habilidad
 		u.kit.potencia = m.potencia
 		-- Lo que muestra el panel de la unidad (alcance en studs).
@@ -516,6 +520,8 @@ function Partida.nueva(op)
 			invertido = costo,
 			prioridad = "primero",
 			nivelUnidad = e.nivel,
+			rasgo = e.rasgo,
+			grados = e.grados,
 			objeto = objeto,
 			modelo = modelo,
 			raiz = raiz,
@@ -531,6 +537,9 @@ function Partida.nueva(op)
 		modelo:SetAttribute("Heroe", e.heroId)
 		modelo:SetAttribute("Ranura", ranura)
 		modelo:SetAttribute("NivelUnidad", e.nivel)
+		modelo:SetAttribute("Rasgo", e.rasgo)
+		local g = Rasgos.grados(e)
+		modelo:SetAttribute("Grados", `{g.dano}/{g.alcance}/{g.cadencia}`)
 		modelo:SetAttribute("Mejora", 0)
 		modelo:SetAttribute("Invertido", costo)
 		modelo:SetAttribute("Prioridad", "primero")
@@ -769,6 +778,7 @@ function Partida.nueva(op)
 		end
 		for _, e in tocados do
 			e.ultimoAtacante = u.dueno
+			e.ultimaUnidad = u
 			revisar(e)
 		end
 	end

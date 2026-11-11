@@ -16,6 +16,7 @@ local Actos = require(Shared.Actos)
 local Temporada = require(Shared.Temporada)
 local Evento = require(Shared.Evento)
 local Raid = require(Shared.Raid)
+local Rasgos = require(Shared.Rasgos)
 local Hub = require(script.Parent.Hub)
 local Perfiles = require(script.Parent.Perfiles)
 local Reclutamiento = require(script.Parent.Reclutamiento)
@@ -41,6 +42,7 @@ local coleccion = remoto("RemoteFunction", "Coleccion")
 local temporada = remoto("RemoteFunction", "Temporada")
 local eventoRemoto = remoto("RemoteFunction", "Evento")
 local raidRemoto = remoto("RemoteFunction", "Raid")
+local rasgosRemoto = remoto("RemoteFunction", "Rasgos")
 
 --------------------------------------------------------------------------------
 -- Partidas: cada una en su arena, lejos del HUB
@@ -434,6 +436,8 @@ local function usarEstacion(jugador: Player, estacion: string)
 		abrirPanel:FireClient(jugador, "invocaciones", { pestana = "banner" })
 	elseif estacion == "tienda" then
 		abrirPanel:FireClient(jugador, "invocaciones", { pestana = "tienda" })
+	elseif estacion == "traits" or estacion == "grades" then
+		abrirPanel:FireClient(jugador, "rasgos", { pestana = estacion })
 	elseif estacion == "raids" or estacion == "misiones_raid" then
 		abrirPanel:FireClient(jugador, "raid", { pestana = if estacion == "raids" then "raid" else "misiones" })
 	elseif estacion == "evento" or estacion == "ranking" or estacion == "misiones" then
@@ -517,6 +521,45 @@ task.spawn(function()
 		Perfiles.guardarTodos()
 	end
 end)
+
+--------------------------------------------------------------------------------
+-- Rasgos y grados (docs/RASGOS.md): tiradas sobre las unidades del propio perfil
+--------------------------------------------------------------------------------
+rasgosRemoto.OnServerInvoke = function(jugador, nombre, uid, bloqueos)
+	local perfil = Perfiles.de(jugador)
+	if not perfil then
+		return { error = "Tu perfil todavía no cargó" }
+	end
+	local err, nuevo
+	if nombre ~= "estado" then
+		local u = type(uid) == "number" and Unidades.buscar(perfil, uid)
+		if partidaDe[jugador] then
+			err = "Terminá o abandoná la partida primero" -- el escuadrón de la partida se fijó al empezar
+		elseif not u then
+			err = "Unidad inválida"
+		elseif nombre == "rasgo" then
+			local r
+			r, err = Rasgos.tirarRasgo(perfil, u, math.random)
+			nuevo = r and r.id
+		elseif nombre == "grados" then
+			local b = {}
+			for _, s in Rasgos.STATS do
+				b[s] = type(bloqueos) == "table" and bloqueos[s] == true
+			end
+			err = Rasgos.tirarGrados(perfil, u, b, math.random)
+		else
+			err = "Acción desconocida"
+		end
+		if not err then
+			Perfiles.marcar(jugador)
+		end
+	end
+	local unidades = {}
+	for _, u in perfil.units do
+		table.insert(unidades, { uid = u.uid, heroId = u.heroId, nivel = u.level, rasgo = u.rasgo, grados = Rasgos.grados(u) })
+	end
+	return { error = err, nuevo = nuevo, unidades = unidades, fichas = perfil.fichasRasgo, cristales = perfil.cristales, pity = perfil.pityRasgo, garantia = Rasgos.GARANTIA }
+end
 
 --------------------------------------------------------------------------------
 -- Raids (docs/RAIDS.md): estado y misiones de raid; las salas usan el remoto Sala con acto "raid"

@@ -2,6 +2,7 @@
 -- y evolución por crafteo. Reglas en docs/INVOCACIONES.md. Módulo puro sobre el perfil.
 local Personajes = require(script.Parent.Personajes)
 local Cuenta = require(script.Parent.Cuenta)
+local Rasgos = require(script.Parent.Rasgos)
 
 local Unidades = {}
 
@@ -151,6 +152,14 @@ function Unidades.evolucionar(perfil, uids): (any?, string?)
 	end
 	perfil.cores -= costo
 	local nueva = { uid = perfil.nextUnitUid, heroId = destino, level = nivel, xp = 0 }
+	-- La evolución hereda el rasgo y los grados de la copia con el mejor rasgo.
+	local mejor
+	for _, u in elegidas do
+		if not mejor or Rasgos.rango(u.rasgo) > Rasgos.rango(mejor.rasgo) then
+			mejor = u
+		end
+	end
+	nueva.rasgo, nueva.grados = mejor.rasgo, mejor.grados
 	perfil.nextUnitUid += 1
 	table.insert(perfil.units, nueva)
 	if lugar then

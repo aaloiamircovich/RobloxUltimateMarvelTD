@@ -28,6 +28,8 @@ Evento.TIENDA = {
 	{ id = "nucleo", nombre = "1 núcleo", precio = 120, limite = 2, nucleos = 1 },
 	{ id = "xp", nombre = "300 XP de pase", precio = 50, limite = 4, xpPase = 300 },
 	{ id = "objeto", nombre = "Objeto épico", precio = 150, limite = 1, objeto = "Epic" },
+	{ id = "fichas", nombre = "2 fichas de rasgo", precio = 60, limite = 3, fichasRasgo = 2 },
+	{ id = "cristales", nombre = "4 cristales de grado", precio = 40, limite = 3, cristales = 4 },
 }
 local PRODUCTO = {}
 for _, p in Evento.TIENDA do
@@ -148,6 +150,8 @@ function Evento.comprar(perfil, id: string, t: number): string?
 	end
 	perfil.gems += p.gemas or 0
 	perfil.cores += p.nucleos or 0
+	perfil.fichasRasgo = (perfil.fichasRasgo or 0) + (p.fichasRasgo or 0)
+	perfil.cristales = (perfil.cristales or 0) + (p.cristales or 0)
 	if p.xpPase then
 		Temporada.ganarXP(perfil, p.xpPase, t)
 	end

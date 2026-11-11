@@ -9,6 +9,7 @@ local Cuenta = require(Shared.Cuenta)
 local Temporada = require(Shared.Temporada)
 local Evento = require(Shared.Evento)
 local Raid = require(Shared.Raid)
+local Rasgos = require(Shared.Rasgos)
 local items = require(Shared.Data.items)
 
 local Perfiles = {}
@@ -52,6 +53,9 @@ function Perfiles.normalizar(crudo)
 		temporada = Temporada.normalizar(datos.temporada), -- misiones y pase (docs/TEMPORADA.md)
 		evento = Evento.normalizar(datos.evento), -- desafío semanal (docs/EVENTO.md)
 		raid = Raid.normalizar(datos.raid), -- llaves, misiones y fragmentos de raid (docs/RAIDS.md)
+		fichasRasgo = entero(datos.fichasRasgo, 0, 1e6, 0), -- docs/RASGOS.md
+		cristales = entero(datos.cristales, 0, 1e6, 0),
+		pityRasgo = entero(datos.pityRasgo, 0, 1000, 0),
 	}
 	local c = tonumber(datos.credits)
 	if c and c == c and c >= 0 and c < math.huge then
@@ -72,7 +76,9 @@ function Perfiles.normalizar(crudo)
 			local uid = type(u) == "table" and entero(u.uid, 1, 1e9, nil)
 			if uid and not usados[uid] and type(u.heroId) == "string" and Personajes.de(u.heroId) and #p.units < Unidades.MAX_INVENTARIO then
 				usados[uid] = true
-				table.insert(p.units, { uid = uid, heroId = u.heroId, level = entero(u.level, 1, Unidades.NIVEL_MAXIMO, 1), xp = entero(u.xp, 0, 1e9, 0) })
+				local nueva = { uid = uid, heroId = u.heroId, level = entero(u.level, 1, Unidades.NIVEL_MAXIMO, 1), xp = entero(u.xp, 0, 1e9, 0) }
+				Rasgos.normalizarUnidad(u, nueva) -- rasgo y grados (docs/RASGOS.md)
+				table.insert(p.units, nueva)
 				p.nextUnitUid = math.max(p.nextUnitUid, uid + 1)
 			end
 		end

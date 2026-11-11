@@ -17,7 +17,7 @@ Sistema propio del port (el 2D no lo tiene). Lógica en `src/shared/Raid.luau` (
 ## Llaves y premios
 - **3 llaves por día** (00:00 UTC, no se acumulan); se gasta una al terminar la raid (ganar o perder).
   Abandonar antes de terminar no la gasta. Para iniciar, todos los de la sala necesitan una llave.
-- Victoria: **150 gemas, 2 núcleos, 10 fragmentos** y chance de **objeto Mítico (5 %)** o **Legendario (20 %)** que no tengas.
+- Victoria: **150 gemas, 2 núcleos, 10 fragmentos, 2 fichas de rasgo y 3 cristales de grado** y chance de **objeto Mítico (5 %)** o **Legendario (20 %)** que no tengas.
 - Derrota: 2 fragmentos.
 - **Fragmentos**: 100 para el personaje exclusivo de raid, que todavía no existe (`Raid.EXCLUSIVA`); se guardan.
 

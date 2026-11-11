@@ -23,7 +23,7 @@ Raid.DINERO = 3000 -- dinero inicial de la raid (una partida normal empieza con 
 Raid.VELOCIDAD_JEFE = 0.45
 Raid.FASES = { 0.66, 0.33 } -- al bajar de cada umbral: refuerzos y furia
 Raid.REFUERZOS, Raid.FURIA = 6, 1.3
-Raid.PREMIO = { gemas = 150, nucleos = 2, fragmentos = 10 }
+Raid.PREMIO = { gemas = 150, nucleos = 2, fragmentos = 10, fichasRasgo = 2, cristales = 3 } -- fichas y cristales: docs/RASGOS.md
 Raid.FRAGMENTOS_DERROTA = 2
 Raid.PROB_OBJETO = { { "Mythic", 0.05 }, { "Legendary", 0.20 } } -- se tira de la más rara a la más común
 Raid.FRAGMENTOS_UNIDAD = 100
@@ -155,6 +155,11 @@ function Raid.terminar(perfil, gano: boolean, dano: number, t: number, azar: () 
 				break
 			end
 		end
+	end
+	if gano then
+		premio.fichasRasgo, premio.cristales = Raid.PREMIO.fichasRasgo, Raid.PREMIO.cristales
+		perfil.fichasRasgo = (perfil.fichasRasgo or 0) + premio.fichasRasgo
+		perfil.cristales = (perfil.cristales or 0) + premio.cristales
 	end
 	perfil.gems += premio.gemas
 	perfil.cores += premio.nucleos

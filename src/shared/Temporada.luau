@@ -13,7 +13,7 @@ Temporada.INICIO = 1794355200 -- miércoles 11/11/2026 00:00 UTC, temporada 1
 Temporada.NIVELES, Temporada.XP_NIVEL = 50, 300
 Temporada.XP_OLEADA, Temporada.XP_ACTO = 10, 50 -- XP de pase por jugar
 Temporada.CANTIDAD = 3 -- misiones por lista
-Temporada.PREMIO = { diaria = { gemas = 15, xp = 100 }, semanal = { gemas = 60, xp = 400 } }
+Temporada.PREMIO = { diaria = { gemas = 15, xp = 100 }, semanal = { gemas = 60, xp = 400, fichasRasgo = 1, cristales = 2 } }
 Temporada.GEMAS_OBJETO_REPETIDO = 100
 -- Unidad del nivel 50: un personaje nuevo que todavía no existe; hasta entonces el nivel 50 no se reclama.
 Temporada.EXCLUSIVA = nil :: string?
@@ -154,6 +154,8 @@ function Temporada.reclamar(perfil, lista: string, i: number, t: number): string
 	m.reclamada = true
 	local premio = Temporada.PREMIO[if lista == "diarias" then "diaria" else "semanal"]
 	perfil.gems += premio.gemas
+	perfil.fichasRasgo = (perfil.fichasRasgo or 0) + (premio.fichasRasgo or 0)
+	perfil.cristales = (perfil.cristales or 0) + (premio.cristales or 0)
 	Temporada.ganarXP(perfil, premio.xp, t)
 	return nil
 end
@@ -164,6 +166,10 @@ function Temporada.premio(numero: number, nivel: number)
 		return { tipo = "unidad", id = Temporada.EXCLUSIVA }
 	elseif nivel % 10 == 0 then
 		return { tipo = "nucleos", cantidad = nivel // 10 }
+	elseif nivel % 10 == 3 then
+		return { tipo = "fichas", cantidad = 1 + nivel // 20 }
+	elseif nivel % 10 == 7 then
+		return { tipo = "cristales", cantidad = 2 + nivel // 20 }
 	elseif nivel % 5 == 0 then
 		local rareza = if nivel < 30 then "Rare" else "Epic"
 		local ids = {}
@@ -201,6 +207,10 @@ function Temporada.reclamarPase(perfil, nivel: number, t: number): string?
 		Unidades.agregar(perfil, p.id)
 	elseif p.tipo == "nucleos" then
 		perfil.cores += p.cantidad
+	elseif p.tipo == "fichas" then
+		perfil.fichasRasgo = (perfil.fichasRasgo or 0) + p.cantidad
+	elseif p.tipo == "cristales" then
+		perfil.cristales = (perfil.cristales or 0) + p.cantidad
 	elseif p.tipo == "objeto" then
 		if Objetos.tiene(perfil, p.id) then
 			perfil.gems += Temporada.GEMAS_OBJETO_REPETIDO
