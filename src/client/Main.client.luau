@@ -419,10 +419,39 @@ tituloFin.BackgroundTransparency = 0
 Comic.borde(tituloFin, 6)
 local detalleFin = texto({ Position = UDim2.fromOffset(24, 80), Size = UDim2.new(1, -48, 0, 70), TextSize = 22, Font = Comic.TEXTO, TextWrapped = true, ZIndex = 21 }, panelFin)
 local premioFin = texto({ Position = UDim2.fromOffset(24, 156), Size = UDim2.new(1, -48, 0, 70), TextSize = 30, TextColor3 = Comic.AMARILLO, TextWrapped = true, ZIndex = 21 }, panelFin)
-Comic.boton("⌂ VOLVER AL LOBBY", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -22), Size = UDim2.fromOffset(300, 60), TextSize = 30, BackgroundColor3 = Comic.ROJO, ZIndex = 21 }, panelFin, function()
-	modo = nil
-	accion:InvokeServer("volver")
-end)
+local botonesFin = crear("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -22), Size = UDim2.new(1, -40, 0, 60), BackgroundTransparency = 1, ZIndex = 21 }, panelFin)
+crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder }, botonesFin)
+local votosFin = texto({ AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -88), Size = UDim2.new(1, -48, 0, 22), TextSize = 17, Font = Comic.TEXTO, ZIndex = 21 }, panelFin)
+
+-- Botones de la pantalla final: las opciones que da el servidor se votan; el lobby es inmediato.
+local NOMBRE_OPCION = { siguiente = "SIGUIENTE ACTO ▶", mapa = "SIGUIENTE MAPA ▶", repetir = "REPETIR" }
+local function armarBotonesFin()
+	for _, b in botonesFin:GetChildren() do
+		if b:IsA("GuiObject") then
+			b:Destroy()
+		end
+	end
+	local gano = estado:GetAttribute("Resultado") == "victoria"
+	local miVoto = jugador:GetAttribute("Voto")
+	for i, o in string.split(estado:GetAttribute("Opciones") or "", ",") do
+		if NOMBRE_OPCION[o] then
+			local votos = estado:GetAttribute("Votos_" .. o)
+			local txt = if o == "repetir" and not gano then "REINTENTAR" else NOMBRE_OPCION[o]
+			local b = Comic.boton(txt .. (if votos then ` ({votos}/{estado:GetAttribute("VotosTotal")})` else ""), { Size = UDim2.fromOffset(if i == 1 then 210 else 160, 60), TextSize = 22, BackgroundColor3 = if i == 1 then Comic.VERDE else Color3.fromRGB(200, 130, 20), LayoutOrder = i, ZIndex = 22 }, botonesFin, function()
+				avisar(accion:InvokeServer("votar", o))
+			end)
+			if miVoto == o then
+				local borde = b:FindFirstChildOfClass("UIStroke")
+				borde.Color, borde.Thickness = Comic.AMARILLO, 5
+			end
+		end
+	end
+	Comic.boton("⌂ LOBBY", { Size = UDim2.fromOffset(120, 60), TextSize = 24, BackgroundColor3 = Comic.ROJO, LayoutOrder = 10, ZIndex = 22 }, botonesFin, function()
+		modo = nil
+		accion:InvokeServer("volver")
+	end)
+	votosFin.Text = if miVoto then "Esperando a los demás…" else ""
+end
 
 local function mostrarResultado()
 	local gano = estado:GetAttribute("Resultado") == "victoria"
@@ -430,6 +459,7 @@ local function mostrarResultado()
 	tituloFin.BackgroundColor3 = if gano then Comic.ROJO else Comic.GRIS
 	detalleFin.Text = estado:GetAttribute("Mensaje")
 	premioFin.Text = jugador:GetAttribute("PremioActo") or (if gano then "" else "¡Los héroes volverán más fuertes!")
+	armarBotonesFin()
 	resultado.Visible = true
 	modo = nil
 	escalaFin.Scale = 0.3
@@ -510,6 +540,10 @@ local function cambiarPartida()
 				cartelOleada(n, total > 0 and n == total)
 			elseif nombre == "Fase" and estado:GetAttribute("Fase") == "fin" then
 				task.delay(0.5, mostrarResultado) -- da tiempo a que llegue el premio del acto
+			elseif nombre == "Fase" then
+				resultado.Visible = false -- reinicio en el mismo mapa (repetir o siguiente acto)
+			elseif string.sub(nombre, 1, 5) == "Votos" and resultado.Visible then
+				armarBotonesFin()
 			end
 			refrescar()
 		end))
@@ -530,7 +564,7 @@ local function cambiarPartida()
 	refrescar()
 end
 jugador:GetAttributeChangedSignal("Partida"):Connect(cambiarPartida)
-for _, a in { "Dinero", "Listo", "Auto", "Escuadron", "PremioActo" } do
+for _, a in { "Dinero", "Listo", "Auto", "Escuadron", "PremioActo", "Voto" } do
 	jugador:GetAttributeChangedSignal(a):Connect(function()
 		if a == "Escuadron" then
 			armarEscuadron()
@@ -538,6 +572,8 @@ for _, a in { "Dinero", "Listo", "Auto", "Escuadron", "PremioActo" } do
 			dineroSalta()
 		elseif a == "PremioActo" and resultado.Visible then
 			premioFin.Text = jugador:GetAttribute("PremioActo") or ""
+		elseif a == "Voto" and resultado.Visible then
+			armarBotonesFin()
 		end
 		refrescar()
 	end)

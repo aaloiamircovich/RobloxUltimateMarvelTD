@@ -124,6 +124,69 @@ local function salirDePartida(j: Player)
 	end
 end
 
+-- Ejecuta lo que votaron todos en la pantalla final (repetir, siguiente acto o siguiente mapa).
+local function resolverVotos(p)
+	local opcion = p.decision()
+	if not opcion then
+		return
+	end
+	local info = p.info()
+	local miembros = {}
+	for j in p.jugadores do
+		table.insert(miembros, j)
+	end
+	local mapa, acto, pesadilla = info.mapa, info.acto, info.pesadilla
+	if opcion == "siguiente" then
+		acto += 1
+	elseif opcion == "mapa" then
+		mapa, acto, pesadilla = Actos.MAPAS[table.find(Actos.MAPAS, mapa) + 1], 1, false
+	end
+	-- Validar para todos; la Pesadilla pasa a normal si alguno no la tiene abierta.
+	for _, conPesadilla in { pesadilla, false } do
+		local problema
+		for _, j in miembros do
+			local perfil = Perfiles.de(j)
+			problema = problema or (if perfil then Actos.puedeJugar(perfil, mapa, acto, conPesadilla) else "Perfil no cargado")
+		end
+		if not problema then
+			if pesadilla and not conPesadilla then
+				for _, j in miembros do
+					aviso:FireClient(j, "Alguien no tiene abierta la Pesadilla de este acto: se juega en normal")
+				end
+			end
+			if mapa == info.mapa then
+				p.reiniciar(acto, conPesadilla)
+			else
+				-- Otro mapa: partida nueva en otra arena.
+				for _, j in miembros do
+					partidaDe[j] = nil
+					p.salir(j)
+				end
+				p.destruir()
+				partidas[p.id] = nil
+				arenas[p.arena] = nil
+				local anfitrion = if table.find(miembros, info.anfitrion) then info.anfitrion else miembros[1]
+				local fallo = iniciarPartida(miembros, anfitrion, mapa, acto, false)
+				if fallo then
+					for _, j in miembros do
+						aviso:FireClient(j, fallo)
+						if j.Character then
+							j.Character:PivotTo(Hub.llegada("central"))
+						end
+					end
+				end
+			end
+			return
+		end
+		if not pesadilla then
+			for _, j in miembros do
+				aviso:FireClient(j, problema)
+			end
+			return
+		end
+	end
+end
+
 -- Frontera de confianza: tipos de cada acción antes de pasarla a la partida.
 local FIRMAS = {
 	colocar = { "number", "number", "number" },
@@ -139,8 +202,23 @@ local FIRMAS = {
 }
 accion.OnServerInvoke = function(jugador, nombre, a, b, c)
 	if nombre == "volver" then
+		local p = partidaDe[jugador]
 		salirDePartida(jugador)
+		if p and partidas[p.id] then
+			resolverVotos(p) -- los que quedan pueden haber quedado de acuerdo
+		end
 		return nil
+	end
+	if nombre == "votar" then
+		local p = partidaDe[jugador]
+		if not p or type(a) ~= "string" then
+			return "Datos inválidos"
+		end
+		local problema = p.votar(jugador, a)
+		if not problema then
+			resolverVotos(p)
+		end
+		return problema
 	end
 	local firma = type(nombre) == "string" and FIRMAS[nombre]
 	if not firma then

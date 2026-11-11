@@ -49,3 +49,7 @@ Reemplaza el flujo actual (un mapa a la vez para todo el servidor, cámara fija,
   del escuadrón con retrato 3D, borde del color de la rareza y teclas 1–6; panel de la unidad a la izquierda
   con anillo de alcance; cartel «¡OLEADA n!» / «¡JEFE!», pantalla de victoria/derrota con premios, números
   de daño y «+💰» al ganar dinero. Se achica sola en pantallas chicas.
+- Pantalla final: victoria → «Siguiente acto» (o «Siguiente mapa» tras el acto 5) + «Repetir» + «Lobby»;
+  derrota → «Reintentar» + «Lobby». Se vota: arranca cuando todos los que quedan eligen lo mismo (quien va al
+  lobby no bloquea). En el mismo mapa se reinicia en el lugar (vida, dinero y unidades de cero); otro mapa es
+  partida nueva. La Pesadilla sigue si todos la tienen abierta; si no, pasa a normal con aviso.

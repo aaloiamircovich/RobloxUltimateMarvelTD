@@ -820,7 +820,17 @@ function Partida.nueva(op)
 
 	local function terminar(mensaje: string)
 		terminada = true
-		fijar("Resultado", if string.sub(mensaje, 1, 7) == "Derrota" then "derrota" else "victoria")
+		local gano = string.sub(mensaje, 1, 7) ~= "Derrota"
+		fijar("Resultado", if gano then "victoria" else "derrota")
+		-- Qué se puede votar en la pantalla final.
+		local opciones = {}
+		if gano and not infinito and op.acto < Actos.POR_MAPA then
+			table.insert(opciones, "siguiente")
+		elseif gano and not infinito and Actos.MAPAS[(table.find(Actos.MAPAS, NIVEL.id) or 0) + 1] then
+			table.insert(opciones, "mapa")
+		end
+		table.insert(opciones, "repetir")
+		fijar("Opciones", table.concat(opciones, ","))
 		fijar("Fase", "fin")
 		fijar("Mensaje", mensaje)
 		for j in p.jugadores do
@@ -969,6 +979,75 @@ function Partida.nueva(op)
 	task.spawn(bucle)
 
 	------------------------------------------------------------------------------
+	-- Pantalla final: votos para repetir, siguiente acto o siguiente mapa (Main decide y ejecuta)
+	------------------------------------------------------------------------------
+	local OPCIONES = { "siguiente", "mapa", "repetir" }
+
+	function p.info()
+		return { mapa = NIVEL.id, acto = op.acto, pesadilla = pesadilla, anfitrion = op.anfitrion }
+	end
+
+	function p.votar(j: Player, opcion: string): string?
+		if not terminada then
+			return "La partida sigue en juego"
+		end
+		if not table.find(string.split(estado:GetAttribute("Opciones") or "", ","), opcion) then
+			return "Opción no disponible"
+		end
+		p.jugadores[j].voto = opcion
+		j:SetAttribute("Voto", opcion)
+		return nil
+	end
+
+	-- Publica el conteo; devuelve la opción si todos los que quedan votaron lo mismo.
+	function p.decision(): string?
+		if not terminada then
+			return nil
+		end
+		local conteo, total = {}, 0
+		for _, d in p.jugadores do
+			total += 1
+			if d.voto then
+				conteo[d.voto] = (conteo[d.voto] or 0) + 1
+			end
+		end
+		fijar("VotosTotal", total)
+		for _, o in OPCIONES do
+			fijar("Votos_" .. o, conteo[o])
+			if total > 0 and conteo[o] == total then
+				return o
+			end
+		end
+		return nil
+	end
+
+	-- Reinicio rápido en el mismo mapa (repetir o siguiente acto): nadie sale de la arena.
+	function p.reiniciar(acto, conPesadilla: boolean)
+		for _, u in unidades do
+			u.modelo:Destroy()
+		end
+		table.clear(unidades)
+		for i = #enemigos, 1, -1 do
+			quitarEnemigo(enemigos[i])
+		end
+		op.acto, pesadilla = acto, conPesadilla and not infinito
+		fijar("Acto", if infinito then "Infinito" else tostring(acto))
+		fijar("Pesadilla", pesadilla)
+		fijar("Base", Partida.BASE)
+		fijar("Oleada", 0)
+		for _, a in { "Resultado", "Opciones", "VotosTotal", "Votos_siguiente", "Votos_mapa", "Votos_repetir" } do
+			fijar(a, nil)
+		end
+		for j in p.jugadores do
+			j:SetAttribute("PremioActo", nil)
+			j:SetAttribute("Voto", nil)
+			agregar(j)
+		end
+		terminada = false
+		task.spawn(bucle)
+	end
+
+	------------------------------------------------------------------------------
 	-- Salida
 	------------------------------------------------------------------------------
 	-- Saca al jugador (y sus unidades); devuelve true si la partida quedó vacía.
@@ -983,7 +1062,7 @@ function Partida.nueva(op)
 			end
 		end
 		p.jugadores[j] = nil
-		for _, a in { "Partida", "Dinero", "Escuadron", "Listo", "Auto", "PremioActo" } do
+		for _, a in { "Partida", "Dinero", "Escuadron", "Listo", "Auto", "PremioActo", "Voto" } do
 			j:SetAttribute(a, nil)
 		end
 		task.spawn(Perfiles.guardar, j)
