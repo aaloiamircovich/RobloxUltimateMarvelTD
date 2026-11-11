@@ -125,6 +125,15 @@ function Comic.panel(gui: Instance, titulo: string, tamano: UDim2)
 	Comic.boton("X", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 14, 0, -18), Size = UDim2.fromOffset(46, 46), TextSize = 28 }, p, function()
 		p.Visible = false
 	end)
+	-- Se achica para entrar en pantallas chicas (celulares).
+	local escala = Comic.crear("UIScale", {}, p)
+	local camara = workspace.CurrentCamera
+	local function ajustar()
+		local v = camara.ViewportSize
+		escala.Scale = math.min(1, (v.X - 40) / tamano.X.Offset, (v.Y - 80) / (tamano.Y.Offset + 30))
+	end
+	camara:GetPropertyChangedSignal("ViewportSize"):Connect(ajustar)
+	ajustar()
 	local cuerpo = Comic.crear("Frame", { Position = UDim2.fromOffset(20, 46), Size = UDim2.new(1, -40, 1, -64), BackgroundTransparency = 1 }, p)
 	return p, cuerpo
 end

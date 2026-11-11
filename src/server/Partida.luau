@@ -21,6 +21,7 @@ local Unidades = require(Shared.Unidades)
 local Mejoras = require(Shared.Mejoras)
 local Cuenta = require(Shared.Cuenta)
 local Actos = require(Shared.Actos)
+local Temporada = require(Shared.Temporada)
 local Perfiles = require(script.Parent.Perfiles)
 
 local heroes = Personajes.todos
@@ -264,6 +265,18 @@ function Partida.nueva(op)
 	for _, j in op.jugadores do
 		agregar(j)
 	end
+	-- Avance de misiones y XP de pase (docs/TEMPORADA.md).
+	local function evento(j: Player?, nombre: string, n: number, xpPase: number?)
+		local perfil = j and Perfiles.de(j)
+		if perfil then
+			Temporada.registrar(perfil, nombre, n, os.time())
+			if xpPase then
+				Temporada.ganarXP(perfil, xpPase, os.time())
+			end
+			Perfiles.marcar(j)
+		end
+	end
+
 	local function dar(j: Player?, n: number)
 		if j and p.jugadores[j] then
 			j:SetAttribute("Dinero", (j:GetAttribute("Dinero") or 0) + n)
@@ -336,6 +349,7 @@ function Partida.nueva(op)
 		e.cuerpo:SetAttribute("Vida", math.max(0, math.ceil(e.vida)))
 		if e.vida <= 0 then
 			dar(e.ultimoAtacante, e.config.reward or 0)
+			evento(e.ultimoAtacante, "derrota", 1)
 			quitarEnemigo(e)
 		end
 	end
@@ -475,6 +489,7 @@ function Partida.nueva(op)
 		ubicar(u)
 		modelo.Parent = carpetaUnidades
 		table.insert(unidades, u)
+		evento(j, "colocar", 1)
 		return nil
 	end
 
@@ -523,6 +538,7 @@ function Partida.nueva(op)
 		u.modelo:SetAttribute("Mejora", u.mejora)
 		u.modelo:SetAttribute("Invertido", u.invertido)
 		j:SetAttribute("Dinero", dinero - siguiente.costo)
+		evento(j, "mejorar", 1)
 		return nil
 	end
 
@@ -841,6 +857,10 @@ function Partida.nueva(op)
 	-- Premios de cada oleada superada: XP de unidades y de cuenta; en Infinito, gemas y núcleos.
 	local function premiarOleada(n: number)
 		for j, d in p.jugadores do
+			evento(j, "oleada", 1, Temporada.XP_OLEADA)
+			if infinito then
+				evento(j, "infinito", n)
+			end
 			local perfil = Perfiles.de(j)
 			if perfil then
 				local premios = {}
@@ -965,6 +985,7 @@ function Partida.nueva(op)
 			local perfil = Perfiles.de(j)
 			if perfil then
 				local premio = Actos.ganar(perfil, NIVEL.id, op.acto, pesadilla)
+				evento(j, "acto", 1, Temporada.XP_ACTO)
 				Cuenta.ganarXP(perfil, Cuenta.XP_MAPA)
 				Perfiles.marcar(j)
 				j:SetAttribute("Gemas", perfil.gems)

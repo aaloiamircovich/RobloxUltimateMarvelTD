@@ -13,11 +13,13 @@ local Mejoras = require(Shared.Mejoras)
 local coleccion = ReplicatedStorage:WaitForChild("Coleccion")
 local usarHud = ReplicatedStorage:WaitForChild("UsarHud")
 local teletransportar = ReplicatedStorage:WaitForChild("Teletransportar")
+local temporadaRemota = ReplicatedStorage:WaitForChild("Temporada")
+local items = require(Shared.Data.items)
 local jugador = Players.LocalPlayer
 
 local COLOR_RAREZA = Comic.RAREZA
 
-local gui = Comic.crear("ScreenGui", { Name = "Hud", ResetOnSpawn = false, IgnoreGuiInset = false, DisplayOrder = 1 })
+local gui = Comic.crear("ScreenGui", { Name = "Hud", ResetOnSpawn = false, IgnoreGuiInset = false, DisplayOrder = 1, ZIndexBehavior = Enum.ZIndexBehavior.Sibling })
 
 --------------------------------------------------------------------------------
 -- Paneles propios del HUD
@@ -114,6 +116,130 @@ do
 	end
 end
 
+-- Misiones y pase de batalla (docs/TEMPORADA.md): el servidor devuelve el resumen tras cada pedido.
+local function duracion(s: number): string
+	s = math.max(0, math.floor(s))
+	if s >= 86400 then
+		return `{s // 86400}d {s % 86400 // 3600}h`
+	end
+	return `{s // 3600}h {s % 3600 // 60}m`
+end
+
+local function barra(padre, pos: UDim2, tam: UDim2, fraccion: number, color: Color3, txt: string)
+	local fondo = Comic.crear("Frame", { Position = pos, Size = tam, BackgroundColor3 = Color3.fromRGB(50, 20, 24) }, padre)
+	Comic.borde(fondo, 2)
+	local relleno = Comic.crear("Frame", { Size = UDim2.fromScale(math.clamp(fraccion, 0, 1), 1), BackgroundColor3 = color, BorderSizePixel = 0 }, fondo)
+	Comic.crear("UICorner", { CornerRadius = UDim.new(0, 6) }, relleno)
+	Comic.texto({ Text = txt, Size = UDim2.fromScale(1, 1), TextSize = 16 }, fondo)
+	return fondo
+end
+
+local armarMisiones, armarPase
+local function pedirTemporada(nombre: string, a, b)
+	local res = temporadaRemota:InvokeServer(nombre, a, b)
+	armarMisiones(res)
+	armarPase(res)
+end
+
+local cuerpoMisiones
+do
+	local p, cuerpo = Comic.panel(gui, "MISIONES", UDim2.fromOffset(780, 470))
+	paneles.misiones = p
+	cuerpoMisiones = cuerpo
+end
+function armarMisiones(res)
+	cuerpoMisiones:ClearAllChildren()
+	for c, col in { { "diarias", "DIARIAS", res.finDia, res.premioDiaria }, { "semanales", "SEMANALES", res.finSemana, res.premioSemanal } } do
+		local x = (c - 1) * 375
+		Comic.texto({ Text = `{col[2]}  ·  se renuevan en {duracion(col[3])}`, Position = UDim2.fromOffset(x, 4), Size = UDim2.fromOffset(360, 26), TextSize = 22, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Left }, cuerpoMisiones)
+		for i, m in res[col[1]] do
+			local f = Comic.crear("Frame", { Position = UDim2.fromOffset(x, 38 + (i - 1) * 118), Size = UDim2.fromOffset(360, 108), BackgroundColor3 = Comic.ROJO_OSCURO }, cuerpoMisiones)
+			Comic.borde(f, 3)
+			Comic.texto({ Text = m.texto, Position = UDim2.fromOffset(10, 6), Size = UDim2.new(1, -20, 0, 26), TextSize = 19, Font = Comic.TEXTO, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true }, f)
+			barra(f, UDim2.fromOffset(10, 38), UDim2.new(1, -20, 0, 22), m.progreso / m.meta, Comic.AMARILLO, `{m.progreso} / {m.meta}`)
+			Comic.texto({ Text = `💎 {col[4].gemas}   ⭐ {col[4].xp} XP`, Position = UDim2.fromOffset(10, 70), Size = UDim2.fromOffset(170, 30), TextSize = 20, TextXAlignment = Enum.TextXAlignment.Left }, f)
+			local lista = col[1]
+			local puede = m.progreso >= m.meta and not m.reclamada
+			Comic.boton(if m.reclamada then "✔ LISTA" elseif puede then "¡RECLAMAR!" else "EN CURSO", {
+				AnchorPoint = Vector2.new(1, 1),
+				Position = UDim2.new(1, -10, 1, -8),
+				Size = UDim2.fromOffset(150, 36),
+				TextSize = 20,
+				AutoButtonColor = puede,
+				BackgroundColor3 = if puede then Comic.VERDE else Comic.GRIS,
+			}, f, function()
+				if puede then
+					pedirTemporada("reclamar", lista, i)
+				end
+			end)
+		end
+	end
+	Comic.texto({ Text = res.error or "", Position = UDim2.new(0, 0, 1, -22), Size = UDim2.new(1, 0, 0, 22), TextSize = 16, Font = Comic.TEXTO, TextColor3 = Comic.AMARILLO }, cuerpoMisiones)
+end
+
+local cuerpoPase
+do
+	local p, cuerpo = Comic.panel(gui, "PASE DE BATALLA", UDim2.fromOffset(900, 500))
+	paneles.pase = p
+	cuerpoPase = cuerpo
+end
+local function textoPremio(pr): string
+	if pr.tipo == "gemas" then
+		return `💎\n{pr.cantidad}`
+	elseif pr.tipo == "nucleos" then
+		return `🔷\n{pr.cantidad} núcleo{if pr.cantidad > 1 then "s" else ""}`
+	elseif pr.tipo == "objeto" then
+		return `🎁\n{items[pr.id] and items[pr.id].name or pr.id}`
+	end
+	return "★ ???\nPersonaje exclusivo"
+end
+function armarPase(res)
+	local viejo = cuerpoPase:FindFirstChild("Niveles")
+	local desplazado = viejo and viejo.CanvasPosition
+	cuerpoPase:ClearAllChildren()
+	local pase = res.pase
+	Comic.texto({ Text = `TEMPORADA {pase.numero}  ·  termina en {duracion(pase.fin)}`, Position = UDim2.fromOffset(0, 4), Size = UDim2.fromOffset(420, 28), TextSize = 24, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Left }, cuerpoPase)
+	local maximo = pase.nivel >= pase.niveles
+	barra(cuerpoPase, UDim2.fromOffset(430, 6), UDim2.fromOffset(400, 26), if maximo then 1 else (pase.xp % pase.xpNivel) / pase.xpNivel, Color3.fromRGB(80, 160, 255), if maximo then `NIVEL {pase.nivel} · ¡MÁXIMO!` else `NIVEL {pase.nivel}  ·  {pase.xp % pase.xpNivel} / {pase.xpNivel} XP`)
+	Comic.texto({ Text = "GRATIS", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(26, 166), Size = UDim2.fromOffset(130, 30), TextSize = 22, Rotation = -90 }, cuerpoPase)
+	Comic.texto({ Text = "PREMIUM", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(26, 316), Size = UDim2.fromOffset(130, 30), TextSize = 22, Rotation = -90, TextColor3 = Comic.AMARILLO }, cuerpoPase)
+	local lista = Comic.crear("ScrollingFrame", { Name = "Niveles", Position = UDim2.fromOffset(56, 44), Size = UDim2.new(1, -56, 1, -66), BackgroundTransparency = 1, ScrollBarThickness = 8, ScrollingDirection = Enum.ScrollingDirection.X, AutomaticCanvasSize = Enum.AutomaticSize.X, CanvasSize = UDim2.new() }, cuerpoPase)
+	Comic.crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }, lista)
+	for nivel = 1, pase.niveles do
+		local col = Comic.crear("Frame", { Size = UDim2.fromOffset(104, 360), BackgroundTransparency = 1, LayoutOrder = nivel }, lista)
+		local alcanzado = pase.nivel >= nivel
+		local reclamado = table.find(pase.reclamados, nivel) ~= nil
+		local pr = pase.premios[nivel]
+		local insignia = Comic.texto({ Text = tostring(nivel), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 4), Size = UDim2.fromOffset(44, 44), TextSize = 24, TextColor3 = if alcanzado then Comic.ROJO_OSCURO else Comic.CREMA, TextStrokeTransparency = if alcanzado then 1 else 0 }, col)
+		insignia.BackgroundTransparency = 0
+		insignia.BackgroundColor3 = if alcanzado then Comic.AMARILLO else Comic.GRIS
+		Comic.crear("UIStroke", { Thickness = 3 }, insignia)
+		Comic.crear("UICorner", { CornerRadius = UDim.new(1, 0) }, insignia)
+		local puede = alcanzado and not reclamado and not (pr.tipo == "unidad" and not pr.id)
+		local gratis = Comic.boton(textoPremio(pr) .. (if reclamado then "\n✔" elseif puede then "\n¡TOMAR!" else ""), {
+			Position = UDim2.fromOffset(0, 56),
+			Size = UDim2.fromOffset(104, 140),
+			TextSize = 18,
+			AutoButtonColor = puede,
+			BackgroundColor3 = if reclamado then Color3.fromRGB(60, 50, 55) elseif puede then Comic.VERDE elseif pr.tipo == "unidad" then Color3.fromRGB(150, 90, 20) else Comic.ROJO,
+		}, col, function()
+			if puede then
+				pedirTemporada("reclamarPase", nivel)
+			end
+		end)
+		if nivel % 10 == 0 then
+			gratis:FindFirstChildOfClass("UIStroke").Color = Comic.AMARILLO
+		end
+		-- Fila premium: visible con candado hasta que se decida monetizar (CLAUDE.md).
+		local premium = Comic.texto({ Text = "🔒\nPremium\npróximamente", Position = UDim2.fromOffset(0, 206), Size = UDim2.fromOffset(104, 140), TextSize = 16, Font = Comic.TEXTO, TextColor3 = Color3.fromRGB(200, 190, 170) }, col)
+		premium.BackgroundTransparency = 0
+		premium.BackgroundColor3 = Color3.fromRGB(40, 30, 34)
+		Comic.borde(premium, 3)
+	end
+	lista.CanvasPosition = desplazado or Vector2.new(math.max(0, (math.min(pase.nivel, pase.niveles) - 3) * 114), 0)
+	Comic.texto({ Text = res.error or "", Position = UDim2.new(0, 0, 1, -22), Size = UDim2.new(1, 0, 0, 22), TextSize = 16, Font = Comic.TEXTO, TextColor3 = Comic.AMARILLO }, cuerpoPase)
+end
+
 -- Funciones que todavía no existen.
 local textoPronto
 do
@@ -143,13 +269,15 @@ local BOTONES_IZQ = {
 		usarHud:FireServer("inventario")
 	end },
 	{ "MISIONES", "misiones", function()
-		pronto("Misiones")
+		pedirTemporada("estado")
+		abrir("misiones")
 	end },
 	{ "INVOCAR", "invocar", function()
 		usarHud:FireServer("summon")
 	end },
 	{ "PASE", "pase", function()
-		pronto("El pase de batalla")
+		pedirTemporada("estado")
+		abrir("pase")
 	end },
 	{ "¡JUGAR!", "jugar", function()
 		abrir("jugar")

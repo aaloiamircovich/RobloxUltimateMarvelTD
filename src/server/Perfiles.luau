@@ -6,6 +6,7 @@ local Shared = game:GetService("ReplicatedStorage").Shared
 local Personajes = require(Shared.Personajes)
 local Unidades = require(Shared.Unidades)
 local Cuenta = require(Shared.Cuenta)
+local Temporada = require(Shared.Temporada)
 local items = require(Shared.Data.items)
 
 local Perfiles = {}
@@ -46,6 +47,7 @@ function Perfiles.normalizar(crudo)
 		modeRecords = { survival = { bestWave = 0, bestScore = 0 } },
 		ownedItemIds = {},
 		equippedItems = {},
+		temporada = Temporada.normalizar(datos.temporada), -- misiones y pase (docs/TEMPORADA.md)
 	}
 	local c = tonumber(datos.credits)
 	if c and c == c and c >= 0 and c < math.huge then

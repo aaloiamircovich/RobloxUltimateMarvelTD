@@ -13,6 +13,7 @@ local Unidades = require(Shared.Unidades)
 local Banner = require(Shared.Banner)
 local Cuenta = require(Shared.Cuenta)
 local Actos = require(Shared.Actos)
+local Temporada = require(Shared.Temporada)
 local Hub = require(script.Parent.Hub)
 local Perfiles = require(script.Parent.Perfiles)
 local Reclutamiento = require(script.Parent.Reclutamiento)
@@ -34,6 +35,7 @@ local usarHud = remoto("RemoteEvent", "UsarHud")
 local teletransportar = remoto("RemoteEvent", "Teletransportar")
 local salaRemota = remoto("RemoteFunction", "Sala")
 local coleccion = remoto("RemoteFunction", "Coleccion")
+local temporada = remoto("RemoteFunction", "Temporada")
 
 --------------------------------------------------------------------------------
 -- Partidas: cada una en su arena, lejos del HUB
@@ -485,6 +487,32 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------------------
+-- Misiones y pase de batalla (docs/TEMPORADA.md): estado y reclamos sobre el propio perfil
+--------------------------------------------------------------------------------
+temporada.OnServerInvoke = function(jugador, nombre, a, b)
+	local perfil = Perfiles.de(jugador)
+	if not perfil then
+		return { error = "Tu perfil todavía no cargó" }
+	end
+	local ahora = os.time()
+	local err
+	if nombre == "reclamar" and type(a) == "string" and type(b) == "number" then
+		err = Temporada.reclamar(perfil, a, b, ahora)
+	elseif nombre == "reclamarPase" and type(a) == "number" then
+		err = Temporada.reclamarPase(perfil, a, ahora)
+	elseif nombre ~= "estado" then
+		err = "Acción desconocida"
+	end
+	if nombre ~= "estado" and not err then
+		Perfiles.marcar(jugador)
+		publicarSaldo(jugador, perfil)
+	end
+	local res = Temporada.resumen(perfil, ahora)
+	res.error = err
+	return res
+end
+
+--------------------------------------------------------------------------------
 -- Colección (estación Invocaciones): acciones por jugador sobre su propio perfil
 --------------------------------------------------------------------------------
 local function resumen(perfil)
@@ -539,6 +567,9 @@ coleccion.OnServerInvoke = function(jugador, nombre, arg)
 	elseif nombre == "invocar" and (arg == 1 or arg == 10) then
 		local nuevas, err = Banner.invocar(perfil, arg, Banner.hora(os.time()), math.random)
 		res.error = err
+		if not err then
+			Temporada.registrar(perfil, "invocar", arg, os.time())
+		end
 		res.nuevas = nuevas
 	elseif nombre == "escuadron" and type(arg) == "table" then
 		res.error = Unidades.fijarEscuadron(perfil, arg)
