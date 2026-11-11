@@ -57,7 +57,8 @@ return function()
 	assert(Temporada.premio(1, 10).tipo == "nucleos" and Temporada.premio(1, 40).cantidad == 4, "núcleos cada 10")
 	Temporada.ganarXP(p, 1e6, T)
 	assert(Temporada.nivel(p) == Temporada.NIVELES, "tope en 50")
-	assert(Temporada.reclamarPase(p, 50, T) ~= nil, "la exclusiva todavía no existe")
+	local antes = #p.units
+	assert(Temporada.reclamarPase(p, 50, T) == nil and #p.units == antes + 1 and p.units[#p.units].heroId == "odin", "nivel 50: Odin")
 
 	-- Nueva temporada: el pase vuelve a cero.
 	Temporada.actualizar(p, T + Temporada.DURACION)

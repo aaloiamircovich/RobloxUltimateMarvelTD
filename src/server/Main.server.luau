@@ -749,7 +749,15 @@ raidRemoto.OnServerInvoke = function(jugador, nombre, a)
 		return { error = "Tu perfil todavía no cargó" }
 	end
 	local err
-	if nombre == "reclamar" and type(a) == "string" then
+	if partidaDe[jugador] and nombre ~= "estado" then
+		err = "Terminá o abandoná la partida primero"
+	elseif nombre == "canjear" then
+		local _, e = Raid.canjear(perfil, os.time())
+		err = e
+		if not err then
+			Perfiles.marcar(jugador)
+		end
+	elseif nombre == "reclamar" and type(a) == "string" then
 		err = Raid.reclamar(perfil, a, os.time())
 		if not err then
 			Perfiles.marcar(jugador)

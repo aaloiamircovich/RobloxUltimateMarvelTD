@@ -19,7 +19,7 @@ Sistema propio del port (el 2D no lo tiene). Lógica en `src/shared/Raid.luau` (
   Abandonar antes de terminar no la gasta. Para iniciar, todos los de la sala necesitan una llave.
 - Victoria: **150 gemas, 2 núcleos, 20 fichas de raid (Banner 2), 10 fragmentos, 2 fichas de rasgo y 3 cristales de grado** y chance de **objeto Mítico (5 %)** o **Legendario (20 %)** que no tengas.
 - Derrota: 2 fragmentos y 5 fichas de raid.
-- **Fragmentos**: 100 para el personaje exclusivo de raid, que todavía no existe (`Raid.EXCLUSIVA`); se guardan.
+- **Fragmentos**: 100 se canjean por **Knull**, personaje exclusivo de raid (docs/EXCLUSIVOS.md).
 
 ## Misiones de raid (semanales, estación MISIONES DE RAID o pestaña del panel)
 - Ganá 3 raids · Jugá 5 raids · Hacé 30.000 de daño a jefes de raid. Cada una: **80 gemas + 10 fichas de raid + 10 fragmentos**.

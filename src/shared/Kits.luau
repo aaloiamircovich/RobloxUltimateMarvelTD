@@ -162,8 +162,50 @@ end
 
 -- onAttack del 2D. Cuenta el ataque y devuelve golpes extra { enemigo, golpe } (Sabotaje Widow).
 -- enemigos: { { e, x, y } } en píxeles; heroe: { x, y, alcance, ve } con ve = detecta sigilo.
+-- Habilidades de los exclusivos (docs/EXCLUSIVOS.md): cada `cada` ataques golpea a hasta `maximo` enemigos a
+-- `radio` px del blanco con `poder` del daño; Knull además ralentiza.
+local EXCLUSIVOS = {
+	odin = { cada = 3, radio = 140, maximo = 4, poder = 0.70 },
+	knull = { cada = 4, radio = 100, maximo = 6, poder = 0.60, efecto = { type = "slow", duration = 2, power = 0.35 } },
+}
+
+local function habilidadExclusiva(h, kit, config, stats, objetivo, heroe, enemigos)
+	local blanco
+	for _, c in enemigos do
+		if c.e == objetivo then
+			blanco = c
+		end
+	end
+	if not blanco then
+		return {}
+	end
+	local poder = h.poder * (kit.potencia or 1)
+	local golpes = { { enemigo = objetivo, efecto = h.efecto, golpe = { tipo = config.category, dano = stats.damage * poder } } }
+	local cercanos = {}
+	for _, c in enemigos do
+		local d = math.sqrt((c.x - blanco.x) ^ 2 + (c.y - blanco.y) ^ 2)
+		if c ~= blanco and c.e.vida > 0 and (heroe.ve or not Combate.sigilo(c.e)) and d <= h.radio then
+			table.insert(cercanos, { c = c, d = d })
+		end
+	end
+	table.sort(cercanos, function(a, b)
+		return a.d < b.d
+	end)
+	for i = 1, math.min(h.maximo, #cercanos) do
+		table.insert(golpes, { enemigo = cercanos[i].c.e, efecto = h.efecto, golpe = { tipo = config.category, dano = stats.damage * poder } })
+	end
+	return golpes
+end
+
 function Kits.alAtacar(kit, config, stats, nivel: number, objetivo, heroe, enemigos)
 	kit.ataques += 1
+	local exclusivo = EXCLUSIVOS[kit.heroe]
+	if exclusivo then
+		if kit.activa == false or kit.ataques % exclusivo.cada ~= 0 then
+			return {}
+		end
+		return habilidadExclusiva(exclusivo, kit, config, stats, objetivo, heroe, enemigos)
+	end
 	if kit.activa == false or kit.heroe ~= "black_widow" or kit.ataques % 4 ~= 0 then
 		return {}
 	end

@@ -776,6 +776,9 @@ function Partida.nueva(op)
 			if g.sabotaje and g.enemigo.vida > 0 then
 				Conductas.sabotear(g.enemigo, Conductas.SABOTAJE_SEGUNDOS)
 			end
+			if g.efecto and g.enemigo.vida > 0 then
+				Combate.aplicarEstado(g.enemigo, g.efecto) -- ralentización de Knull
+			end
 			table.insert(tocados, g.enemigo)
 			if i > 1 then
 				EFECTOS.rayo(destino, g.enemigo.cuerpo.Position)

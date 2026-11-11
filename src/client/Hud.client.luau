@@ -205,7 +205,7 @@ local function textoPremio(pr): string
 	elseif pr.tipo == "cristales" then
 		return `💠\n{pr.cantidad} cristales`
 	end
-	return "★ ???\nPersonaje exclusivo"
+	return if pr.id and Personajes.todos[pr.id] then `★ {Personajes.todos[pr.id].name}\nExclusivo` else "★ ???\nPersonaje exclusivo"
 end
 function armarPase(res)
 	local viejo = cuerpoPase:FindFirstChild("Niveles")
@@ -289,7 +289,14 @@ function armarRaid(res, sala)
 
 	-- Fragmentos para el personaje exclusivo de raid (todavía no existe).
 	local function fragmentos(y: number)
-		barra(area, UDim2.fromOffset(0, y), UDim2.new(1, 0, 0, 28), res.fragmentos / res.fragmentosUnidad, Color3.fromRGB(255, 120, 40), `FRAGMENTOS {res.fragmentos} / {res.fragmentosUnidad}  ·  personaje de raid: {if res.exclusiva then res.exclusiva else "próximamente"}`)
+		local nombre = if res.exclusiva then Personajes.todos[res.exclusiva].name else "próximamente"
+		barra(area, UDim2.fromOffset(0, y), UDim2.new(1, -170, 0, 28), math.min(1, res.fragmentos / res.fragmentosUnidad), Color3.fromRGB(255, 120, 40), `FRAGMENTOS {res.fragmentos} / {res.fragmentosUnidad}  ·  personaje de raid: {nombre}`)
+		local puede = res.exclusiva and res.fragmentos >= res.fragmentosUnidad
+		Comic.boton(`CANJEAR {string.upper(nombre)}`, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, y - 6), Size = UDim2.fromOffset(160, 40), TextSize = 18, BackgroundColor3 = if puede then Comic.VERDE else Comic.GRIS }, area, function()
+			if puede then
+				pedirRaid(raidRemoto, "canjear")
+			end
+		end)
 	end
 
 	if pestanaRaid == "raid" then

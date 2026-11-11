@@ -37,6 +37,11 @@ for id, h in heroes do
 	end
 end
 
+-- Exclusivos (Odin del pase, Knull de la raid): no son invocables (invocables() recorre sólo heroes.json).
+for id, h in require(script.Parent.Exclusivos) do
+	todos[id] = h
+end
+
 Personajes.todos = todos
 
 function Personajes.de(id: string)

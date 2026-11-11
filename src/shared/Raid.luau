@@ -2,6 +2,7 @@
 -- misiones de raid semanales. Sistema propio del port. Módulo puro: la hora y el azar entran como parámetros.
 local Temporada = require(script.Parent.Temporada)
 local Objetos = require(script.Parent.Objetos)
+local Unidades = require(script.Parent.Unidades)
 local items = require(script.Parent.Data.items)
 
 local Raid = {}
@@ -28,8 +29,8 @@ Raid.FRAGMENTOS_DERROTA = 2
 Raid.FICHAS_DERROTA = 5 -- fichas de raid de consuelo
 Raid.PROB_OBJETO = { { "Mythic", 0.05 }, { "Legendary", 0.20 } } -- se tira de la más rara a la más común
 Raid.FRAGMENTOS_UNIDAD = 100
--- Personaje exclusivo de raid: todavía no existe; los fragmentos se guardan hasta entonces.
-Raid.EXCLUSIVA = nil :: string?
+-- Personaje exclusivo de raid: Knull, se canjea por FRAGMENTOS_UNIDAD fragmentos.
+Raid.EXCLUSIVA = "knull" :: string? -- docs/EXCLUSIVOS.md
 Raid.MISIONES = {
 	{ id = "ganar", texto = "Ganá %d raids", meta = 3 },
 	{ id = "jugar", texto = "Jugá %d raids", meta = 5 },
@@ -191,6 +192,22 @@ function Raid.reclamar(perfil, id: string, t: number): string?
 	perfil.fichasRaid = (perfil.fichasRaid or 0) + Raid.PREMIO_MISION.fichasRaid
 	r.fragmentos += Raid.PREMIO_MISION.fragmentos
 	return nil
+end
+
+-- Canjea fragmentos por el personaje exclusivo de raid (se puede repetir: es una unidad más).
+function Raid.canjear(perfil, t: number): (any?, string?)
+	local r = Raid.actualizar(perfil, t)
+	if not Raid.EXCLUSIVA then
+		return nil, "El personaje de raid llega pronto"
+	end
+	if r.fragmentos < Raid.FRAGMENTOS_UNIDAD then
+		return nil, `Faltan {Raid.FRAGMENTOS_UNIDAD - r.fragmentos} fragmentos`
+	end
+	if #perfil.units >= Unidades.MAX_INVENTARIO then
+		return nil, "Inventario de unidades lleno"
+	end
+	r.fragmentos -= Raid.FRAGMENTOS_UNIDAD
+	return Unidades.agregar(perfil, Raid.EXCLUSIVA), nil
 end
 
 -- Lo que muestra el panel de raids.

@@ -15,8 +15,8 @@ Temporada.XP_OLEADA, Temporada.XP_ACTO = 10, 50 -- XP de pase por jugar
 Temporada.CANTIDAD = 3 -- misiones por lista
 Temporada.PREMIO = { diaria = { gemas = 15, xp = 100 }, semanal = { gemas = 60, xp = 400, fichasRasgo = 1, cristales = 2 } }
 Temporada.GEMAS_OBJETO_REPETIDO = 100
--- Unidad del nivel 50: un personaje nuevo que todavía no existe; hasta entonces el nivel 50 no se reclama.
-Temporada.EXCLUSIVA = nil :: string?
+-- Unidad del nivel 50: Odin, personaje exclusivo del pase.
+Temporada.EXCLUSIVA = "odin" :: string? -- docs/EXCLUSIVOS.md
 
 -- Tareas: evento que las hace avanzar y meta diaria/semanal (nil = no sale en esa lista).
 -- `maximo`: cuenta el mejor valor en vez de sumar.
