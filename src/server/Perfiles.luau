@@ -57,6 +57,7 @@ function Perfiles.normalizar(crudo)
 		raid = Raid.normalizar(datos.raid), -- llaves, misiones y fragmentos de raid (docs/RAIDS.md)
 		fichasRasgo = entero(datos.fichasRasgo, 0, 1e6, 0), -- docs/RASGOS.md
 		cristales = entero(datos.cristales, 0, 1e6, 0),
+		fichasRaid = entero(datos.fichasRaid, 0, 1e6, 0), -- Banner 2 (docs/INVOCACIONES.md)
 		pityRasgo = entero(datos.pityRasgo, 0, 1000, 0),
 		mascotas = Mascotas.normalizar(datos.mascotas), -- docs/MASCOTAS.md
 		estilo = Estilo.normalizar(datos.estilo), -- monturas y bailes (docs/ESTILO.md)

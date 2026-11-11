@@ -450,8 +450,8 @@ local function usarEstacion(jugador: Player, estacion: string)
 		abrirPanel:FireClient(jugador, "invocaciones", { pestana = "banner" })
 	elseif estacion == "tienda" then
 		abrirPanel:FireClient(jugador, "invocaciones", { pestana = "tienda" })
-	elseif estacion == "banner_2" or estacion == "banner_3" then
-		abrirPanel:FireClient(jugador, "banners", { pestana = if estacion == "banner_2" then "limitado" else "fichas" })
+	elseif estacion == "banner_2" then
+		abrirPanel:FireClient(jugador, "banners", {})
 	elseif estacion == "monturas" or estacion == "bailes" then
 		abrirPanel:FireClient(jugador, "estilo", { pestana = estacion })
 	elseif estacion == "pets" then
@@ -545,7 +545,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------------------
--- Banners 2 (limitado semanal) y 3 (con fichas del desafío): docs/INVOCACIONES.md
+-- Banner 2 (destacado cada 3 horas, con fichas de raid): docs/INVOCACIONES.md. El 3 está «Próximamente».
 --------------------------------------------------------------------------------
 bannersRemoto.OnServerInvoke = function(jugador, nombre, cantidad)
 	local perfil = Perfiles.de(jugador)
@@ -554,15 +554,13 @@ bannersRemoto.OnServerInvoke = function(jugador, nombre, cantidad)
 	end
 	local ahora = os.time()
 	local err, nuevas
-	if nombre == "limitado" or nombre == "fichas" then
+	if nombre == "limitado" then
 		if partidaDe[jugador] then
 			err = "Terminá o abandoná la partida primero"
 		elseif type(cantidad) ~= "number" then
 			err = "Cantidad inválida"
-		elseif nombre == "limitado" then
-			nuevas, err = Banners.limitado(perfil, cantidad, Evento.semana(ahora), math.random)
 		else
-			nuevas, err = Banners.fichas(perfil, cantidad, ahora, math.random)
+			nuevas, err = Banners.limitado(perfil, cantidad, ahora, math.random)
 		end
 		if not err then
 			Temporada.registrar(perfil, "invocar", cantidad, ahora)

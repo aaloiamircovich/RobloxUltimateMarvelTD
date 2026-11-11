@@ -920,7 +920,7 @@ function Partida.nueva(op)
 					if premio.gemas > 0 then
 						table.insert(partes, `+{premio.gemas} gemas · +{premio.nucleos} núcleos`)
 					end
-					table.insert(partes, `+{premio.fragmentos} fragmentos`)
+					table.insert(partes, `+{premio.fragmentos} fragmentos · +{premio.fichasRaid} fichas de raid`)
 					if premio.objeto then
 						table.insert(partes, `¡{items[premio.objeto].name}!`)
 					end

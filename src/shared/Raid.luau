@@ -23,8 +23,9 @@ Raid.DINERO = 3000 -- dinero inicial de la raid (una partida normal empieza con 
 Raid.VELOCIDAD_JEFE = 0.45
 Raid.FASES = { 0.66, 0.33 } -- al bajar de cada umbral: refuerzos y furia
 Raid.REFUERZOS, Raid.FURIA = 6, 1.3
-Raid.PREMIO = { gemas = 150, nucleos = 2, fragmentos = 10, fichasRasgo = 2, cristales = 3 } -- fichas y cristales: docs/RASGOS.md
+Raid.PREMIO = { gemas = 150, nucleos = 2, fragmentos = 10, fichasRasgo = 2, cristales = 3, fichasRaid = 20 } -- fichas de rasgo y cristales: docs/RASGOS.md; fichas de raid: Banner 2
 Raid.FRAGMENTOS_DERROTA = 2
+Raid.FICHAS_DERROTA = 5 -- fichas de raid de consuelo
 Raid.PROB_OBJETO = { { "Mythic", 0.05 }, { "Legendary", 0.20 } } -- se tira de la más rara a la más común
 Raid.FRAGMENTOS_UNIDAD = 100
 -- Personaje exclusivo de raid: todavía no existe; los fragmentos se guardan hasta entonces.
@@ -34,7 +35,7 @@ Raid.MISIONES = {
 	{ id = "jugar", texto = "Jugá %d raids", meta = 5 },
 	{ id = "dano", texto = "Hacé %d de daño a jefes de raid", meta = 30000 }, -- ~3.000 por raid con la vida actual
 }
-Raid.PREMIO_MISION = { gemas = 80, fragmentos = 10 }
+Raid.PREMIO_MISION = { gemas = 80, fragmentos = 10, fichasRaid = 10 }
 
 function Raid.semana(t: number): number
 	return Temporada.semana(t)
@@ -134,10 +135,10 @@ function Raid.terminar(perfil, gano: boolean, dano: number, t: number, azar: () 
 	r.usadas = math.min(Raid.LLAVES_DIA, r.usadas + 1)
 	avanzar(r, "jugar", 1)
 	avanzar(r, "dano", math.floor(dano))
-	local premio = { gemas = 0, nucleos = 0, fragmentos = Raid.FRAGMENTOS_DERROTA }
+	local premio = { gemas = 0, nucleos = 0, fragmentos = Raid.FRAGMENTOS_DERROTA, fichasRaid = Raid.FICHAS_DERROTA }
 	if gano then
 		avanzar(r, "ganar", 1)
-		premio.gemas, premio.nucleos, premio.fragmentos = Raid.PREMIO.gemas, Raid.PREMIO.nucleos, Raid.PREMIO.fragmentos
+		premio.gemas, premio.nucleos, premio.fragmentos, premio.fichasRaid = Raid.PREMIO.gemas, Raid.PREMIO.nucleos, Raid.PREMIO.fragmentos, Raid.PREMIO.fichasRaid
 		-- Objeto raro que todavía no tenés.
 		for _, par in Raid.PROB_OBJETO do
 			if azar() < par[2] then
@@ -163,6 +164,7 @@ function Raid.terminar(perfil, gano: boolean, dano: number, t: number, azar: () 
 	end
 	perfil.gems += premio.gemas
 	perfil.cores += premio.nucleos
+	perfil.fichasRaid = (perfil.fichasRaid or 0) + premio.fichasRaid
 	r.fragmentos += premio.fragmentos
 	return premio
 end
@@ -186,6 +188,7 @@ function Raid.reclamar(perfil, id: string, t: number): string?
 	end
 	r.reclamadas[id] = true
 	perfil.gems += Raid.PREMIO_MISION.gemas
+	perfil.fichasRaid = (perfil.fichasRaid or 0) + Raid.PREMIO_MISION.fichasRaid
 	r.fragmentos += Raid.PREMIO_MISION.fragmentos
 	return nil
 end
@@ -202,6 +205,7 @@ function Raid.resumen(perfil, t: number)
 		jefe = jefe.id,
 		mapa = jefe.mapa,
 		llaves = Raid.LLAVES_DIA - r.usadas,
+		fichasRaid = perfil.fichasRaid or 0,
 		llavesDia = Raid.LLAVES_DIA,
 		fragmentos = r.fragmentos,
 		fragmentosUnidad = Raid.FRAGMENTOS_UNIDAD,

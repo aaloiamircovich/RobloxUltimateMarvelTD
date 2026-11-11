@@ -1,48 +1,49 @@
--- Banners 2 y 3: destacado semanal, garantía del limitado y pago con fichas del desafío (docs/INVOCACIONES.md).
+-- Banner 2: Mítico destacado cada 3 horas, pagado con fichas de raid, con garantía (docs/INVOCACIONES.md).
 -- Ejecutar en Studio: scripts/correr-pruebas.luau
 return function()
 	local Shared = game:GetService("ReplicatedStorage").Shared
 	local Banners = require(Shared.Banners)
+	local Raid = require(Shared.Raid)
 	local Personajes = require(Shared.Personajes)
 	local Temporada = require(Shared.Temporada)
 	local Perfiles = require(script.Parent.Parent.Perfiles)
 	local T = Temporada.INICIO + 3600
-	local w = Temporada.semana(T)
 
 	local total = 0
 	for _, p in Banners.LIMITADO.prob do
 		total += p
 	end
-	assert(total == 100, "probabilidades del limitado suman 100")
-	local d = Banners.destacado(w)
-	assert(Personajes.de(d).rarity == "Mythic" and Banners.destacado(w + 1) ~= d, "Mítico destacado que rota")
+	assert(total == 100, "probabilidades suman 100")
+	local d = Banners.destacado(Banners.periodo(T))
+	assert(Personajes.de(d).rarity == "Mythic", "el destacado es Mítico")
+	assert(Banners.destacado(Banners.periodo(T + 3 * 3600)) ~= d, "cambia a las 3 horas")
+	assert(Banners.periodo(T) == Banners.periodo(T + 3600) or Banners.periodo(T) + 1 == Banners.periodo(T + 3600), "períodos de 3 horas")
 
 	local p = Perfiles.normalizar({ units = { { uid = 1, heroId = "hawkeye" } } })
-	assert(select(2, Banners.limitado(p, 3, w, math.random)) ~= nil, "sólo x1 o x10")
-	p.gems = 80 * 100
-	-- Con azar que nunca da Mítico, la tirada 80 es el destacado.
+	assert(select(2, Banners.limitado(p, 1, T, math.random)) ~= nil, "sin fichas de raid no se tira")
+	assert(select(2, Banners.limitado(p, 3, T, math.random)) ~= nil, "sólo x1 o x10")
+
+	-- Fichas de raid: victoria 20, derrota 5, misión 10.
+	local nunca = function()
+		return 0.99
+	end
+	Raid.terminar(p, true, 0, T, nunca)
+	Raid.terminar(p, false, 0, T, nunca)
+	assert(p.fichasRaid == 25, "20 por victoria y 5 por derrota")
+
+	-- Garantía a las 80 tiradas sin destacado (azar que nunca da Mítico).
+	p.fichasRaid = 10 * 80
 	local comun = function()
 		return 0.5
 	end
 	for _ = 1, 7 do
-		Banners.limitado(p, 10, w, comun)
+		Banners.limitado(p, 10, T, comun)
 	end
-	assert(p.shop.limitadoPity == 70, "70 sin destacado")
-	local nuevas = Banners.limitado(p, 10, w, comun)
-	assert(nuevas[10].heroId == d and p.shop.limitadoPity == 0, "la 80 es el destacado y el contador vuelve a 0")
-	assert(p.gems == 80 * 100 - 80 * 80, "80 gemas por tirada")
-	-- Con azar mínimo sale Mítico y, dentro de la parte del destacado, el destacado.
-	assert(Banners.limitado(p, 1, w, function()
-		return 0.999
-	end)[1].heroId ~= nil, "tirada válida")
+	assert(p.shop.limitadoPity == 70 and p.fichasRaid == 100, "70 tiradas, 10 fichas cada una")
+	local nuevas = Banners.limitado(p, 10, T, comun)
+	assert(nuevas[10].heroId == d and p.shop.limitadoPity == 0 and p.fichasRaid == 0, "la 80 es el destacado")
 
-	-- Banner 3: fichas del desafío.
-	local q = Perfiles.normalizar({ units = { { uid = 1, heroId = "hawkeye" } } })
-	assert(select(2, Banners.fichas(q, 1, T, math.random)) ~= nil, "sin fichas")
-	q.evento.semana = w
-	q.evento.fichas = 300
-	local u = Banners.fichas(q, 10, T, math.random)
-	assert(#u == 10 and q.evento.fichas == 0, "x10 con 300 fichas")
-	assert(Perfiles.normalizar({ shop = { limitadoPity = 55 } }).shop.limitadoPity == 55, "el contador se guarda")
-	return "OK: banners 2 y 3"
+	assert(Perfiles.normalizar({ fichasRaid = 33, shop = { limitadoPity = 55 } }).shop.limitadoPity == 55, "el contador se guarda")
+	assert(Perfiles.normalizar({ fichasRaid = 33 }).fichasRaid == 33, "las fichas de raid se guardan")
+	return "OK: banner 2"
 end
