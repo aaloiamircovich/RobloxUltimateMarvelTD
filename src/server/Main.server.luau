@@ -15,6 +15,7 @@ local Cuenta = require(Shared.Cuenta)
 local Actos = require(Shared.Actos)
 local Temporada = require(Shared.Temporada)
 local Evento = require(Shared.Evento)
+local Raid = require(Shared.Raid)
 local Hub = require(script.Parent.Hub)
 local Perfiles = require(script.Parent.Perfiles)
 local Reclutamiento = require(script.Parent.Reclutamiento)
@@ -39,6 +40,7 @@ local salaRemota = remoto("RemoteFunction", "Sala")
 local coleccion = remoto("RemoteFunction", "Coleccion")
 local temporada = remoto("RemoteFunction", "Temporada")
 local eventoRemoto = remoto("RemoteFunction", "Evento")
+local raidRemoto = remoto("RemoteFunction", "Raid")
 
 --------------------------------------------------------------------------------
 -- Partidas: cada una en su arena, lejos del HUB
@@ -151,7 +153,7 @@ local function resolverVotos(p)
 		local problema
 		for _, j in miembros do
 			local perfil = Perfiles.de(j)
-			problema = problema or (if not perfil then "Perfil no cargado" elseif acto == "evento" then nil else Actos.puedeJugar(perfil, mapa, acto, conPesadilla))
+			problema = problema or (if not perfil then "Perfil no cargado" elseif acto == "evento" then nil elseif acto == "raid" then Raid.puedeEntrar(perfil, os.time()) else Actos.puedeJugar(perfil, mapa, acto, conPesadilla))
 		end
 		if not problema then
 			if pesadilla and not conPesadilla then
@@ -324,7 +326,7 @@ local function datosHistoria(perfil)
 end
 
 local function validarActo(acto)
-	return acto == "infinito" or (type(acto) == "number" and acto == math.floor(acto) and acto >= 1 and acto <= Actos.POR_MAPA)
+	return acto == "infinito" or acto == "raid" or (type(acto) == "number" and acto == math.floor(acto) and acto >= 1 and acto <= Actos.POR_MAPA)
 end
 
 salaRemota.OnServerInvoke = function(jugador, nombre, datos)
@@ -335,10 +337,17 @@ salaRemota.OnServerInvoke = function(jugador, nombre, datos)
 	local res = {}
 	if nombre == "crear" and type(datos) == "table" then
 		local mapa, acto = datos.mapa, datos.acto
+		if acto == "raid" then
+			-- La raid se juega en el mapa del jefe de la semana y pide una llave.
+			mapa = Raid.jefe(Raid.semana(os.time())).mapa
+			datos.pesadilla = false
+		end
 		if type(mapa) ~= "string" or not validarActo(acto) then
 			res.error = "Datos inválidos"
 		elseif partidaDe[jugador] then
 			res.error = "Ya estás en una partida"
+		elseif acto == "raid" then
+			res.error = Raid.puedeEntrar(perfil, os.time())
 		else
 			res.error = Actos.puedeJugar(perfil, mapa, acto, datos.pesadilla == true)
 		end
@@ -374,8 +383,17 @@ salaRemota.OnServerInvoke = function(jugador, nombre, datos)
 		salirDeSala(jugador)
 	elseif nombre == "iniciar" then
 		local s = salaDe[jugador]
+		local sinLlave
+		for _, j in (s and s.acto == "raid" and s.miembros or {}) do
+			local pj = Perfiles.de(j)
+			if not pj or Raid.puedeEntrar(pj, os.time()) then
+				sinLlave = j
+			end
+		end
 		if not s or s.anfitrion ~= jugador then
 			res.error = "Sólo el anfitrión inicia la partida"
+		elseif sinLlave then
+			res.error = `{sinLlave.DisplayName} no tiene llaves de raid hoy`
 		else
 			res.error = iniciarPartida(table.clone(s.miembros), jugador, s.mapa, s.acto, s.pesadilla)
 			if not res.error then
@@ -416,6 +434,8 @@ local function usarEstacion(jugador: Player, estacion: string)
 		abrirPanel:FireClient(jugador, "invocaciones", { pestana = "banner" })
 	elseif estacion == "tienda" then
 		abrirPanel:FireClient(jugador, "invocaciones", { pestana = "tienda" })
+	elseif estacion == "raids" or estacion == "misiones_raid" then
+		abrirPanel:FireClient(jugador, "raid", { pestana = if estacion == "raids" then "raid" else "misiones" })
 	elseif estacion == "evento" or estacion == "ranking" or estacion == "misiones" then
 		abrirPanel:FireClient(jugador, estacion, {}) -- los abre el HUD del lobby
 	else
@@ -426,7 +446,7 @@ end
 local hub = Hub.construir(usarEstacion)
 
 -- Botones del HUD del lobby: abren los mismos paneles que las estaciones, sin caminar hasta ellas.
-local PANELES_HUD = { story = true, infinite = true, summon = true, tienda = true, unidades = "unidades", inventario = "objetos" }
+local PANELES_HUD = { story = true, infinite = true, summon = true, tienda = true, raids = true, unidades = "unidades", inventario = "objetos" }
 usarHud.OnServerEvent:Connect(function(jugador, nombre)
 	local destino = type(nombre) == "string" and PANELES_HUD[nombre]
 	if not destino or partidaDe[jugador] then
@@ -497,6 +517,33 @@ task.spawn(function()
 		Perfiles.guardarTodos()
 	end
 end)
+
+--------------------------------------------------------------------------------
+-- Raids (docs/RAIDS.md): estado y misiones de raid; las salas usan el remoto Sala con acto "raid"
+--------------------------------------------------------------------------------
+raidRemoto.OnServerInvoke = function(jugador, nombre, a)
+	local perfil = Perfiles.de(jugador)
+	if not perfil then
+		return { error = "Tu perfil todavía no cargó" }
+	end
+	local err
+	if nombre == "reclamar" and type(a) == "string" then
+		err = Raid.reclamar(perfil, a, os.time())
+		if not err then
+			Perfiles.marcar(jugador)
+			publicarSaldo(jugador, perfil)
+		end
+	elseif nombre ~= "estado" then
+		err = "Acción desconocida"
+	end
+	local res = Raid.resumen(perfil, os.time())
+	local jefe = enemigosDatos.bosses[res.jefe]
+	res.nombreJefe = jefe.name
+	res.vidaJefe = jefe.hp
+	res.nombreMapa = niveles[indiceNivel(res.mapa)].name
+	res.error = err
+	return res
+end
 
 --------------------------------------------------------------------------------
 -- Desafío semanal y rankings (docs/EVENTO.md)

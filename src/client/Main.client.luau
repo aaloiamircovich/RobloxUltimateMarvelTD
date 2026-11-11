@@ -83,6 +83,13 @@ mensaje.BackgroundTransparency = 0.3
 mensaje.BackgroundColor3 = Comic.FONDO
 crear("UICorner", { CornerRadius = UDim.new(0, 6) }, mensaje)
 
+-- Barra del jefe de raid (atributos JefeVida/JefeVidaMax de la partida).
+local barraJefe = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 96), Size = UDim2.fromOffset(600, 34), BackgroundColor3 = Comic.FONDO, Visible = false }, arriba)
+Comic.borde(barraJefe, 4)
+local rellenoJefe = crear("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(150, 30, 90), BorderSizePixel = 0 }, barraJefe)
+crear("UICorner", { CornerRadius = UDim.new(0, 6) }, rellenoJefe)
+local textoJefe = texto({ Size = UDim2.fromScale(1, 1), TextSize = 24 }, barraJefe)
+
 -- Avisos (errores, premios): globo de diálogo blanco.
 local aviso = texto({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 46), Size = UDim2.fromOffset(560, 40), TextSize = 20, Font = Comic.TEXTO, TextColor3 = Comic.NEGRO, TextStrokeTransparency = 1, TextWrapped = true, Visible = false, ZIndex = 5 }, arriba)
 aviso.BackgroundTransparency = 0
@@ -244,7 +251,7 @@ local function refrescar()
 	local oleada = estado:GetAttribute("Oleada")
 	local base, baseMax = estado:GetAttribute("Base"), estado:GetAttribute("BaseMax")
 	local acto = estado:GetAttribute("Acto")
-	titulo.Text = string.upper(`{estado:GetAttribute("NombreNivel")} · {if acto == "Infinito" or acto == "Evento" then acto else "Acto " .. acto}{if estado:GetAttribute("Pesadilla") then " · Pesadilla" else ""}`)
+	titulo.Text = string.upper(`{estado:GetAttribute("NombreNivel")} · {if acto == "Infinito" or acto == "Evento" or acto == "Raid" then acto else "Acto " .. acto}{if estado:GetAttribute("Pesadilla") then " · Pesadilla" else ""}`)
 	barraVida.Size = UDim2.fromScale(math.clamp(base / baseMax, 0, 1), 1)
 	textoVida.Text = `🛡 {base} / {baseMax}`
 	textoOleada.Text = if total == 0 then tostring(oleada) else `{oleada}/{total}`
@@ -252,6 +259,12 @@ local function refrescar()
 	textoReloj.Text = reloj()
 	mensaje.Text = estado:GetAttribute("Mensaje")
 	mensaje.Visible = mensaje.Text ~= "" and fase ~= "fin"
+	local vidaJefe, maxJefe = estado:GetAttribute("JefeVida"), estado:GetAttribute("JefeVidaMax")
+	barraJefe.Visible = maxJefe ~= nil and fase ~= "fin"
+	if maxJefe then
+		rellenoJefe.Size = UDim2.fromScale(math.clamp((vidaJefe or 0) / maxJefe, 0, 1), 1)
+		textoJefe.Text = `{string.upper(estado:GetAttribute("NombreJefe") or "")}  ·  {miles(vidaJefe or 0)} / {miles(maxJefe)}`
+	end
 
 	-- Controles.
 	botonListo.Visible = fase == "listo" and not jugador:GetAttribute("Listo")

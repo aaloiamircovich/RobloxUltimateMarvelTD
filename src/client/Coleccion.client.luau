@@ -485,7 +485,7 @@ function pantallaHistoria()
 	local sala = res.sala
 	if sala then
 		texto({ Position = UDim2.fromOffset(10, 6), Size = UDim2.new(1, -20, 0, 26), Font = Enum.Font.Bangers, TextSize = 24, TextColor3 = ACENTO, TextStrokeTransparency = 0, TextXAlignment = Enum.TextXAlignment.Left, Text = `Sala · {#sala.miembros}/4` }, der)
-		linea(34, `{sala.nombreMapa} · {if sala.acto == "infinito" then "Infinito" else "Acto " .. sala.acto}{if sala.pesadilla then " · Pesadilla" else ""}`, ACENTO)
+		linea(34, `{sala.nombreMapa} · {if sala.acto == "infinito" then "Infinito" elseif sala.acto == "raid" then "Raid" else "Acto " .. sala.acto}{if sala.pesadilla then " · Pesadilla" else ""}`, ACENTO)
 		for i, m in sala.miembros do
 			linea(58 + (i - 1) * 22, (if m.anfitrion then "👑 " else "• ") .. m.nombre)
 		end
@@ -530,7 +530,7 @@ function pantallaHistoria()
 		if i > 2 then
 			break
 		end
-		boton(`Unirse: {s.anfitrion} · {s.nombreMapa} {if s.acto == "infinito" then "∞" else "A" .. s.acto} ({#s.miembros}/4)`, { Position = UDim2.fromOffset(10, 142 + (i - 1) * 38), Size = UDim2.new(1, -20, 0, 32), TextSize = 13 }, der, function()
+		boton(`Unirse: {s.anfitrion} · {s.nombreMapa} {if s.acto == "infinito" then "∞" elseif s.acto == "raid" then "Raid" else "A" .. s.acto} ({#s.miembros}/4)`, { Position = UDim2.fromOffset(10, 142 + (i - 1) * 38), Size = UDim2.new(1, -20, 0, 32), TextSize = 13 }, der, function()
 			pedirSala("unirse", s.id)
 			pantallaHistoria()
 		end)

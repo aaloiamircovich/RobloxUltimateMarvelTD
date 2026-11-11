@@ -15,6 +15,8 @@ local usarHud = ReplicatedStorage:WaitForChild("UsarHud")
 local teletransportar = ReplicatedStorage:WaitForChild("Teletransportar")
 local temporadaRemota = ReplicatedStorage:WaitForChild("Temporada")
 local eventoRemoto = ReplicatedStorage:WaitForChild("Evento")
+local raidRemoto = ReplicatedStorage:WaitForChild("Raid")
+local salaRemota = ReplicatedStorage:WaitForChild("Sala")
 local abrirPanelRemoto = ReplicatedStorage:WaitForChild("AbrirPanel")
 local items = require(Shared.Data.items)
 local jugador = Players.LocalPlayer
@@ -38,7 +40,7 @@ do
 	local p, cuerpo = Comic.panel(gui, "¡A JUGAR!", UDim2.fromOffset(560, 300))
 	paneles.jugar = p
 	Comic.crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 16), HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center }, cuerpo)
-	for _, m in { { "HISTORIA", "story", Comic.ROJO }, { "INFINITO", "infinite", Color3.fromRGB(90, 60, 190) }, { "RAIDS", nil, Color3.fromRGB(70, 70, 80) } } do
+	for _, m in { { "HISTORIA", "story", Comic.ROJO }, { "INFINITO", "infinite", Color3.fromRGB(90, 60, 190) }, { "RAIDS", "raids", Color3.fromRGB(150, 30, 90) } } do
 		local b = Comic.boton(m[1], { Size = UDim2.fromOffset(150, 170), BackgroundColor3 = m[3], TextSize = 34 }, cuerpo, function()
 			if m[2] then
 				p.Visible = false
@@ -242,6 +244,139 @@ function armarPase(res)
 	Comic.texto({ Text = res.error or "", Position = UDim2.new(0, 0, 1, -22), Size = UDim2.new(1, 0, 0, 22), TextSize = 16, Font = Comic.TEXTO, TextColor3 = Comic.AMARILLO }, cuerpoPase)
 end
 
+-- Raids (docs/RAIDS.md): jefe de la semana, llaves, fragmentos, sala cooperativa y misiones de raid.
+local cuerpoRaid
+local pestanaRaid = "raid"
+local armarRaid
+do
+	local p, cuerpo = Comic.panel(gui, "RAIDS", UDim2.fromOffset(820, 480))
+	paneles.raid = p
+	cuerpoRaid = cuerpo
+end
+local function pedirRaid(remoto: RemoteFunction, nombre: string, a)
+	local res = remoto:InvokeServer(nombre, a)
+	if res.empezo then
+		paneles.raid.Visible = false
+		return
+	end
+	local estado = raidRemoto:InvokeServer("estado")
+	local sala = if remoto == salaRemota then res else salaRemota:InvokeServer("estado")
+	estado.error = res.error
+	armarRaid(estado, sala)
+end
+
+function armarRaid(res, sala)
+	cuerpoRaid:ClearAllChildren()
+	for i, t in { { "raid", "RAID" }, { "misiones", "MISIONES DE RAID" } } do
+		Comic.boton(t[2], { Position = UDim2.fromOffset((i - 1) * 150, 0), Size = UDim2.fromOffset(if i == 1 then 140 else 220, 40), TextSize = 22, BackgroundColor3 = if pestanaRaid == t[1] then Comic.AMARILLO else Comic.ROJO_OSCURO, TextColor3 = if pestanaRaid == t[1] then Comic.ROJO_OSCURO else Comic.CREMA }, cuerpoRaid, function()
+			pestanaRaid = t[1]
+			armarRaid(res, sala)
+		end)
+	end
+	Comic.texto({ Text = `🔑 {res.llaves}/{res.llavesDia} llaves  ·  se renuevan en {duracion(res.finDia)}`, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 6), Size = UDim2.fromOffset(380, 30), TextSize = 22, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Right }, cuerpoRaid)
+	local area = Comic.crear("Frame", { Position = UDim2.fromOffset(0, 52), Size = UDim2.new(1, 0, 1, -80), BackgroundTransparency = 1 }, cuerpoRaid)
+	Comic.texto({ Text = res.error or "", Position = UDim2.new(0, 0, 1, -24), Size = UDim2.new(1, 0, 0, 22), TextSize = 16, Font = Comic.TEXTO, TextColor3 = Comic.AMARILLO }, cuerpoRaid)
+
+	-- Fragmentos para el personaje exclusivo de raid (todavía no existe).
+	local function fragmentos(y: number)
+		barra(area, UDim2.fromOffset(0, y), UDim2.new(1, 0, 0, 28), res.fragmentos / res.fragmentosUnidad, Color3.fromRGB(255, 120, 40), `FRAGMENTOS {res.fragmentos} / {res.fragmentosUnidad}  ·  personaje de raid: {if res.exclusiva then res.exclusiva else "próximamente"}`)
+	end
+
+	if pestanaRaid == "raid" then
+		-- Izquierda: jefe y premios.
+		local jefe = Comic.crear("Frame", { Size = UDim2.fromOffset(380, 250), BackgroundColor3 = Comic.ROJO, Rotation = -1.5 }, area)
+		Comic.borde(jefe, 5)
+		Comic.texto({ Text = "JEFE DE LA SEMANA", Position = UDim2.fromOffset(12, 8), Size = UDim2.new(1, -24, 0, 26), TextSize = 22, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Left }, jefe)
+		Comic.texto({ Text = string.upper(res.nombreJefe), Position = UDim2.fromOffset(12, 36), Size = UDim2.new(1, -24, 0, 60), TextSize = 50, TextXAlignment = Enum.TextXAlignment.Left }, jefe)
+		Comic.texto({
+			Text = `En {res.nombreMapa}. 5 oleadas de esbirros y después el jefe, que al 66 % y al 33 % de vida llama refuerzos y se enfurece.\nVictoria: 💎 {res.premio.gemas} · 🔷 {res.premio.nucleos} · {res.premio.fragmentos} fragmentos y chance de objeto Legendario o Mítico.`,
+			Position = UDim2.fromOffset(12, 100),
+			Size = UDim2.new(1, -24, 0, 140),
+			TextSize = 17,
+			Font = Comic.TEXTO,
+			TextWrapped = true,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextYAlignment = Enum.TextYAlignment.Top,
+		}, jefe)
+		fragmentos(276)
+		-- Derecha: sala (hasta 4) o salas abiertas para unirse.
+		local der = Comic.crear("Frame", { Position = UDim2.fromOffset(404, 0), Size = UDim2.fromOffset(376, 260), BackgroundColor3 = Comic.ROJO_OSCURO }, area)
+		Comic.borde(der, 4)
+		local miSala = sala.sala
+		if miSala and miSala.acto == "raid" then
+			Comic.texto({ Text = `SALA DE {string.upper(miSala.anfitrion)}  ({#miSala.miembros}/4)`, Position = UDim2.fromOffset(10, 8), Size = UDim2.new(1, -20, 0, 28), TextSize = 24, TextColor3 = Comic.AMARILLO }, der)
+			local nombres = {}
+			for _, m in miSala.miembros do
+				table.insert(nombres, (if m.anfitrion then "★ " else "• ") .. m.nombre)
+			end
+			Comic.texto({ Text = table.concat(nombres, "\n"), Position = UDim2.fromOffset(16, 44), Size = UDim2.new(1, -32, 0, 120), TextSize = 20, Font = Comic.TEXTO, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top }, der)
+			if miSala.anfitrion == jugador.DisplayName then
+				Comic.boton("¡INICIAR RAID!", { Position = UDim2.new(0, 10, 1, -62), Size = UDim2.new(0.6, -15, 0, 52), TextSize = 26, BackgroundColor3 = Comic.VERDE }, der, function()
+					pedirRaid(salaRemota, "iniciar")
+				end)
+			else
+				Comic.texto({ Text = "Esperando al anfitrión…", Position = UDim2.new(0, 10, 1, -62), Size = UDim2.new(0.6, -15, 0, 52), TextSize = 18, Font = Comic.TEXTO }, der)
+			end
+			Comic.boton("SALIR", { Position = UDim2.new(0.6, 5, 1, -62), Size = UDim2.new(0.4, -15, 0, 52), TextSize = 24, BackgroundColor3 = Comic.GRIS }, der, function()
+				pedirRaid(salaRemota, "salir")
+			end)
+		else
+			Comic.boton("CREAR SALA", { Position = UDim2.fromOffset(10, 10), Size = UDim2.new(0.5, -15, 0, 52), TextSize = 24, BackgroundColor3 = Comic.VERDE }, der, function()
+				pedirRaid(salaRemota, "crear", { acto = "raid", mapa = res.mapa })
+			end)
+			Comic.boton("JUGAR SOLO", { Position = UDim2.new(0.5, 5, 0, 10), Size = UDim2.new(0.5, -15, 0, 52), TextSize = 24, BackgroundColor3 = Color3.fromRGB(200, 130, 20) }, der, function()
+				pedirRaid(salaRemota, "crear", { acto = "raid", mapa = res.mapa, solo = true })
+			end)
+			Comic.texto({ Text = "SALAS ABIERTAS", Position = UDim2.fromOffset(10, 72), Size = UDim2.new(1, -20, 0, 24), TextSize = 20, TextColor3 = Comic.AMARILLO }, der)
+			local n = 0
+			for _, s in sala.abiertas or {} do
+				if s.acto == "raid" and n < 3 then
+					n += 1
+					Comic.boton(`UNIRSE: {s.anfitrion} ({#s.miembros}/4)`, { Position = UDim2.fromOffset(10, 100 + (n - 1) * 50), Size = UDim2.new(1, -20, 0, 42), TextSize = 20 }, der, function()
+						pedirRaid(salaRemota, "unirse", s.id)
+					end)
+				end
+			end
+			if n == 0 then
+				Comic.texto({ Text = "No hay salas de raid abiertas", Position = UDim2.fromOffset(10, 110), Size = UDim2.new(1, -20, 0, 24), TextSize = 16, Font = Comic.TEXTO }, der)
+			end
+		end
+	else
+		Comic.texto({ Text = `MISIONES SEMANALES  ·  se renuevan en {duracion(res.finSemana)}`, Size = UDim2.new(1, 0, 0, 30), TextSize = 26, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Left }, area)
+		for i, m in res.misiones do
+			local f = Comic.crear("Frame", { Position = UDim2.fromOffset(0, 40 + (i - 1) * 72), Size = UDim2.new(1, 0, 0, 64), BackgroundColor3 = Comic.ROJO_OSCURO }, area)
+			Comic.borde(f, 3)
+			Comic.texto({ Text = m.texto, Position = UDim2.fromOffset(10, 4), Size = UDim2.fromOffset(330, 26), TextSize = 19, Font = Comic.TEXTO, TextXAlignment = Enum.TextXAlignment.Left }, f)
+			barra(f, UDim2.fromOffset(10, 34), UDim2.fromOffset(330, 22), m.progreso / m.meta, Comic.AMARILLO, `{m.progreso} / {m.meta}`)
+			Comic.texto({ Text = `💎 {res.premioMision.gemas} · {res.premioMision.fragmentos} fragmentos`, Position = UDim2.fromOffset(356, 18), Size = UDim2.fromOffset(220, 30), TextSize = 20 }, f)
+			local puede = m.progreso >= m.meta and not m.reclamada
+			Comic.boton(if m.reclamada then "✔ LISTA" elseif puede then "¡RECLAMAR!" else "EN CURSO", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(150, 42), TextSize = 20, AutoButtonColor = puede, BackgroundColor3 = if puede then Comic.VERDE else Comic.GRIS }, f, function()
+				if puede then
+					pedirRaid(raidRemoto, "reclamar", m.id)
+				end
+			end)
+		end
+		fragmentos(270)
+	end
+end
+
+local function abrirRaid(pestana: string)
+	pestanaRaid = pestana
+	pedirRaid(raidRemoto, "estado")
+	if not paneles.raid.Visible then
+		abrir("raid")
+	end
+end
+-- Mientras el panel está abierto, refresca la sala (alguien se une o se va).
+task.spawn(function()
+	while true do
+		task.wait(2)
+		if paneles.raid.Visible and pestanaRaid == "raid" then
+			pedirRaid(raidRemoto, "estado")
+		end
+	end
+end)
+
 -- Desafío semanal, tienda de fichas y rankings (docs/EVENTO.md).
 local cuerpoEvento
 local pestanaEvento = "desafio"
@@ -328,9 +463,11 @@ local function abrirEvento(pestana: string)
 	pedirEvento("estado")
 	abrir("evento")
 end
-abrirPanelRemoto.OnClientEvent:Connect(function(nombre)
+abrirPanelRemoto.OnClientEvent:Connect(function(nombre, datos)
 	if nombre == "evento" or nombre == "ranking" then
 		abrirEvento(if nombre == "ranking" then "ranking" else "desafio")
+	elseif nombre == "raid" then
+		abrirRaid(if datos and datos.pestana == "misiones" then "misiones" else "raid")
 	elseif nombre == "misiones" then
 		pedirTemporada("estado")
 		abrir("misiones")

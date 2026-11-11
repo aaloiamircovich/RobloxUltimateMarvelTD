@@ -23,6 +23,7 @@ local Cuenta = require(Shared.Cuenta)
 local Actos = require(Shared.Actos)
 local Temporada = require(Shared.Temporada)
 local Evento = require(Shared.Evento)
+local Raid = require(Shared.Raid)
 local Perfiles = require(script.Parent.Perfiles)
 local Ranking = require(script.Parent.Ranking)
 
@@ -30,6 +31,7 @@ local heroes = Personajes.todos
 local enemigosDatos = require(Data.enemies)
 local niveles = require(Data.levels)
 local tablaTipos = require(Data.TypeChart)
+local items = require(Data.items)
 
 local Partida = {}
 
@@ -185,7 +187,7 @@ local function escuadronDe(perfil)
 	return r, table.concat(texto, ",")
 end
 
--- op: { id, indice (mapa en levels.json), acto (1–5, "infinito" o "evento"), pesadilla, jugadores, anfitrion, origen, aviso, alSalir }
+-- op: { id, indice (mapa en levels.json), acto (1–5, "infinito", "evento" o "raid"), pesadilla, jugadores, anfitrion, origen, aviso, alSalir }
 function Partida.nueva(op)
 	local p = {}
 	local NIVEL, INDICE_NIVEL = niveles[op.indice], op.indice - 1
@@ -198,8 +200,13 @@ function Partida.nueva(op)
 	local modo = if sinFin then "survival" else "campaign"
 	local pesadilla = op.pesadilla and not sinFin
 	local superadas, derrotados = 0, 0 -- para el puntaje del evento
+	-- Raid (docs/RAIDS.md): 5 oleadas de esbirros y el jefe de la semana con fases.
+	local esRaid = op.acto == "raid"
+	local jefeRaid = Raid.jefe(Raid.semana(os.time()))
+	local jefeVivo = nil -- el enemigo jefe mientras está en el mapa
+	local danoJefe = {} -- [Player] = daño hecho al jefe
 	local function nombreActo(): string
-		return if infinito then "Infinito" elseif esEvento then "Evento" else tostring(op.acto)
+		return if infinito then "Infinito" elseif esEvento then "Evento" elseif esRaid then "Raid" else tostring(op.acto)
 	end
 	local origen: Vector3 = op.origen
 	local terminada = false
@@ -235,7 +242,7 @@ function Partida.nueva(op)
 	fijar("Base", BASE)
 	fijar("BaseMax", BASE)
 	fijar("Oleada", 0)
-	fijar("OleadasTotal", if infinito then 0 elseif esEvento then Evento.OLEADAS else Actos.OLEADAS)
+	fijar("OleadasTotal", if infinito then 0 elseif esEvento then Evento.OLEADAS elseif esRaid then Raid.OLEADAS_ESBIRROS + 1 else Actos.OLEADAS)
 	fijar("Fase", "listo")
 	fijar("Mensaje", "")
 	fijar("Velocidad", 1)
@@ -346,6 +353,7 @@ function Partida.nueva(op)
 		moverEnemigo(e, CFrame.new(puntoEnRuta(e.avance) + Vector3.new(0, e.altura, 0)))
 		cuerpo.Parent = carpetaEnemigos
 		table.insert(enemigos, e)
+		return e
 	end
 
 	local function quitarEnemigo(e)
@@ -363,6 +371,30 @@ function Partida.nueva(op)
 		end
 		e.barra.Size = UDim2.fromScale(math.max(0, e.vida / e.vidaMax), 1)
 		e.cuerpo:SetAttribute("Vida", math.max(0, math.ceil(e.vida)))
+		if e == jefeVivo then
+			-- Daño por jugador (misiones de raid) y fases: refuerzos y furia al 66 % y 33 %.
+			local antes = e.vidaVista or e.vidaMax
+			local ahora = math.max(0, e.vida)
+			if e.ultimoAtacante then
+				danoJefe[e.ultimoAtacante] = (danoJefe[e.ultimoAtacante] or 0) + (antes - ahora)
+			end
+			e.vidaVista = ahora
+			fijar("JefeVida", math.ceil(ahora))
+			for _ = 1, Raid.fasesCruzadas(antes / e.vidaMax, ahora / e.vidaMax) do
+				e.config.speed *= Raid.FURIA
+				aviso(`¡{string.upper(e.config.name)} SE ENFURECE! Llegan refuerzos`)
+				local ids = {}
+				for id in enemigosDatos.normal do
+					table.insert(ids, id)
+				end
+				table.sort(ids)
+				for i = 1, Raid.REFUERZOS do
+					local config = table.clone(enemigosDatos.normal[ids[math.random(#ids)]])
+					config.reward = 0
+					task.delay(i * 0.4, crearEnemigo, config, math.max(0, e.avance - 2))
+				end
+			end
+		end
 		if e.vida <= 0 then
 			dar(e.ultimoAtacante, e.config.reward or 0)
 			evento(e.ultimoAtacante, "derrota", 1)
@@ -858,6 +890,26 @@ function Partida.nueva(op)
 		terminada = true
 		local gano = string.sub(mensaje, 1, 7) ~= "Derrota"
 		fijar("Resultado", if gano then "victoria" else "derrota")
+		if esRaid then
+			for j in p.jugadores do
+				local perfil = Perfiles.de(j)
+				if perfil then
+					local premio = Raid.terminar(perfil, gano, danoJefe[j] or 0, os.time(), math.random)
+					Perfiles.marcar(j)
+					j:SetAttribute("Gemas", perfil.gems)
+					j:SetAttribute("Nucleos", perfil.cores)
+					local partes = { `Daño al jefe: {math.floor(danoJefe[j] or 0)}` }
+					if premio.gemas > 0 then
+						table.insert(partes, `+{premio.gemas} gemas · +{premio.nucleos} núcleos`)
+					end
+					table.insert(partes, `+{premio.fragmentos} fragmentos`)
+					if premio.objeto then
+						table.insert(partes, `¡{items[premio.objeto].name}!`)
+					end
+					j:SetAttribute("PremioActo", table.concat(partes, " · "))
+				end
+			end
+		end
 		if esEvento then
 			-- Puntaje del intento: fichas, mejor puntaje y ranking de la semana.
 			local puntos = Evento.puntos(superadas, derrotados)
@@ -941,7 +993,7 @@ function Partida.nueva(op)
 		while not terminada and not todos("listo") and ahora() < estado:GetAttribute("FinTemporizador") do
 			task.wait(0.1)
 		end
-		local total = if infinito then math.huge elseif esEvento then Evento.OLEADAS else Actos.OLEADAS
+		local total = if infinito then math.huge elseif esEvento then Evento.OLEADAS elseif esRaid then Raid.OLEADAS_ESBIRROS + 1 else Actos.OLEADAS
 		local n = 0
 		local generando = 0 -- oleadas que todavía están sacando enemigos
 		while not terminada and n < total do
@@ -955,10 +1007,25 @@ function Partida.nueva(op)
 			for _, u in unidades do
 				table.insert(equipo, u.config)
 			end
-			local oleada2D = if sinFin then n else Actos.oleada2D(op.acto, n)
-			local jefe = if sinFin then nil elseif n == Actos.OLEADAS then op.acto else false
+			local oleada2D = if sinFin then n elseif esRaid then 15 + n * 3 else Actos.oleada2D(op.acto, n)
+			local jefe = if sinFin then nil elseif esRaid or n ~= Actos.OLEADAS then false else op.acto
 			local cola, mod = Oleadas.preparar(oleada2D, enemigosDatos, NIVEL, INDICE_NIVEL, equipo, modo, jefe)
-			fijar("Mensaje", `Oleada {n}: {mod.nombre}` .. (if n == Actos.OLEADAS and not sinFin then " · ¡JEFE!" else ""))
+			fijar("Mensaje", `Oleada {n}: {mod.nombre}` .. (if n == Actos.OLEADAS and not sinFin and not esRaid then " · ¡JEFE!" else ""))
+			if esRaid and n > Raid.OLEADAS_ESBIRROS then
+				-- Oleada final: sólo el jefe de raid, con vida según los jugadores, lento y con fases.
+				local base = enemigosDatos.bosses[jefeRaid.id]
+				local config = table.clone(base)
+				local cuantos = 0
+				for _ in p.jugadores do
+					cuantos += 1
+				end
+				config.hp = Raid.vidaJefe(base.hp, cuantos)
+				config.speed = base.speed * Raid.VELOCIDAD_JEFE
+				config.reward = 0
+				config.isBoss = true
+				cola = { { espera = 1, enemigo = config, jefeRaid = true } }
+				fijar("Mensaje", `¡JEFE DE RAID: {string.upper(base.name)}!`)
+			end
 			generando += 1
 			local completa = false -- ya salieron todos los enemigos de esta oleada
 			task.spawn(function()
@@ -966,7 +1033,13 @@ function Partida.nueva(op)
 					if not esperar(entrada.espera) or derrota() then
 						break
 					end
-					crearEnemigo(entrada.enemigo)
+					local e = crearEnemigo(entrada.enemigo)
+					if entrada.jefeRaid then
+						jefeVivo = e
+						fijar("NombreJefe", e.config.name)
+						fijar("JefeVidaMax", e.vidaMax)
+						fijar("JefeVida", e.vidaMax)
+					end
 				end
 				generando -= 1
 				completa = true
@@ -993,7 +1066,7 @@ function Partida.nueva(op)
 				return
 			end
 			if derrota() then
-				terminar(`Derrota en la oleada {n}` .. (if sinFin then "" else ` del acto {op.acto}`))
+				terminar(`Derrota en la oleada {n}` .. (if sinFin or esRaid then "" else ` del acto {op.acto}`))
 				return
 			end
 			local bono = Mejoras.BONO_OLEADA + math.floor(estado:GetAttribute("Base") * Mejoras.BONO_VIDA / 25)
@@ -1018,6 +1091,10 @@ function Partida.nueva(op)
 		end
 		if esEvento then
 			terminar(`¡Desafío superado! {Evento.OLEADAS} oleadas`)
+			return
+		end
+		if esRaid then
+			terminar(`¡Raid superada! {enemigosDatos.bosses[jefeRaid.id].name} derrotado`)
 			return
 		end
 		for j in p.jugadores do
@@ -1092,6 +1169,10 @@ function Partida.nueva(op)
 		end
 		op.acto, pesadilla = acto, conPesadilla and not sinFin
 		superadas, derrotados = 0, 0
+		jefeVivo, danoJefe = nil, {}
+		for _, a in { "JefeVida", "JefeVidaMax", "NombreJefe" } do
+			fijar(a, nil)
+		end
 		fijar("Acto", nombreActo())
 		fijar("Pesadilla", pesadilla)
 		fijar("Base", BASE)

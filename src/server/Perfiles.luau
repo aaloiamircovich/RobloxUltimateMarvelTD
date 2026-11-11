@@ -8,6 +8,7 @@ local Unidades = require(Shared.Unidades)
 local Cuenta = require(Shared.Cuenta)
 local Temporada = require(Shared.Temporada)
 local Evento = require(Shared.Evento)
+local Raid = require(Shared.Raid)
 local items = require(Shared.Data.items)
 
 local Perfiles = {}
@@ -50,6 +51,7 @@ function Perfiles.normalizar(crudo)
 		equippedItems = {},
 		temporada = Temporada.normalizar(datos.temporada), -- misiones y pase (docs/TEMPORADA.md)
 		evento = Evento.normalizar(datos.evento), -- desafío semanal (docs/EVENTO.md)
+		raid = Raid.normalizar(datos.raid), -- llaves, misiones y fragmentos de raid (docs/RAIDS.md)
 	}
 	local c = tonumber(datos.credits)
 	if c and c == c and c >= 0 and c < math.huge then
