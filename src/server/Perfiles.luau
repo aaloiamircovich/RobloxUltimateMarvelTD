@@ -48,7 +48,7 @@ function Perfiles.normalizar(crudo)
 		mapProgress = {},
 		acts = {}, -- [mapa] = { normal = último acto ganado, pesadilla = ídem en Pesadilla } (docs/PARTIDA.md)
 		unlockedHeroIds = {},
-		shop = { heroPity = 0 },
+		shop = { heroPity = 0, limitadoPity = 0 }, -- limitadoPity: Banner 2 (Banners.luau)
 		modeRecords = { survival = { bestWave = 0, bestScore = 0 } },
 		ownedItemIds = {},
 		equippedItems = {},
@@ -154,6 +154,7 @@ function Perfiles.normalizar(crudo)
 	end
 	if type(datos.shop) == "table" then
 		p.shop.heroPity = entero(datos.shop.heroPity, 0, 1e6, 0)
+		p.shop.limitadoPity = entero(datos.shop.limitadoPity, 0, 1000, 0)
 	end
 	return p
 end

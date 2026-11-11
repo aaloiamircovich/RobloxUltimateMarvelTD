@@ -38,7 +38,14 @@ evolución por nivel del 2D (ShopSystem.recruitHero / EvolutionSystem). El resto
   (suman 102: Común 47,1 %, Raro 29,4 %, Épico 14,7 %, Legendario 5,9 %, Mítico 2 %, Secreto 1 %). Se mantiene la garantía del 2D: tras 4 comunes seguidos, la siguiente no es común.
 - **Banner 1** cambia cada hora (igual en todos los servidores): **1 estrella** (Legendario o Mítico) y **2 apoyos** (Épicos).
   Cuando sale la rareza de un destacado, hay **50 %** de que sea él (repartido si hay varios de esa rareza).
-- Los personajes evolucionados no salen en invocaciones: sólo se craftean. Banners 2 y 3: a definir.
+- Los personajes evolucionados no salen en invocaciones: sólo se craftean.
+- **Banner 2 · limitado semanal** (estación BANNER 2 de Asgard): un **Mítico destacado** que cambia cada lunes,
+  **80 gemas** por tirada (x1 o x10). Común 20 % · Raro 40 % · Épico 26 % · Legendario 10 % · Mítico 4 % (el 75 % de
+  los Míticos es el destacado: 3 % por tirada). **Garantía:** a las 80 tiradas sin el destacado, sale seguro; el
+  contador se guarda entre semanas.
+- **Banner 3 · fichas** (estación BANNER 3): mismas probabilidades que el Banner 1, sin destacados, pagando
+  **30 fichas del desafío semanal** por tirada (las fichas vencen el lunes, docs/EVENTO.md).
+- Las tiradas de los 3 banners cuentan para la misión «Invocá X veces».
 
 ## Gemas y núcleos
 - Gemas: +10 por cada oleada de historia superada por primera vez en ese mapa, +25 al completar un mapa,

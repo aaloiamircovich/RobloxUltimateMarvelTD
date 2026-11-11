@@ -19,6 +19,7 @@ local Raid = require(Shared.Raid)
 local Rasgos = require(Shared.Rasgos)
 local Mascotas = require(Shared.Mascotas)
 local Estilo = require(Shared.Estilo)
+local Banners = require(Shared.Banners)
 local Hub = require(script.Parent.Hub)
 local Perfiles = require(script.Parent.Perfiles)
 local Reclutamiento = require(script.Parent.Reclutamiento)
@@ -47,6 +48,7 @@ local raidRemoto = remoto("RemoteFunction", "Raid")
 local rasgosRemoto = remoto("RemoteFunction", "Rasgos")
 local mascotasRemoto = remoto("RemoteFunction", "Mascotas")
 local estiloRemoto = remoto("RemoteFunction", "Estilo")
+local bannersRemoto = remoto("RemoteFunction", "Banners")
 
 --------------------------------------------------------------------------------
 -- Partidas: cada una en su arena, lejos del HUB
@@ -448,6 +450,8 @@ local function usarEstacion(jugador: Player, estacion: string)
 		abrirPanel:FireClient(jugador, "invocaciones", { pestana = "banner" })
 	elseif estacion == "tienda" then
 		abrirPanel:FireClient(jugador, "invocaciones", { pestana = "tienda" })
+	elseif estacion == "banner_2" or estacion == "banner_3" then
+		abrirPanel:FireClient(jugador, "banners", { pestana = if estacion == "banner_2" then "limitado" else "fichas" })
 	elseif estacion == "monturas" or estacion == "bailes" then
 		abrirPanel:FireClient(jugador, "estilo", { pestana = estacion })
 	elseif estacion == "pets" then
@@ -539,6 +543,39 @@ task.spawn(function()
 		Perfiles.guardarTodos()
 	end
 end)
+
+--------------------------------------------------------------------------------
+-- Banners 2 (limitado semanal) y 3 (con fichas del desafío): docs/INVOCACIONES.md
+--------------------------------------------------------------------------------
+bannersRemoto.OnServerInvoke = function(jugador, nombre, cantidad)
+	local perfil = Perfiles.de(jugador)
+	if not perfil then
+		return { error = "Tu perfil todavía no cargó" }
+	end
+	local ahora = os.time()
+	local err, nuevas
+	if nombre == "limitado" or nombre == "fichas" then
+		if partidaDe[jugador] then
+			err = "Terminá o abandoná la partida primero"
+		elseif type(cantidad) ~= "number" then
+			err = "Cantidad inválida"
+		elseif nombre == "limitado" then
+			nuevas, err = Banners.limitado(perfil, cantidad, Evento.semana(ahora), math.random)
+		else
+			nuevas, err = Banners.fichas(perfil, cantidad, ahora, math.random)
+		end
+		if not err then
+			Temporada.registrar(perfil, "invocar", cantidad, ahora)
+			Perfiles.marcar(jugador)
+			publicarSaldo(jugador, perfil)
+		end
+	elseif nombre ~= "estado" then
+		err = "Acción desconocida"
+	end
+	local res = Banners.resumen(perfil, ahora)
+	res.error, res.nuevas = err, nuevas
+	return res
+end
 
 --------------------------------------------------------------------------------
 -- Monturas y bailes (docs/ESTILO.md). Montar: el servidor suelda el modelo bajo los pies y sube la velocidad.

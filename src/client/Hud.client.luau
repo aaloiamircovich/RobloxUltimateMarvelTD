@@ -20,6 +20,7 @@ local salaRemota = ReplicatedStorage:WaitForChild("Sala")
 local rasgosRemoto = ReplicatedStorage:WaitForChild("Rasgos")
 local mascotasRemoto = ReplicatedStorage:WaitForChild("Mascotas")
 local estiloRemoto = ReplicatedStorage:WaitForChild("Estilo")
+local bannersRemoto = ReplicatedStorage:WaitForChild("Banners")
 local Mascotas = require(Shared.Mascotas)
 local Rasgos = require(Shared.Rasgos)
 local abrirPanelRemoto = ReplicatedStorage:WaitForChild("AbrirPanel")
@@ -660,6 +661,108 @@ local function abrirEstilo(pestana: string?)
 	end
 end
 
+-- Banners 2 (limitado semanal) y 3 (con fichas del desafío): docs/INVOCACIONES.md.
+local NOMBRE_RAREZA_B = { Common = "Común", Rare = "Raro", Epic = "Épico", Legendary = "Legendario", Mythic = "Mítico", Secret = "Secreto" }
+local cuerpoBanners
+local pestanaBanner = "limitado"
+local armarBanners
+do
+	local p, cuerpo = Comic.panel(gui, "BANNERS", UDim2.fromOffset(840, 480))
+	paneles.banners = p
+	cuerpoBanners = cuerpo
+end
+local function pedirBanner(nombre: string, cantidad: number?)
+	armarBanners(bannersRemoto:InvokeServer(nombre, cantidad))
+end
+
+function armarBanners(res)
+	cuerpoBanners:ClearAllChildren()
+	if not res.destacado then
+		Comic.texto({ Text = res.error or "", Size = UDim2.fromScale(1, 1), TextSize = 22, Font = Comic.TEXTO }, cuerpoBanners)
+		return
+	end
+	for i, t in { { "limitado", "BANNER 2 · LIMITADO" }, { "fichas", "BANNER 3 · FICHAS" } } do
+		Comic.boton(t[2], { Position = UDim2.fromOffset((i - 1) * 250, 0), Size = UDim2.fromOffset(240, 40), TextSize = 22, BackgroundColor3 = if pestanaBanner == t[1] then Comic.AMARILLO else Comic.ROJO_OSCURO, TextColor3 = if pestanaBanner == t[1] then Comic.ROJO_OSCURO else Comic.CREMA }, cuerpoBanners, function()
+			pestanaBanner = t[1]
+			armarBanners(res)
+		end)
+	end
+	Comic.texto({ Text = `💎 {res.gemas}   🎟 {res.fichas}`, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 6), Size = UDim2.fromOffset(260, 30), TextSize = 24, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Right }, cuerpoBanners)
+	Comic.texto({ Text = res.error or "", Position = UDim2.new(0, 0, 1, -24), Size = UDim2.new(1, 0, 0, 22), TextSize = 16, Font = Comic.TEXTO, TextColor3 = Comic.AMARILLO }, cuerpoBanners)
+
+	local limitado = pestanaBanner == "limitado"
+	local caja = Comic.crear("Frame", { Position = UDim2.fromOffset(0, 54), Size = UDim2.fromOffset(420, 330), BackgroundColor3 = if limitado then Color3.fromRGB(110, 20, 60) else Color3.fromRGB(40, 70, 140), Rotation = -1 }, cuerpoBanners)
+	Comic.borde(caja, 5)
+	local prob = if limitado then res.probLimitado else res.probFichas
+	local lineas = {}
+	for _, r in { "Common", "Rare", "Epic", "Legendary", "Mythic", "Secret" } do
+		if prob[r] and prob[r] > 0 then
+			table.insert(lineas, `{NOMBRE_RAREZA_B[r]} {prob[r]}%`)
+		end
+	end
+	if limitado then
+		local h = Personajes.todos[res.destacado]
+		Comic.texto({ Text = "MÍTICO DE LA SEMANA", Position = UDim2.fromOffset(14, 10), Size = UDim2.new(1, -28, 0, 26), TextSize = 22, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Left }, caja)
+		Comic.texto({ Text = string.upper(h.name), Position = UDim2.fromOffset(14, 38), Size = UDim2.new(1, -28, 0, 56), TextSize = 50, TextColor3 = COLOR_RAREZA.Mythic, TextXAlignment = Enum.TextXAlignment.Left }, caja)
+		Comic.texto({
+			Text = `Cambia en {duracion(res.finSemana)}.\n{table.concat(lineas, " · ")}\n{h.name}: {math.floor(prob.Mythic * res.parteDestacado * 10 + 0.5) / 10}% por tirada.`,
+			Position = UDim2.fromOffset(14, 100),
+			Size = UDim2.new(1, -28, 0, 100),
+			TextSize = 17,
+			Font = Comic.TEXTO,
+			TextWrapped = true,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextYAlignment = Enum.TextYAlignment.Top,
+		}, caja)
+		barra(caja, UDim2.fromOffset(14, 210), UDim2.new(1, -28, 0, 30), res.pity / res.garantia, COLOR_RAREZA.Mythic, `GARANTÍA  {res.pity} / {res.garantia}`)
+	else
+		Comic.texto({ Text = "INVOCACIÓN CON FICHAS", Position = UDim2.fromOffset(14, 10), Size = UDim2.new(1, -28, 0, 40), TextSize = 34, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Left }, caja)
+		Comic.texto({
+			Text = `Pagás con las fichas del desafío semanal (vencen en {duracion(res.finSemana)}).\nMismas probabilidades que el Banner 1, sin destacados:\n{table.concat(lineas, " · ")}`,
+			Position = UDim2.fromOffset(14, 60),
+			Size = UDim2.new(1, -28, 0, 160),
+			TextSize = 17,
+			Font = Comic.TEXTO,
+			TextWrapped = true,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextYAlignment = Enum.TextYAlignment.Top,
+		}, caja)
+	end
+	local costo = if limitado then res.costoLimitado else res.costoFichas
+	local saldo = if limitado then res.gemas else res.fichas
+	local signo = if limitado then "💎" else "🎟"
+	for i, n in { 1, 10 } do
+		Comic.boton(`x{n}  {signo} {costo * n}`, { Position = UDim2.new(0, 14 + (i - 1) * 200, 1, -66), Size = UDim2.fromOffset(186, 54), TextSize = 26, BackgroundColor3 = if saldo >= costo * n then Comic.VERDE else Comic.GRIS }, caja, function()
+			pedirBanner(pestanaBanner, n)
+		end)
+	end
+
+	-- Derecha: lo que salió en la última tirada.
+	local der = Comic.crear("Frame", { Position = UDim2.fromOffset(440, 54), Size = UDim2.fromOffset(360, 330), BackgroundColor3 = Comic.ROJO_OSCURO }, cuerpoBanners)
+	Comic.borde(der, 4)
+	Comic.texto({ Text = "ÚLTIMA TIRADA", Position = UDim2.fromOffset(10, 8), Size = UDim2.new(1, -20, 0, 28), TextSize = 24, TextColor3 = Comic.AMARILLO }, der)
+	local lista = Comic.crear("Frame", { Position = UDim2.fromOffset(10, 44), Size = UDim2.new(1, -20, 1, -54), BackgroundTransparency = 1 }, der)
+	Comic.crear("UIGridLayout", { CellSize = UDim2.fromOffset(165, 50), CellPadding = UDim2.fromOffset(10, 6) }, lista)
+	for _, u in res.nuevas or {} do
+		local h = Personajes.todos[u.heroId]
+		local t = Comic.texto({ Text = `{h.name}\n{NOMBRE_RAREZA_B[h.rarity] or h.rarity}`, TextSize = 16, Font = Comic.TEXTO, TextColor3 = COLOR_RAREZA[h.rarity] or Comic.CREMA }, lista)
+		t.BackgroundTransparency = 0
+		t.BackgroundColor3 = Comic.FONDO
+		Comic.borde(t, 2)
+	end
+	if not res.nuevas then
+		Comic.texto({ Text = "Tirá para ver qué sale", Position = UDim2.fromOffset(10, 140), Size = UDim2.new(1, -20, 0, 30), TextSize = 18, Font = Comic.TEXTO }, der)
+	end
+end
+
+local function abrirBanners(pestana: string?)
+	pestanaBanner = if pestana == "fichas" then "fichas" else "limitado"
+	pedirBanner("estado")
+	if not paneles.banners.Visible then
+		abrir("banners")
+	end
+end
+
 -- Desafío semanal, tienda de fichas y rankings (docs/EVENTO.md).
 local cuerpoEvento
 local pestanaEvento = "desafio"
@@ -749,6 +852,8 @@ end
 abrirPanelRemoto.OnClientEvent:Connect(function(nombre, datos)
 	if nombre == "evento" or nombre == "ranking" then
 		abrirEvento(if nombre == "ranking" then "ranking" else "desafio")
+	elseif nombre == "banners" then
+		abrirBanners(datos and datos.pestana)
 	elseif nombre == "estilo" then
 		abrirEstilo(datos and datos.pestana)
 	elseif nombre == "mascotas" then
