@@ -29,3 +29,6 @@ Sistema propio del port (el 2D no lo tiene). Lógica en `src/shared/Raid.luau` (
   (~55 de daño/s cada una) y cada unidad tiene al jefe en alcance unos 20 s: 4.000–7.000 de daño crudo.
 - Vidas resultantes (1 jugador → 4): Thanos 2.700 → 7.600 · Galactus 2.700 → 7.600 · Apocalypse 3.500 → 9.700 ·
   Dormammu 4.800 → 13.400. Se ajusta con `Raid.OBJETIVO`.
+- Prueba en partida (11/11/2026, solo, Apocalypse 3.500): escuadrón flojo (Dagger y 2 Triton de nivel 5, mejoras 2–4)
+  llegó al jefe con 318 de base, le sacó 2.396 (68 %, cruzó las dos fases) y perdió por poco. Con esbirros de las
+  oleadas 18–30 o 6–14 del 2D se perdía antes del jefe; por eso quedaron en 2–10.
