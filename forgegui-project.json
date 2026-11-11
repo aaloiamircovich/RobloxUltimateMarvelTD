@@ -1069,6 +1069,83 @@
       "studio_path": "ServerStorage.Plantillas.Mascotas.fenix",
       "status": "inserted",
       "date": "2026-11-11"
+    },
+    {
+      "name": "montura_patineta",
+      "kind": "model_3d",
+      "source": "roblox generate_mesh",
+      "roblox_asset_id": "133720405993885",
+      "studio_path": "ServerStorage.Plantillas.Monturas.patineta",
+      "status": "inserted",
+      "date": "2026-11-11"
+    },
+    {
+      "name": "montura_moto",
+      "kind": "model_3d",
+      "source": "roblox generate_mesh",
+      "roblox_asset_id": "108666245354477",
+      "studio_path": "ServerStorage.Plantillas.Monturas.moto",
+      "status": "inserted",
+      "date": "2026-11-11"
+    },
+    {
+      "name": "montura_disco",
+      "kind": "model_3d",
+      "source": "roblox generate_mesh",
+      "roblox_asset_id": "138474873538489",
+      "studio_path": "ServerStorage.Plantillas.Monturas.disco",
+      "status": "inserted",
+      "date": "2026-11-11"
+    },
+    {
+      "name": "montura_dragon",
+      "kind": "model_3d",
+      "source": "roblox generate_mesh",
+      "roblox_asset_id": "139314345897077",
+      "studio_path": "ServerStorage.Plantillas.Monturas.dragon",
+      "status": "inserted",
+      "date": "2026-11-11"
+    },
+    {
+      "name": "montura_pantera",
+      "kind": "model_3d",
+      "source": "roblox generate_mesh",
+      "studio_path": "ServerStorage.Plantillas.Monturas.pantera",
+      "status": "inserted",
+      "date": "2026-11-11",
+      "note": "primer prompt rechazado por moderación; reescrito como gato grande"
+    },
+    {
+      "name": "baile_robot",
+      "kind": "animation",
+      "source": "roblox generate_animation",
+      "roblox_asset_id": "104185003547683",
+      "status": "published",
+      "date": "2026-11-11"
+    },
+    {
+      "name": "baile_victoria",
+      "kind": "animation",
+      "source": "roblox generate_animation",
+      "roblox_asset_id": "118656636666654",
+      "status": "published",
+      "date": "2026-11-11"
+    },
+    {
+      "name": "baile_poder",
+      "kind": "animation",
+      "source": "roblox generate_animation",
+      "roblox_asset_id": "139760743413828",
+      "status": "published",
+      "date": "2026-11-11"
+    },
+    {
+      "name": "baile_giro",
+      "kind": "animation",
+      "source": "roblox generate_animation",
+      "roblox_asset_id": "73201221556654",
+      "status": "published",
+      "date": "2026-11-11"
     }
   ],
   "notas_importacion": "Los modelos de ForgeGUI llegan con un giro de ~10° alrededor de Y; enderezar al múltiplo de 90° más cercano antes de guardarlos como plantilla."

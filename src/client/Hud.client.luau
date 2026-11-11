@@ -19,6 +19,7 @@ local raidRemoto = ReplicatedStorage:WaitForChild("Raid")
 local salaRemota = ReplicatedStorage:WaitForChild("Sala")
 local rasgosRemoto = ReplicatedStorage:WaitForChild("Rasgos")
 local mascotasRemoto = ReplicatedStorage:WaitForChild("Mascotas")
+local estiloRemoto = ReplicatedStorage:WaitForChild("Estilo")
 local Mascotas = require(Shared.Mascotas)
 local Rasgos = require(Shared.Rasgos)
 local abrirPanelRemoto = ReplicatedStorage:WaitForChild("AbrirPanel")
@@ -592,6 +593,73 @@ local function abrirMascotas()
 	end
 end
 
+-- Monturas y bailes (docs/ESTILO.md): comprar con gemas, equipar montura y armar la rueda de bailes.
+local cuerpoEstilo
+local pestanaEstilo = "monturas"
+local armarEstilo
+do
+	local p, cuerpo = Comic.panel(gui, "MONTURAS Y BAILES", UDim2.fromOffset(860, 460))
+	paneles.estilo = p
+	cuerpoEstilo = cuerpo
+end
+local function pedirEstilo(nombre: string, a)
+	armarEstilo(estiloRemoto:InvokeServer(nombre, a))
+end
+
+function armarEstilo(res)
+	cuerpoEstilo:ClearAllChildren()
+	if not res.estilo then
+		Comic.texto({ Text = res.error or "", Size = UDim2.fromScale(1, 1), TextSize = 22, Font = Comic.TEXTO }, cuerpoEstilo)
+		return
+	end
+	for i, t in { { "monturas", "MONTURAS" }, { "bailes", "BAILES" } } do
+		Comic.boton(t[2], { Position = UDim2.fromOffset((i - 1) * 150, 0), Size = UDim2.fromOffset(140, 40), TextSize = 22, BackgroundColor3 = if pestanaEstilo == t[1] then Comic.AMARILLO else Comic.ROJO_OSCURO, TextColor3 = if pestanaEstilo == t[1] then Comic.ROJO_OSCURO else Comic.CREMA }, cuerpoEstilo, function()
+			pestanaEstilo = t[1]
+			armarEstilo(res)
+		end)
+	end
+	Comic.texto({ Text = `💎 {res.gemas}   ·   G: montar   ·   B: rueda de bailes`, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 6), Size = UDim2.fromOffset(460, 30), TextSize = 22, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Right }, cuerpoEstilo)
+	Comic.texto({ Text = res.error or "", Position = UDim2.new(0, 0, 1, -24), Size = UDim2.new(1, 0, 0, 22), TextSize = 16, Font = Comic.TEXTO, TextColor3 = Comic.AMARILLO }, cuerpoEstilo)
+	local area = Comic.crear("Frame", { Position = UDim2.fromOffset(0, 54), Size = UDim2.new(1, 0, 1, -84), BackgroundTransparency = 1 }, cuerpoEstilo)
+	Comic.crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 10), HorizontalAlignment = Enum.HorizontalAlignment.Center }, area)
+	local e = res.estilo
+	local lista = if pestanaEstilo == "monturas" then res.monturas else res.bailes
+	local ancho = if pestanaEstilo == "monturas" then 150 else 124
+	for _, x in lista do
+		local tiene = table.find(if pestanaEstilo == "monturas" then e.monturas else e.bailes, x.id) ~= nil
+		local activo = if pestanaEstilo == "monturas" then e.montura == x.id else table.find(e.rueda, x.id) ~= nil
+		local f = Comic.crear("Frame", { Size = UDim2.fromOffset(ancho, 300), BackgroundColor3 = if activo then Color3.fromRGB(40, 110, 50) else Comic.ROJO_OSCURO }, area)
+		Comic.borde(f, 4)
+		Comic.texto({ Text = string.upper(x.nombre), Position = UDim2.fromOffset(6, 12), Size = UDim2.new(1, -12, 0, 70), TextSize = 24, TextWrapped = true, TextColor3 = Comic.AMARILLO }, f)
+		Comic.texto({ Text = if x.velocidad then `Velocidad ×{x.velocidad}` else (if activo then "En la rueda" else ""), Position = UDim2.fromOffset(6, 100), Size = UDim2.new(1, -12, 0, 40), TextSize = 18, Font = Comic.TEXTO, TextWrapped = true }, f)
+		local txt, color
+		if not tiene then
+			txt, color = if x.precio == 0 then "GRATIS" else `💎 {x.precio}`, if res.gemas >= x.precio then Comic.VERDE else Comic.GRIS
+		elseif pestanaEstilo == "monturas" then
+			txt, color = if activo then "EQUIPADA" else "EQUIPAR", if activo then Comic.GRIS else Comic.VERDE
+		else
+			txt, color = if activo then "SACAR" else "A LA RUEDA", if activo then Comic.GRIS else Comic.VERDE
+		end
+		Comic.boton(txt, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12), Size = UDim2.new(1, -16, 0, 50), TextSize = 22, BackgroundColor3 = color }, f, function()
+			if pestanaEstilo == "monturas" then
+				if not activo then
+					pedirEstilo("montura", x.id)
+				end
+			else
+				pedirEstilo("baile", x.id)
+			end
+		end)
+	end
+end
+
+local function abrirEstilo(pestana: string?)
+	pestanaEstilo = if pestana == "bailes" then "bailes" else "monturas"
+	pedirEstilo("estado")
+	if not paneles.estilo.Visible then
+		abrir("estilo")
+	end
+end
+
 -- Desafío semanal, tienda de fichas y rankings (docs/EVENTO.md).
 local cuerpoEvento
 local pestanaEvento = "desafio"
@@ -681,6 +749,8 @@ end
 abrirPanelRemoto.OnClientEvent:Connect(function(nombre, datos)
 	if nombre == "evento" or nombre == "ranking" then
 		abrirEvento(if nombre == "ranking" then "ranking" else "desafio")
+	elseif nombre == "estilo" then
+		abrirEstilo(datos and datos.pestana)
 	elseif nombre == "mascotas" then
 		abrirMascotas()
 	elseif nombre == "rasgos" then

@@ -18,6 +18,7 @@ local Evento = require(Shared.Evento)
 local Raid = require(Shared.Raid)
 local Rasgos = require(Shared.Rasgos)
 local Mascotas = require(Shared.Mascotas)
+local Estilo = require(Shared.Estilo)
 local Hub = require(script.Parent.Hub)
 local Perfiles = require(script.Parent.Perfiles)
 local Reclutamiento = require(script.Parent.Reclutamiento)
@@ -45,6 +46,7 @@ local eventoRemoto = remoto("RemoteFunction", "Evento")
 local raidRemoto = remoto("RemoteFunction", "Raid")
 local rasgosRemoto = remoto("RemoteFunction", "Rasgos")
 local mascotasRemoto = remoto("RemoteFunction", "Mascotas")
+local estiloRemoto = remoto("RemoteFunction", "Estilo")
 
 --------------------------------------------------------------------------------
 -- Partidas: cada una en su arena, lejos del HUB
@@ -446,6 +448,8 @@ local function usarEstacion(jugador: Player, estacion: string)
 		abrirPanel:FireClient(jugador, "invocaciones", { pestana = "banner" })
 	elseif estacion == "tienda" then
 		abrirPanel:FireClient(jugador, "invocaciones", { pestana = "tienda" })
+	elseif estacion == "monturas" or estacion == "bailes" then
+		abrirPanel:FireClient(jugador, "estilo", { pestana = estacion })
 	elseif estacion == "pets" then
 		abrirPanel:FireClient(jugador, "mascotas", {})
 	elseif estacion == "traits" or estacion == "grades" then
@@ -504,6 +508,7 @@ local function alEntrar(jugador: Player)
 	local perfil, problema = Perfiles.cargar(jugador)
 	publicarSaldo(jugador, perfil)
 	jugador:SetAttribute("Mascotas", Mascotas.texto(perfil))
+	jugador:SetAttribute("Rueda", table.concat(perfil.estilo.rueda, ","))
 	-- Récords que ya tenía: entran al ranking aunque no juegue en esta sesión.
 	if perfil.modeRecords.survival.bestWave > 0 then
 		Ranking.anotar("infinito", jugador.UserId, perfil.modeRecords.survival.bestWave)
@@ -534,6 +539,102 @@ task.spawn(function()
 		Perfiles.guardarTodos()
 	end
 end)
+
+--------------------------------------------------------------------------------
+-- Monturas y bailes (docs/ESTILO.md). Montar: el servidor suelda el modelo bajo los pies y sube la velocidad.
+-- Los bailes los reproduce el cliente sobre su personaje (Roblox replica la animación a los demás).
+--------------------------------------------------------------------------------
+local PLANTILLAS_MONTURA = game:GetService("ServerStorage"):FindFirstChild("Plantillas")
+PLANTILLAS_MONTURA = PLANTILLAS_MONTURA and PLANTILLAS_MONTURA:FindFirstChild("Monturas")
+
+local function bajar(jugador: Player)
+	local personaje = jugador.Character
+	local humanoide = personaje and personaje:FindFirstChildOfClass("Humanoid")
+	local m = personaje and personaje:FindFirstChild("Montura")
+	if m then
+		if humanoide then
+			humanoide.HipHeight -= m:GetAttribute("Alto") or 0
+			humanoide.WalkSpeed = Estilo.VELOCIDAD_BASE
+		end
+		m:Destroy()
+	end
+	jugador:SetAttribute("Montado", nil)
+end
+
+local function subir(jugador: Player, perfil)
+	local personaje = jugador.Character
+	local humanoide = personaje and personaje:FindFirstChildOfClass("Humanoid")
+	local raiz = personaje and personaje:FindFirstChild("HumanoidRootPart") :: BasePart
+	local datos = Estilo.montura(perfil.estilo.montura)
+	local plantilla = PLANTILLAS_MONTURA and datos and PLANTILLAS_MONTURA:FindFirstChild(datos.id)
+	if not (humanoide and raiz and plantilla) or humanoide.Health <= 0 then
+		return "No se puede montar ahora"
+	end
+	local m = plantilla:Clone()
+	m.Name = "Montura"
+	local alto = m:GetAttribute("Alto") or 1
+	-- Al subir la cadera `alto`, el personaje (y la montura soldada) sube: la montura va `alto` más abajo
+	-- de los pies para quedar en el piso, con el jinete parado arriba.
+	local pies = raiz.CFrame * CFrame.new(0, -(raiz.Size.Y / 2 + humanoide.HipHeight + alto), 0)
+	m:PivotTo(pies * CFrame.Angles(0, math.rad(m:GetAttribute("Giro") or 0), 0))
+	for _, p in m:GetDescendants() do
+		if p:IsA("BasePart") then
+			p.Anchored, p.CanCollide, p.Massless = false, false, true
+			local w = Instance.new("WeldConstraint")
+			w.Part0, w.Part1 = raiz, p
+			w.Parent = p
+		end
+	end
+	m.Parent = personaje
+	humanoide.HipHeight += alto
+	humanoide.WalkSpeed = Estilo.VELOCIDAD_BASE * datos.velocidad
+	jugador:SetAttribute("Montado", datos.id)
+	return nil
+end
+
+estiloRemoto.OnServerInvoke = function(jugador, nombre, a)
+	local perfil = Perfiles.de(jugador)
+	if not perfil then
+		return { error = "Tu perfil todavía no cargó" }
+	end
+	local err
+	if nombre == "montura" and type(a) == "string" then
+		err = Estilo.elegirMontura(perfil, a)
+		if not err and jugador:GetAttribute("Montado") then
+			bajar(jugador)
+			subir(jugador, perfil) -- cambia a la nueva sin bajarse
+		end
+	elseif nombre == "baile" and type(a) == "string" then
+		err = Estilo.elegirBaile(perfil, a)
+	elseif nombre == "montar" then
+		if jugador:GetAttribute("Montado") then
+			bajar(jugador)
+		else
+			err = subir(jugador, perfil)
+		end
+		return { error = err }
+	elseif nombre ~= "estado" then
+		err = "Acción desconocida"
+	end
+	if nombre ~= "estado" and not err then
+		Perfiles.marcar(jugador)
+		publicarSaldo(jugador, perfil)
+		jugador:SetAttribute("Rueda", table.concat(perfil.estilo.rueda, ","))
+	end
+	return { error = err, estilo = perfil.estilo, gemas = perfil.gems, monturas = Estilo.MONTURAS, bailes = Estilo.BAILES, rueda = Estilo.RUEDA }
+end
+
+-- Al reaparecer, el personaje nuevo viene sin montura.
+Players.PlayerAdded:Connect(function(j)
+	j.CharacterAdded:Connect(function()
+		j:SetAttribute("Montado", nil)
+	end)
+end)
+for _, j in Players:GetPlayers() do
+	j.CharacterAdded:Connect(function()
+		j:SetAttribute("Montado", nil)
+	end)
+end
 
 --------------------------------------------------------------------------------
 -- Mascotas (docs/MASCOTAS.md): huevos, equipar y fusionar sobre el propio perfil

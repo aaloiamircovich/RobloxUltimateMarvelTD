@@ -11,6 +11,7 @@ local Evento = require(Shared.Evento)
 local Raid = require(Shared.Raid)
 local Rasgos = require(Shared.Rasgos)
 local Mascotas = require(Shared.Mascotas)
+local Estilo = require(Shared.Estilo)
 local items = require(Shared.Data.items)
 
 local Perfiles = {}
@@ -58,6 +59,7 @@ function Perfiles.normalizar(crudo)
 		cristales = entero(datos.cristales, 0, 1e6, 0),
 		pityRasgo = entero(datos.pityRasgo, 0, 1000, 0),
 		mascotas = Mascotas.normalizar(datos.mascotas), -- docs/MASCOTAS.md
+		estilo = Estilo.normalizar(datos.estilo), -- monturas y bailes (docs/ESTILO.md)
 	}
 	local c = tonumber(datos.credits)
 	if c and c == c and c >= 0 and c < math.huge then
