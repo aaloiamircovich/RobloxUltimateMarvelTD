@@ -36,6 +36,11 @@ Plantillas en `ServerStorage.Plantillas.Heroes/<id del héroe>` (en el lugar, no
 Hechos (20): los 8 Míticos (`thor`, `hulk`, `jean_grey`, `silver_surfer`, `magneto`, `adam_warlock`, `sentry`,
 `profesor_x`), `scarlet_witch`, `iron_man`, `doctor_strange`, `spiderman`, `capitan_america`, `black_panther`, `wolverine`
 (11/11/2026, cada uno con animación de ataque propia), `odin` y `knull` (exclusivos, docs/EXCLUSIVOS.md), `hawkeye` (arco y disparo, flecha), `black_widow` (ojos verdes, golpe cruzado con bastones, rayo), `korg` (roca con cara anime, puñetazo, impacto). Las animaciones de la IA duran ~2 s y se reproducen ×2.
+Legendarios (12/11/2026, 14 más; con Iron Man y Doctor Strange están los 16): `captain_marvel`, `vision`, `storm`,
+`ghost_rider`, `nova`, `namor`, `iceman`, `black_bolt`, `hela`, `emma_frost`, `invisible_woman`, `loki`,
+`mister_fantastic`, `beta_ray_bill`. Escalar por la caja engaña cuando hay cuernos, martillos o capas: medir de los
+pies (`LeftFoot`) a la cabeza (`Head`) y comparar con Hawkeye (~4 studs).
+
 Las **evoluciones** tienen modelo propio: `Plantillas.Heroes/<id de la evolución>`; si no existe, se usa el del
 personaje base (servidor y retratos). Hechas (15): `thor_evolution`, `hulk_evolution`, `scarlet_witch_evolution`,
 `phoenix`, `silver_surfer_evolution`, `magneto_evolution`, `adam_warlock_evolution`, `sentry_evolution`,
