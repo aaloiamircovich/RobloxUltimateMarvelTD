@@ -37,7 +37,11 @@ Hechos (20): los 8 Míticos (`thor`, `hulk`, `jean_grey`, `silver_surfer`, `magn
 `profesor_x`), `scarlet_witch`, `iron_man`, `doctor_strange`, `spiderman`, `capitan_america`, `black_panther`, `wolverine`
 (11/11/2026, cada uno con animación de ataque propia), `odin` y `knull` (exclusivos, docs/EXCLUSIVOS.md), `hawkeye` (arco y disparo, flecha), `black_widow` (ojos verdes, golpe cruzado con bastones, rayo), `korg` (roca con cara anime, puñetazo, impacto). Las animaciones de la IA duran ~2 s y se reproducen ×2.
 Las **evoluciones** tienen modelo propio: `Plantillas.Heroes/<id de la evolución>`; si no existe, se usa el del
-personaje base (servidor y retratos). Hulk es ×1,25 más alto que el resto.
+personaje base (servidor y retratos). Hechas (15): `thor_evolution`, `hulk_evolution`, `scarlet_witch_evolution`,
+`phoenix`, `silver_surfer_evolution`, `magneto_evolution`, `adam_warlock_evolution`, `sentry_evolution`,
+`profesor_x_evolution`, `iron_man_extremis`, `iron_spider`, `capitan_america_evolution`, `black_panther_evolution`,
+`doctor_strange_evolution`, `wolverine_evolution`. Tamaño: base ×1, evolución ×1,1; Hulk ×1,25 y su evolución ×1,35.
 
 `auto_setup_avatar` suele devolver *timeout* aunque el armado siga en Studio: esperar ~3 min y revisar si apareció
-`<nombre>_autosetup`; si no, volver a pedirlo (a veces sale recién al segundo intento). No lanzar varios a la vez.
+`<nombre>_autosetup`; si no, volver a pedirlo. Con `align_front_angle: true` sale casi siempre al primer intento.
+No lanzar varios a la vez.
