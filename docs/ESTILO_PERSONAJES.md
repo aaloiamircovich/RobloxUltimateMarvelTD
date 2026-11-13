@@ -38,8 +38,20 @@ Hechos (20): los 8 Míticos (`thor`, `hulk`, `jean_grey`, `silver_surfer`, `magn
 (11/11/2026, cada uno con animación de ataque propia), `odin` y `knull` (exclusivos, docs/EXCLUSIVOS.md), `hawkeye` (arco y disparo, flecha), `black_widow` (ojos verdes, golpe cruzado con bastones, rayo), `korg` (roca con cara anime, puñetazo, impacto). Las animaciones de la IA duran ~2 s y se reproducen ×2.
 Legendarios (12/11/2026, 14 más; con Iron Man y Doctor Strange están los 16): `captain_marvel`, `vision`, `storm`,
 `ghost_rider`, `nova`, `namor`, `iceman`, `black_bolt`, `hela`, `emma_frost`, `invisible_woman`, `loki`,
-`mister_fantastic`, `beta_ray_bill`. Escalar por la caja engaña cuando hay cuernos, martillos o capas: medir de los
-pies (`LeftFoot`) a la cabeza (`Head`) y comparar con Hawkeye (~4 studs).
+`mister_fantastic`, `beta_ray_bill`.
+Épicos (12/11/2026, 20 más; con Spider-Man, Capitán América, Black Panther y Wolverine están los 24): `daredevil`,
+`shang_chi`, `moon_knight`, `cyclops`, `blade`, `domino`, `iron_fist`, `magik`, `gambit`, `human_torch`, `psylocke`,
+`venom`, `angela`, `deadpool`, `nightcrawler`, `rogue`, `beast`, `cable`, `miles_morales`, `x_23`.
+
+**Cómo escalar.** Escalar por la caja engaña cuando hay cuernos, martillos o capas: medir de los pies (`LeftFoot`) a
+la cabeza (`Head`) y comparar con Hawkeye (3,97 studs). Ojo: el Humanoid recoloca las piezas uno o dos frames después de
+`ScaleTo`, y una plantilla en ServerStorage nunca se recoloca. Medir siempre una **copia en el workspace tras esperar
+unos `Heartbeat`**, y recién ahí aplicar `ScaleTo(escala * objetivo / medido)` a la plantilla. Medir al instante da
+alturas viejas, el bucle vuelve a achicar y salen "figuras de palitos" (cabeza y piezas diminutas).
+Prompts: empezar con "blocky Roblox-style character with a chunky body, thick arms and legs and a big square head";
+sin accesorios flotantes (discos, cintas, alas grandes), que confunden al armado. Si el armado devuelve un esqueleto de
+huesos con `AnimationController` y sin `Humanoid`, regenerar la malla. Si dice "Failed to separate the geometry",
+pasar `classifications: [{path: "body", classification: "Body"}]`.
 
 Las **evoluciones** tienen modelo propio: `Plantillas.Heroes/<id de la evolución>`; si no existe, se usa el del
 personaje base (servidor y retratos). Hechas (15): `thor_evolution`, `hulk_evolution`, `scarlet_witch_evolution`,
@@ -48,8 +60,8 @@ personaje base (servidor y retratos). Hechas (15): `thor_evolution`, `hulk_evolu
 `doctor_strange_evolution`, `wolverine_evolution`; y las 14 de los Legendarios nuevos (12/11/2026, `<id>_evolution`:
 Binary, Vision blanco, Storm diosa, Ghost Rider rey del infierno, Nova cósmico, Namor rey, Omega Iceman, Black Bolt,
 Hela, Emma diamante, Invisible Woman, Loki con libro de historias, The Maker, Beta Ray Bill con armadura). Tamaño
-medido de pies a cabeza: base = Hawkeye, evolución ×1,1; Hulk ×1,25 y su evolución ×1,35 (el 12/11 se igualaron
-así todas las evoluciones, algunas habían quedado chicas o grandes por medirlas con la caja).
+medido de pies a cabeza: base = Hawkeye, evolución ×1,1; Hulk ×1,25 y su evolución ×1,35; Korg más grande a
+propósito. El 12/11 se volvieron a medir y corregir todas las plantillas con el método de arriba.
 
 `auto_setup_avatar` suele devolver *timeout* aunque el armado siga en Studio: esperar ~3 min y revisar si apareció
 `<nombre>_autosetup`; si no, volver a pedirlo. Con `align_front_angle: true` sale casi siempre al primer intento.
