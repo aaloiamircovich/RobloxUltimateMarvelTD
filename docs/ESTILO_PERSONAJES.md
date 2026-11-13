@@ -47,6 +47,12 @@ Raros (13/11/2026, los 26): `star_lord`, `winter_soldier`, `she_hulk`, `war_mach
 (×0,8), `jubilee`, `luna_snow`, `mantis`, `ms_marvel`, `nebula`, `valkyrie`, `drax`, `cosmo` (×0,8), `lady_sif`,
 `heimdall`, `white_tiger`, `tigra`. Los animales se piden "standing upright on two legs" para que el armado los tome
 como R15. La moderación rechazó "face mask over the mouth"/"red star" y "hood up with shadowed face".
+Comunes (13/11/2026, 27 más; con Black Widow, Hawkeye y Korg están los 30): `ant_man`, `groot` (×1,15), `gamora`,
+`falcon`, `luke_cage`, `wasp`, `quake`, `medusa`, `punisher`, `jessica_jones`, `shuri`, `okoye`, `crystal`, `namora`,
+`triton`, `squirrel_girl`, `rocket_raccoon` (×0,8), `yelena_belova`, `mbaku`, `red_guardian`, `wong`, `yondu`,
+`maria_hill`, `echo`, `mockingbird`, `kate_bishop`, `howard_the_duck` (×0,8). La palabra "duck" no pasa la moderación:
+se describe como "head shaped like a white bird with an orange beak". Si un personaje no-humano sale sin cara, pedir
+"anime face: large friendly anime eyes".
 
 **Cómo escalar.** Escalar por la caja engaña cuando hay cuernos, martillos o capas: medir de los pies (`LeftFoot`) a
 la cabeza (`Head`) y comparar con Hawkeye (3,97 studs). Ojo: el Humanoid recoloca las piezas uno o dos frames después de
@@ -66,7 +72,7 @@ personaje base (servidor y retratos). Hechas (15): `thor_evolution`, `hulk_evolu
 Binary, Vision blanco, Storm diosa, Ghost Rider rey del infierno, Nova cósmico, Namor rey, Omega Iceman, Black Bolt,
 Hela, Emma diamante, Invisible Woman, Loki con libro de historias, The Maker, Beta Ray Bill con armadura). Tamaño
 medido de pies a cabeza: base = Hawkeye, evolución ×1,1; Hulk y Devil Dinosaur ×1,25 y la evolución de Hulk ×1,35;
-Jeff y Cosmo ×0,8; Korg más grande a propósito. El 12/11 se volvieron a medir y corregir todas las plantillas con el método de arriba.
+Groot ×1,15; Jeff, Cosmo, Rocket y Howard ×0,8; Korg más grande a propósito. El 12/11 se volvieron a medir y corregir todas las plantillas con el método de arriba.
 
 `auto_setup_avatar` suele devolver *timeout* aunque el armado siga en Studio: esperar ~3 min y revisar si apareció
 `<nombre>_autosetup`; si no, volver a pedirlo. Con `align_front_angle: true` sale casi siempre al primer intento.
