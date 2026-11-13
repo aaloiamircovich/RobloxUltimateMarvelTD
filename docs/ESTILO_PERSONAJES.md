@@ -45,8 +45,14 @@ Las **evoluciones** tienen modelo propio: `Plantillas.Heroes/<id de la evolució
 personaje base (servidor y retratos). Hechas (15): `thor_evolution`, `hulk_evolution`, `scarlet_witch_evolution`,
 `phoenix`, `silver_surfer_evolution`, `magneto_evolution`, `adam_warlock_evolution`, `sentry_evolution`,
 `profesor_x_evolution`, `iron_man_extremis`, `iron_spider`, `capitan_america_evolution`, `black_panther_evolution`,
-`doctor_strange_evolution`, `wolverine_evolution`. Tamaño: base ×1, evolución ×1,1; Hulk ×1,25 y su evolución ×1,35.
+`doctor_strange_evolution`, `wolverine_evolution`; y las 14 de los Legendarios nuevos (12/11/2026, `<id>_evolution`:
+Binary, Vision blanco, Storm diosa, Ghost Rider rey del infierno, Nova cósmico, Namor rey, Omega Iceman, Black Bolt,
+Hela, Emma diamante, Invisible Woman, Loki con libro de historias, The Maker, Beta Ray Bill con armadura). Tamaño
+medido de pies a cabeza: base = Hawkeye, evolución ×1,1; Hulk ×1,25 y su evolución ×1,35 (el 12/11 se igualaron
+así todas las evoluciones, algunas habían quedado chicas o grandes por medirlas con la caja).
 
 `auto_setup_avatar` suele devolver *timeout* aunque el armado siga en Studio: esperar ~3 min y revisar si apareció
 `<nombre>_autosetup`; si no, volver a pedirlo. Con `align_front_angle: true` sale casi siempre al primer intento.
-No lanzar varios a la vez.
+No lanzar varios a la vez. Errores pasajeros del servicio ("Failed to retrieve asset", 504, `IsPendingException`):
+reintentar más tarde; precargar las mallas con `ContentProvider:PreloadAsync` ayuda con el último. El generador de
+mallas admite ~12 pedidos seguidos; más allá devuelve "Rate limit exceeded".
