@@ -42,6 +42,11 @@ Legendarios (12/11/2026, 14 más; con Iron Man y Doctor Strange están los 16): 
 Épicos (12/11/2026, 20 más; con Spider-Man, Capitán América, Black Panther y Wolverine están los 24): `daredevil`,
 `shang_chi`, `moon_knight`, `cyclops`, `blade`, `domino`, `iron_fist`, `magik`, `gambit`, `human_torch`, `psylocke`,
 `venom`, `angela`, `deadpool`, `nightcrawler`, `rogue`, `beast`, `cable`, `miles_morales`, `x_23`.
+Raros (13/11/2026, los 26): `star_lord`, `winter_soldier`, `she_hulk`, `war_machine`, `nick_fury`, `elektra`, `cloak`,
+`dagger`, `black_cat`, `elsa_bloodstone`, `the_hood`, `devil_dinosaur` (×1,25), `peni_parker`, `jeff_the_land_shark`
+(×0,8), `jubilee`, `luna_snow`, `mantis`, `ms_marvel`, `nebula`, `valkyrie`, `drax`, `cosmo` (×0,8), `lady_sif`,
+`heimdall`, `white_tiger`, `tigra`. Los animales se piden "standing upright on two legs" para que el armado los tome
+como R15. La moderación rechazó "face mask over the mouth"/"red star" y "hood up with shadowed face".
 
 **Cómo escalar.** Escalar por la caja engaña cuando hay cuernos, martillos o capas: medir de los pies (`LeftFoot`) a
 la cabeza (`Head`) y comparar con Hawkeye (3,97 studs). Ojo: el Humanoid recoloca las piezas uno o dos frames después de
@@ -60,8 +65,8 @@ personaje base (servidor y retratos). Hechas (15): `thor_evolution`, `hulk_evolu
 `doctor_strange_evolution`, `wolverine_evolution`; y las 14 de los Legendarios nuevos (12/11/2026, `<id>_evolution`:
 Binary, Vision blanco, Storm diosa, Ghost Rider rey del infierno, Nova cósmico, Namor rey, Omega Iceman, Black Bolt,
 Hela, Emma diamante, Invisible Woman, Loki con libro de historias, The Maker, Beta Ray Bill con armadura). Tamaño
-medido de pies a cabeza: base = Hawkeye, evolución ×1,1; Hulk ×1,25 y su evolución ×1,35; Korg más grande a
-propósito. El 12/11 se volvieron a medir y corregir todas las plantillas con el método de arriba.
+medido de pies a cabeza: base = Hawkeye, evolución ×1,1; Hulk y Devil Dinosaur ×1,25 y la evolución de Hulk ×1,35;
+Jeff y Cosmo ×0,8; Korg más grande a propósito. El 12/11 se volvieron a medir y corregir todas las plantillas con el método de arriba.
 
 `auto_setup_avatar` suele devolver *timeout* aunque el armado siga en Studio: esperar ~3 min y revisar si apareció
 `<nombre>_autosetup`; si no, volver a pedirlo. Con `align_front_angle: true` sale casi siempre al primer intento.
