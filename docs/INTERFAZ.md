@@ -21,4 +21,10 @@ Decidido por el usuario el 14/11/2026.
 - **Música épica orquestal**: lobby (heroica, tranquila), partida (acción) y jefe (intensa, con coro).
 - Efectos previstos: clic, abrir panel, premio, invocación (normal y rara), colocar, mejorar, vender, ataque
   (flecha, rayo, impacto), muerte de enemigo, golpe a la base, inicio de oleada, llegada del jefe, victoria y derrota.
-- **Pendiente**: la cuenta de ForgeGUI no tiene créditos suficientes (cada música de 2 min pide 1600 y había 1024).
+- **Sistema listo, sin pistas todavía.** `src/client/Sonido.luau` tiene la tabla de IDs (`MUSICA` y `EFECTOS`) y el
+  reproductor; con el ID vacío no suena nada. `Musica.client.luau` pone música de lobby, de partida o de jefe (cuando
+  el mensaje de la oleada dice JEFE o hay jefe de raid) y suena oleada, jefe, golpe a la base, bajas (cuando sube el
+  dinero), victoria y derrota. Clic en todos los botones de `Comic`; colocar, mejorar y vender en la partida;
+  invocar en el banner. Falta: sonido por tipo de ataque (flecha, rayo, impacto).
+- **Pendiente**: ForgeGUI cobra un mínimo de **1600 créditos por pedido** (música de cualquier duración y también
+  efectos) y la cuenta tiene 1024. Al tener créditos: generar, publicar y pegar los IDs en `Sonido.luau`.

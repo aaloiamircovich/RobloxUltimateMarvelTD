@@ -1,6 +1,7 @@
 -- Estilo de interfaz tipo cómic Marvel: rojo intenso, amarillo/dorado de acento, borde negro grueso,
 -- paneles levemente inclinados y letras Bangers. Lo usan el HUD del lobby y los paneles.
 local Comic = {}
+local Sonido = require(script.Parent:WaitForChild("Sonido"))
 
 Comic.ROJO = Color3.fromRGB(200, 24, 32)
 Comic.ROJO_OSCURO = Color3.fromRGB(110, 10, 18)
@@ -64,7 +65,10 @@ function Comic.botonIcono(nombre: string, icono: string, props, padre, alClic)
 		Size = UDim2.new(1, -8, 0.72, 0),
 	}, b)
 	Comic.texto({ Text = nombre, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -2), Size = UDim2.new(1, -6, 0.26, 0) }, b)
-	b.Activated:Connect(alClic)
+	b.Activated:Connect(function()
+		Sonido.efecto("clic")
+		alClic()
+	end)
 	-- Pequeño rebote al apretar.
 	local escala = Comic.crear("UIScale", {}, b)
 	b.MouseButton1Down:Connect(function()
@@ -90,7 +94,10 @@ function Comic.boton(txt: string, props, padre, alClic)
 	props.TextWrapped = true
 	local b = Comic.crear("TextButton", props, padre)
 	Comic.borde(b, 3)
-	b.Activated:Connect(alClic)
+	b.Activated:Connect(function()
+		Sonido.efecto("clic")
+		alClic()
+	end)
 	return b
 end
 

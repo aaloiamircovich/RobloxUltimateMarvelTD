@@ -7,6 +7,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Comic = require(script.Parent:WaitForChild("Comic"))
+local Sonido = require(script.Parent:WaitForChild("Sonido"))
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Mapa = require(Shared.Mapa)
 local Despliegue = require(Shared.Despliegue)
@@ -281,9 +282,11 @@ local function refrescar()
 	abajo.Visible, lateral.Visible = fase ~= "fin", fase ~= "fin"
 end
 
-local function pedir(nombre: string, a: any?)
-	avisar(accion:InvokeServer(nombre, a))
+local function pedir(nombre: string, a: any?): string?
+	local err = accion:InvokeServer(nombre, a)
+	avisar(err)
 	refrescar()
+	return err
 end
 
 local function elegirTarjeta(ranura: number, id: string)
@@ -350,7 +353,9 @@ local function botonUnidad(txt: string, color: Color3, orden: number, alClic): T
 	return b
 end
 botonMejorar = botonUnidad("MEJORAR", Color3.fromRGB(200, 130, 20), 1, function()
-	pedir("mejorar", modo.uid)
+	if not pedir("mejorar", modo.uid) then
+		Sonido.efecto("mejorar")
+	end
 end)
 botonMejorar.Size = UDim2.new(1, 0, 0, 74)
 botonMejorar.RichText = true
@@ -367,7 +372,9 @@ botonMover = botonUnidad("✥ MOVER", Comic.ROJO, 4, function()
 	refrescar()
 end)
 botonVender = botonUnidad("VENDER", Comic.GRIS, 5, function()
-	pedir("vender", modo.uid)
+	if not pedir("vender", modo.uid) then
+		Sonido.efecto("vender")
+	end
 	modo = nil
 	refrescar()
 end)
@@ -733,6 +740,7 @@ UserInputService.InputBegan:Connect(function(input, procesado)
 		local err = accion:InvokeServer("colocar", modo.ranura, x, y)
 		avisar(err)
 		if not err then
+			Sonido.efecto("colocar")
 			modo = nil
 		end
 	elseif modo and modo.tipo == "mover" then

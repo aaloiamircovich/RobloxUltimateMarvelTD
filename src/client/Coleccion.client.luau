@@ -205,6 +205,9 @@ local function pantallaBanner()
 	for i, n in { 1, 10 } do
 		boton(`INVOCAR x{n} · 💎 {b.costo * n}`, { Position = UDim2.new(1, -440 + (i - 1) * 230, 1, -50), Size = UDim2.fromOffset(210, 50), TextSize = 18, BackgroundColor3 = if n == 1 then Color3.fromRGB(170, 120, 30) else Color3.fromRGB(190, 80, 40) }, cuerpo, function()
 			local res = pedir("invocar", n)
+			if res.nuevas then
+				require(script.Parent:WaitForChild("Sonido")).efecto("invocar")
+			end
 			ultimas = res.nuevas
 			mostrar()
 		end)
