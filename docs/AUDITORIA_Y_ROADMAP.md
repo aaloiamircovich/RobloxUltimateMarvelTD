@@ -32,7 +32,7 @@ sentirse precario. Referencias: Anime Galaxy, All Star Tower Defense y los TD de
    (o ProfileStore) antes de tener teleports.
 
 ### Contenido incompleto
-6. 🟡 (15/11: Instituto Xavier hecho, docs/MAPAS.md) **Mapas: 4 de 11.** El 2D tiene 11 (Instituto Xavier, Knowhere, Latveria, Asgard, Dimensión Oscura, Savage Land,
+6. 🟡 (15/11: Instituto Xavier y Knowhere hechos, docs/MAPAS.md) **Mapas: 4 de 11.** El 2D tiene 11 (Instituto Xavier, Knowhere, Latveria, Asgard, Dimensión Oscura, Savage Land,
    The Raft sin hacer). El juego se termina en pocas horas.
 7. ✅ (15/11) **Enemigos: 22 de 49 con modelo** (30 normales + 19 jefes en `enemies.json`). Los que no tienen modelo salen
    como bloque.

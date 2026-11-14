@@ -10,7 +10,7 @@ local Mapa = {}
 Mapa.ESCALA = 1 / 4 -- studs por píxel del 2D: el mapa mide 200×150 studs y una baldosa de 32 px, 8 (docs/PARTIDA.md)
 Mapa.ORIGEN = Vector3.new(300, 0, -40) -- lejos del HUB, que está en el centro
 Mapa.ANCHO, Mapa.ALTO = 800, 600 -- tamaño lógico del 2D (combat-data.js)
-Mapa.JUGABLES = { "level_1", "level_2", "level_3", "level_4", "level_5" } -- PLAYABLE_MISSIONS del 3D
+Mapa.JUGABLES = { "level_1", "level_2", "level_3", "level_4", "level_5", "level_6" } -- PLAYABLE_MISSIONS del 3D
 
 -- Códigos de TerrainRules.js del 2D.
 local AGUA, PASTO, CAMINO, MONTANA, BOSQUE, BLOQUEADO, VEREDA, DETALLE = 0, 1, 2, 3, 4, 5, 11, 12
@@ -97,6 +97,26 @@ local TEMAS = {
 		banda = Color3.fromRGB(244, 211, 94),
 		sueltos = { { "arbusto", 2.4, 160 }, { "flores", 1, 220 }, { "arbol", 7, 60 } },
 		motas = Color3.fromRGB(255, 236, 150),
+	},
+	-- Knowhere: colonia minera dentro de un cráneo Celestial; piso de roca oscura, plataformas de metal oxidado,
+	-- maquinaria en el vacío y neón rosa a los lados del camino (docs/MAPAS.md).
+	knowhere = {
+		aspecto = {
+			[CAMINO] = { color = Color3.fromRGB(80, 76, 92), alto = 1, material = Enum.Material.DiamondPlate },
+			[PASTO] = { color = Color3.fromRGB(58, 46, 66), alto = 1.4, material = Enum.Material.Rock },
+			[DETALLE] = { color = Color3.fromRGB(44, 34, 56), alto = 1.4, material = Enum.Material.Basalt },
+			[BLOQUEADO] = { color = Color3.fromRGB(28, 22, 38), alto = 1.4, material = Enum.Material.Slate },
+			[MONTANA] = { color = Color3.fromRGB(130, 104, 96), alto = 8, material = Enum.Material.CorrodedMetal, techo = "Hub_techo" },
+		},
+		detalle = "cristal", -- un racimo de cristales en cada veta
+		orilla = "neon",
+		orillaColor = Color3.fromRGB(255, 107, 214),
+		banda = Color3.fromRGB(255, 107, 214),
+		bandaMaterial = Enum.Material.Neon,
+		bancos = false,
+		arboles = false, -- sin el árbol del jardín del HUB de respaldo
+		sueltos = { { "cristal", 2.2, 120 } },
+		motas = Color3.fromRGB(255, 107, 214),
 	},
 }
 
@@ -228,6 +248,17 @@ local TERRENOS = {
 			return AGUA
 		end
 		return if ruido < 0.16 then BOSQUE else PASTO
+	end,
+	-- Knowhere: el camino baja por la columna 3, cruza la fila 5, baja por la 9, cruza la 11 y sale por la 17.
+	-- Plataformas mineras (altura) en las curvas y el vacío con maquinaria en las esquinas lejanas.
+	level_6 = function(x, y, ruido)
+		if (x >= 6 and x <= 7 and y >= 7 and y <= 9) or (x >= 11 and x <= 14 and y >= 8 and y <= 9) or (x <= 1 and y >= 1 and y <= 3) then
+			return MONTANA
+		end
+		if (x >= 14 and y <= 5) or (x <= 4 and y >= 10) then
+			return BLOQUEADO
+		end
+		return if ruido < 0.12 then DETALLE else PASTO
 	end,
 }
 
@@ -365,7 +396,7 @@ agregarDecorado = function(nivel, carpeta: Model, celdas, lado: number, origen: 
 	end
 	local estructuras = kits(nivel, "estructura")
 	local arbol = kit(nivel, "arbol")
-	if not arbol and (RunService:IsServer() or RunService:IsEdit()) then
+	if not arbol and estilo.arboles ~= false and (RunService:IsServer() or RunService:IsEdit()) then
 		local p = game:GetService("ServerStorage"):FindFirstChild("Plantillas")
 		local h = p and p:FindFirstChild("Hub")
 		arbol = h and h:FindFirstChild("arbol_jardin")
@@ -628,10 +659,10 @@ function Mapa.construir(nivel, origen: Vector3, padre: Instance): ({ Vector3 }, 
 		if estilo.orilla == "cordon" then
 			local medio = (a + b) / 2 + Vector3.new(0, 0.2, 0)
 			bloque(padre, CFrame.lookAt(medio, medio + (b - a)), Vector3.new(0.6, 0.5, (b - a).Magnitude), Color3.fromRGB(205, 205, 200), Enum.Material.Concrete)
-		elseif estilo.orilla == "runas" then
-			-- Filo de luz naranja embutido en los adoquines.
+		elseif estilo.orilla == "runas" or estilo.orilla == "neon" then
+			-- Filo de luz embutido en el piso (naranja en el Sanctum, del color del tema en los demás).
 			local medio = (a + b) / 2 + Vector3.new(0, 0.02, 0)
-			local p = bloque(padre, CFrame.lookAt(medio, medio + (b - a)), Vector3.new(0.25, 0.06, (b - a).Magnitude), Color3.fromRGB(255, 95, 20), Enum.Material.Neon)
+			local p = bloque(padre, CFrame.lookAt(medio, medio + (b - a)), Vector3.new(0.25, 0.06, (b - a).Magnitude), estilo.orillaColor or Color3.fromRGB(255, 95, 20), Enum.Material.Neon)
 			p.CanCollide = false
 		elseif estilo.orilla == "peligro" then
 			franjaPeligro(padre, a, b, 0.8)
@@ -817,7 +848,8 @@ function Mapa.construir(nivel, origen: Vector3, padre: Instance): ({ Vector3 }, 
 		d.Name = "Zona"
 		d.Anchored, d.CanCollide = true, false
 		d.Shape = Enum.PartType.Cylinder
-		d.Size = Vector3.new(0.2, zona.radius * 2 * Mapa.ESCALA, zona.radius * 2 * Mapa.ESCALA)
+		local radio = zona.radius or 34 -- el mismo radio que reserva Despliegue (Knowhere no lo trae)
+		d.Size = Vector3.new(0.2, radio * 2 * Mapa.ESCALA, radio * 2 * Mapa.ESCALA)
 		d.CFrame = CFrame.new(Mapa.aMundo(zona.x, zona.y, origen) + Vector3.new(0, 0.6, 0)) * CFrame.Angles(0, 0, math.rad(90))
 		d.Color = Color3.fromHex(zona.color or "#ffd166")
 		d.Material = Enum.Material.Neon

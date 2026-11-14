@@ -64,5 +64,10 @@ return function()
 	assert(Despliegue.error(heroes.korg, 220, 300, xavier, rutaX, {}) == "Celda reservada para una defensa de la misión.", "baliza reservada")
 	assert(Despliegue.terreno(xavier, 340, 420) == 0, "estanque de Xavier")
 	assert(Despliegue.terreno(xavier, 260, 180) == 3, "ala oeste de Xavier")
+	-- Knowhere: las zonas sin radio reservan 34 + 16 px; plataformas de altura junto al camino.
+	local knowhere = niveles[6]
+	local rutaK = Mapa.rutaPixeles(knowhere)
+	assert(Despliegue.error(heroes.korg, 260, 170, knowhere, rutaK, {}) == "Celda reservada para una defensa de la misión.", "carga reservada")
+	assert(Despliegue.terreno(knowhere, 280, 320) == 3 and Despliegue.terreno(knowhere, 500, 360) == 3, "plataformas de Knowhere")
 	return "OK: 4 mapas idénticos al 3D y los nuevos con su ruta"
 end
