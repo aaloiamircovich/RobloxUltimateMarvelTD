@@ -97,7 +97,7 @@ local function indiceNivel(mapaId: string): number?
 	return nil
 end
 
-local function iniciarPartida(miembros: { Player }, anfitrion: Player, mapaId: string, acto, pesadilla: boolean): string?
+local function problemaParaEmpezar(miembros: { Player }): string?
 	for _, j in miembros do
 		local perfil = Perfiles.de(j)
 		if not perfil then
@@ -109,6 +109,15 @@ local function iniciarPartida(miembros: { Player }, anfitrion: Player, mapaId: s
 		if partidaDe[j] then
 			return `{j.DisplayName} ya está en una partida`
 		end
+	end
+	return nil
+end
+
+-- Crea la partida en este mismo servidor (en Studio, o dentro de un servidor de partida).
+local function iniciarPartidaAqui(miembros: { Player }, anfitrion: Player, mapaId: string, acto, pesadilla: boolean): string?
+	local problema = problemaParaEmpezar(miembros)
+	if problema then
+		return problema
 	end
 	siguientePartida += 1
 	local id = "P" .. siguientePartida
@@ -130,6 +139,70 @@ local function iniciarPartida(miembros: { Player }, anfitrion: Player, mapaId: s
 		partidaDe[j] = p
 	end
 	return nil
+end
+
+--------------------------------------------------------------------------------
+-- Servidores de partida (docs/SERVIDORES.md): el lobby manda al grupo a un servidor reservado de este mismo
+-- lugar; ese servidor juega la partida y al volver los manda al lobby. En Studio no hay teletransporte:
+-- todo se juega en un solo servidor como antes.
+--------------------------------------------------------------------------------
+local TeleportService = game:GetService("TeleportService")
+local SERVIDOR_PARTIDA = game.PrivateServerId ~= "" and game.PrivateServerOwnerId == 0 -- servidor reservado
+local USAR_SERVIDORES = not RunService:IsStudio()
+
+local function enviarAPartida(miembros: { Player }, anfitrion: Player, mapaId: string, acto, pesadilla: boolean): string?
+	local problema = problemaParaEmpezar(miembros)
+	if problema then
+		return problema
+	end
+	local ok, codigo = pcall(TeleportService.ReserveServer, TeleportService, game.PlaceId)
+	if not ok then
+		warn(`[UMTD] ReserveServer: {codigo}`)
+		return "No se pudo crear el servidor de la partida. Probá de nuevo"
+	end
+	local ids = {}
+	for _, j in miembros do
+		table.insert(ids, j.UserId)
+		aviso:FireClient(j, "Viajando a la partida…")
+	end
+	local opciones = Instance.new("TeleportOptions")
+	opciones.ReservedServerAccessCode = codigo
+	opciones:SetTeleportData({ tipo = "partida", mapa = mapaId, acto = acto, pesadilla = pesadilla, anfitrion = anfitrion.UserId, jugadores = ids })
+	local okViaje, err = pcall(TeleportService.TeleportAsync, TeleportService, game.PlaceId, miembros, opciones)
+	if not okViaje then
+		warn(`[UMTD] TeleportAsync: {err}`)
+		return "No se pudo viajar a la partida. Probá de nuevo"
+	end
+	return nil
+end
+
+-- Punto de entrada único: en el lobby publicado viaja a un servidor reservado; si no, juega aquí.
+local function iniciarPartida(miembros: { Player }, anfitrion: Player, mapaId: string, acto, pesadilla: boolean): string?
+	if USAR_SERVIDORES and not SERVIDOR_PARTIDA then
+		return enviarAPartida(miembros, anfitrion, mapaId, acto, pesadilla)
+	end
+	return iniciarPartidaAqui(miembros, anfitrion, mapaId, acto, pesadilla)
+end
+
+-- Si el viaje falla después de empezar (red, servidor lleno), el jugador sigue acá: avisarle.
+TeleportService.TeleportInitFailed:Connect(function(j, _resultado, mensaje)
+	aviso:FireClient(j, `No se pudo viajar: {mensaje}. Probá de nuevo`)
+end)
+
+-- Vuelve al lobby público (desde un servidor de partida).
+local function volverAlLobby(jugadores: { Player }, mensaje: string?)
+	for _, j in jugadores do
+		if mensaje then
+			aviso:FireClient(j, mensaje)
+		end
+	end
+	local ok, err = pcall(TeleportService.TeleportAsync, TeleportService, game.PlaceId, jugadores)
+	if not ok then
+		warn(`[UMTD] Vuelta al lobby: {err}`)
+		for _, j in jugadores do
+			j:Kick("No se pudo volver al lobby. Volvé a entrar al juego.")
+		end
+	end
 end
 
 -- Saca al jugador de su partida y lo devuelve al HUB; la partida vacía se destruye.
@@ -191,7 +264,7 @@ local function resolverVotos(p)
 				partidas[p.id] = nil
 				arenas[p.arena] = nil
 				local anfitrion = if table.find(miembros, info.anfitrion) then info.anfitrion else miembros[1]
-				local fallo = iniciarPartida(miembros, anfitrion, mapa, acto, false)
+				local fallo = iniciarPartidaAqui(miembros, anfitrion, mapa, acto, false) -- siguiente mapa: en este mismo servidor
 				if fallo then
 					for _, j in miembros do
 						aviso:FireClient(j, fallo)
@@ -231,6 +304,9 @@ accion.OnServerInvoke = function(jugador, nombre, a, b, c)
 		salirDePartida(jugador)
 		if p and partidas[p.id] then
 			resolverVotos(p) -- los que quedan pueden haber quedado de acuerdo
+		end
+		if SERVIDOR_PARTIDA then
+			task.spawn(volverAlLobby, { jugador })
 		end
 		return nil
 	end
@@ -510,6 +586,75 @@ local function publicarSaldo(jugador: Player, perfil)
 	jugador:SetAttribute("Nucleos", perfil.cores)
 end
 
+-- Servidor de partida: junta a los que llegan con el viaje y arranca cuando están todos (o a los 20 s).
+local llegada = { config = nil, presentes = {}, empezo = false }
+
+-- Datos del viaje (los manda nuestro lobby; igual se validan: frontera de confianza).
+local function datosDeViaje(j: Player)
+	local ok, datos = pcall(j.GetJoinData, j)
+	local t = ok and type(datos) == "table" and datos.TeleportData
+	if type(t) ~= "table" or t.tipo ~= "partida" or type(t.mapa) ~= "string" or not indiceNivel(t.mapa) then
+		return nil
+	end
+	if not (validarActo(t.acto) or t.acto == "evento") or type(t.jugadores) ~= "table" or not table.find(t.jugadores, j.UserId) then
+		return nil
+	end
+	return t
+end
+
+local function arrancarLlegados()
+	if llegada.empezo then
+		return
+	end
+	llegada.empezo = true
+	local c = llegada.config
+	local miembros = {}
+	for _, j in llegada.presentes do
+		if j.Parent then
+			table.insert(miembros, j)
+		end
+	end
+	if #miembros == 0 then
+		return
+	end
+	-- Se vuelve a validar con los perfiles ya cargados en este servidor.
+	for _, j in miembros do
+		local perfil = Perfiles.de(j)
+		local problema = if not perfil then "Tu perfil no cargó" elseif c.acto == "evento" then nil elseif c.acto == "raid" then Raid.puedeEntrar(perfil, os.time()) else Actos.puedeJugar(perfil, c.mapa, c.acto, c.pesadilla == true)
+		if problema then
+			volverAlLobby(miembros, problema)
+			return
+		end
+	end
+	local anfitrion = miembros[1]
+	for _, j in miembros do
+		if j.UserId == c.anfitrion then
+			anfitrion = j
+		end
+	end
+	local fallo = iniciarPartidaAqui(miembros, anfitrion, c.mapa, c.acto, c.pesadilla == true)
+	if fallo then
+		volverAlLobby(miembros, fallo)
+	end
+end
+
+local function llegarAPartida(j: Player)
+	local t = datosDeViaje(j)
+	if llegada.empezo or not t or (llegada.config and t.mapa ~= llegada.config.mapa) then
+		volverAlLobby({ j }, "Esa partida ya empezó o no existe")
+		return
+	end
+	if not llegada.config then
+		llegada.config = t
+		task.delay(20, arrancarLlegados)
+	end
+	table.insert(llegada.presentes, j)
+	aviso:FireClient(j, "Preparando la partida…")
+	if #llegada.presentes >= #llegada.config.jugadores then
+		arrancarLlegados()
+	end
+end
+
 local function alEntrar(jugador: Player)
 	local perfil, problema = Perfiles.cargar(jugador)
 	publicarSaldo(jugador, perfil)
@@ -524,6 +669,9 @@ local function alEntrar(jugador: Player)
 	end
 	if problema then
 		aviso:FireClient(jugador, problema)
+	end
+	if SERVIDOR_PARTIDA and jugador.Parent then
+		llegarAPartida(jugador)
 	end
 end
 Players.PlayerAdded:Connect(alEntrar)
