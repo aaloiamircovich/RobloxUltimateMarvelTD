@@ -10,7 +10,7 @@ local Mapa = {}
 Mapa.ESCALA = 1 / 4 -- studs por píxel del 2D: el mapa mide 200×150 studs y una baldosa de 32 px, 8 (docs/PARTIDA.md)
 Mapa.ORIGEN = Vector3.new(300, 0, -40) -- lejos del HUB, que está en el centro
 Mapa.ANCHO, Mapa.ALTO = 800, 600 -- tamaño lógico del 2D (combat-data.js)
-Mapa.JUGABLES = { "level_1", "level_2", "level_3", "level_4" } -- PLAYABLE_MISSIONS del 3D
+Mapa.JUGABLES = { "level_1", "level_2", "level_3", "level_4", "level_5" } -- PLAYABLE_MISSIONS del 3D
 
 -- Códigos de TerrainRules.js del 2D.
 local AGUA, PASTO, CAMINO, MONTANA, BOSQUE, BLOQUEADO, VEREDA, DETALLE = 0, 1, 2, 3, 4, 5, 11, 12
@@ -86,6 +86,17 @@ local TEMAS = {
 		sueltosEn = { BLOQUEADO, PASTO },
 		sueltos = { { "arbol", 9, 300 }, { "arbusto", 2.8, 220 }, { "helecho", 2.2, 160 }, { "cristal", 2, 50 } },
 		motas = Color3.fromRGB(190, 140, 255),
+	},
+	-- Instituto Xavier: jardines con estanque y árboles, sendero de grava y la mansión de ladrillo arriba y abajo
+	-- (docs/MAPAS.md).
+	["x-mansion"] = {
+		aspecto = {
+			[CAMINO] = { color = Color3.fromRGB(196, 178, 150), alto = 1, material = Enum.Material.Pebble },
+			[MONTANA] = { color = Color3.fromRGB(222, 196, 160), alto = 10, material = Enum.Material.Brick, techo = "Hub_techo", techoMaterial = Enum.Material.Slate },
+		},
+		banda = Color3.fromRGB(244, 211, 94),
+		sueltos = { { "arbusto", 2.4, 160 }, { "flores", 1, 220 }, { "arbol", 7, 60 } },
+		motas = Color3.fromRGB(255, 236, 150),
 	},
 }
 
@@ -169,19 +180,16 @@ function Mapa.rutaPixeles(nivel): { { x: number, y: number } }
 end
 
 -- sanctumTerrain del 3D (GameLoop.generateLevelMap del 2D): ruido fijo y la ruta pintada en celdas de 40 px.
-local function terrenoSanctum(ruta)
+-- Grilla de 20×15 celdas de 40 px para los niveles sin terrainRows: `celda(x, y, ruido)` da el código de cada
+-- celda (x 0–19, y 0–14, ruido fijo 0–1) y después se pinta el camino de la ruta encima.
+local function terrenoDeRuta(ruta, celda: (number, number, number) -> number)
 	local lado, cols, filas = 40, 20, 15
 	local t = {}
 	for y = 0, filas - 1 do
 		local fila = {}
 		for x = 0, cols - 1 do
 			local valor = math.sin((x + 1) * 12.9898 + (y + 1) * 78.233) * 43758.5453
-			local ruido = valor - math.floor(valor)
-			local celda = if ruido < 0.05 then VEREDA elseif ruido < 0.13 then DETALLE elseif ruido < 0.18 then BOSQUE else PASTO
-			if y == 0 or y == filas - 1 or (x < 2 and y < 5) then
-				celda = MONTANA
-			end
-			fila[x + 1] = celda
+			fila[x + 1] = celda(x, y, valor - math.floor(valor))
 		end
 		t[y + 1] = fila
 	end
@@ -202,6 +210,27 @@ local function terrenoSanctum(ruta)
 	return t
 end
 
+local TERRENOS = {
+	-- Sanctum: azoteas arriba y abajo, adoquines, braseros y árboles sueltos.
+	level_4 = function(x, y, ruido)
+		if y == 0 or y == 14 or (x < 2 and y < 5) then
+			return MONTANA
+		end
+		return if ruido < 0.05 then VEREDA elseif ruido < 0.13 then DETALLE elseif ruido < 0.18 then BOSQUE else PASTO
+	end,
+	-- Instituto Xavier: la mansión arriba y abajo y dos alas junto a los tramos laterales del camino (unidades
+	-- de altura), y un estanque pegado al tramo de abajo (unidades de agua). El camino va por las columnas 4 y 15.
+	level_5 = function(x, y, ruido)
+		if y == 0 or y == 14 or (x >= 5 and x <= 6 and y >= 4 and y <= 8) or (x >= 13 and x <= 14 and y >= 6 and y <= 9) then
+			return MONTANA
+		end
+		if x >= 7 and x <= 12 and y >= 10 and y <= 11 then
+			return AGUA
+		end
+		return if ruido < 0.16 then BOSQUE else PASTO
+	end,
+}
+
 local cache = {}
 -- Grilla numérica (filas de códigos, 1-indexada) y lado de celda en px, como getMission del 3D.
 function Mapa.terreno(nivel): ({ { number } }, number)
@@ -211,8 +240,8 @@ function Mapa.terreno(nivel): ({ { number } }, number)
 	local grilla
 	if nivel.id == "level_2" then
 		grilla = require(Data.mapas.manhattan).rows
-	elseif nivel.id == "level_4" then
-		grilla = terrenoSanctum(Mapa.rutaPixeles(nivel))
+	elseif TERRENOS[nivel.id] then
+		grilla = terrenoDeRuta(Mapa.rutaPixeles(nivel), TERRENOS[nivel.id])
 	else
 		grilla = {}
 		for _, texto in nivel.rendering.terrainRows do

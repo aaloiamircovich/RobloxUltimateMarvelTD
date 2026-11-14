@@ -13,6 +13,13 @@ local Unidades = require(Shared.Unidades)
 local Banner = require(Shared.Banner)
 local Cuenta = require(Shared.Cuenta)
 local Actos = require(Shared.Actos)
+-- Prueba en Studio: workspace.PruebaMapas = true deja jugar cualquier mapa y acto sin abrirlos en el perfil.
+local function puedeJugar(perfil, mapa: string, acto, pesadilla: boolean?): string?
+	if RunService:IsStudio() and workspace:GetAttribute("PruebaMapas") then
+		return nil
+	end
+	return Actos.puedeJugar(perfil, mapa, acto, pesadilla)
+end
 local Temporada = require(Shared.Temporada)
 local Evento = require(Shared.Evento)
 local Raid = require(Shared.Raid)
@@ -267,7 +274,7 @@ local function resolverVotos(p)
 		local problema
 		for _, j in miembros do
 			local perfil = Perfiles.de(j)
-			problema = problema or (if not perfil then "Perfil no cargado" elseif acto == "evento" then nil elseif acto == "raid" then Raid.puedeEntrar(perfil, os.time()) else Actos.puedeJugar(perfil, mapa, acto, conPesadilla))
+			problema = problema or (if not perfil then "Perfil no cargado" elseif acto == "evento" then nil elseif acto == "raid" then Raid.puedeEntrar(perfil, os.time()) else puedeJugar(perfil, mapa, acto, conPesadilla))
 		end
 		if not problema then
 			if pesadilla and not conPesadilla then
@@ -423,7 +430,7 @@ local function datosHistoria(perfil)
 				numero = a,
 				jefe = jefe and jefe.name or "?",
 				premio = Actos.GEMAS_PRIMERA * a,
-				abierto = Actos.puedeJugar(perfil, id, a) == nil,
+				abierto = puedeJugar(perfil, id, a) == nil,
 				ganado = prog.normal >= a,
 				pesadilla = prog.pesadilla >= a,
 			})
@@ -466,7 +473,7 @@ salaRemota.OnServerInvoke = function(jugador, nombre, datos)
 		elseif acto == "raid" then
 			res.error = Raid.puedeEntrar(perfil, os.time())
 		else
-			res.error = Actos.puedeJugar(perfil, mapa, acto, datos.pesadilla == true)
+			res.error = puedeJugar(perfil, mapa, acto, datos.pesadilla == true)
 		end
 		if not res.error then
 			salirDeSala(jugador)
@@ -645,7 +652,7 @@ local function arrancarLlegados()
 	-- Se vuelve a validar con los perfiles ya cargados en este servidor.
 	for _, j in miembros do
 		local perfil = Perfiles.de(j)
-		local problema = if not perfil then "Tu perfil no cargó" elseif c.acto == "evento" then nil elseif c.acto == "raid" then Raid.puedeEntrar(perfil, os.time()) else Actos.puedeJugar(perfil, c.mapa, c.acto, c.pesadilla == true)
+		local problema = if not perfil then "Tu perfil no cargó" elseif c.acto == "evento" then nil elseif c.acto == "raid" then Raid.puedeEntrar(perfil, os.time()) else puedeJugar(perfil, c.mapa, c.acto, c.pesadilla == true)
 		if problema then
 			volverAlLobby(miembros, problema)
 			return

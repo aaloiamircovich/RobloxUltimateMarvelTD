@@ -256,6 +256,7 @@ function Partida.nueva(op)
 	local jefeVivo = nil -- el jefe de raid mientras está en el mapa (fases y daño por jugador)
 	-- shortcut: la barra muestra un solo jefe; si salen dos juntos, el segundo no aparece en la barra. Mejorar si hay oleadas con varios jefes.
 	local jefeBarra = nil -- el jefe que se ve en la barra de arriba (cualquier modo)
+	local balizasUsadas = {} -- [índice de zona] = true: balizas del Instituto Xavier ya usadas en esta oleada
 	local danoJefe = {} -- [Player] = daño hecho al jefe
 	local function nombreActo(): string
 		return if infinito then "Infinito" elseif esEvento then "Evento" elseif esRaid then "Raid" else tostring(op.acto)
@@ -952,14 +953,29 @@ function Partida.nueva(op)
 			end
 		end
 		actualizarPixeles()
-		-- Runas del Sanctum: marcan a los enemigos cercanos (+12 % de daño recibido).
+		-- Zonas de la misión (MissionSystem.updateLandmarks del 2D). Sanctum: las runas marcan hasta 4 enemigos
+		-- (+12 % de daño recibido). Instituto Xavier: cada baliza aturde 0,8 s a los 2 primeros, una vez por oleada.
 		local mecanica = NIVEL.mission and NIVEL.mission.mechanic
-		if mecanica and mecanica.type == "ward" then
-			for _, zona in mecanica.landmarks or {} do
+		if mecanica and (mecanica.type == "ward" or mecanica.type == "academy") then
+			for i, zona in mecanica.landmarks or {} do
+				if mecanica.type == "academy" and balizasUsadas[i] then
+					continue
+				end
+				local tope = if mecanica.type == "academy" then 2 else 4
+				local tocados = 0
 				for _, c in enPixeles do
-					if vivo(c.e) and math.sqrt((c.x - zona.x) ^ 2 + (c.y - zona.y) ^ 2) <= (zona.radius or 54) then
-						Combate.aplicarEstado(c.e, { type = "mark", duration = 0.4, power = 0.12 })
+					if tocados < tope and vivo(c.e) and math.sqrt((c.x - zona.x) ^ 2 + (c.y - zona.y) ^ 2) <= (zona.radius or 54) then
+						tocados += 1
+						if mecanica.type == "ward" then
+							Combate.aplicarEstado(c.e, { type = "mark", duration = 0.4, power = 0.12 })
+						else
+							Combate.aplicarEstado(c.e, { type = "stun", duration = 0.8, power = 1 })
+						end
 					end
+				end
+				if mecanica.type == "academy" and tocados > 0 then
+					balizasUsadas[i] = true
+					fijar("Mensaje", `Baliza {i} de la Sala de Peligro activada`)
 				end
 			end
 		end
@@ -1125,6 +1141,7 @@ function Partida.nueva(op)
 		while not terminada and n < total do
 			n += 1
 			fijar("Oleada", n)
+			table.clear(balizasUsadas)
 			fijar("Fase", "combate")
 			for j, d in p.jugadores do
 				d.saltar = false

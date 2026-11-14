@@ -1,4 +1,4 @@
--- Ruta y terreno de los 4 mapas jugables contra getMission del 3D (scripts/referencia-mapas.mjs),
+-- Ruta y terreno de los mapas jugables contra getMission del 3D (los que el 3D no tenía, contra el path del 2D) (scripts/referencia-mapas.mjs),
 -- más las celdas reservadas de Sanctum.
 -- Ejecutar en Studio: scripts/correr-pruebas.luau
 return function()
@@ -19,6 +19,24 @@ return function()
 		end
 		local esperado = ref[id]
 		local ruta = Mapa.rutaPixeles(nivel)
+		if not esperado then
+			-- Mapas que el 3D no tenía (Instituto Xavier en adelante): terreno propio de 20×15; se comprueba que
+			-- la ruta sea la del 2D y que todas sus celdas sean camino.
+			local p1, pn = nivel.path[1], nivel.path[#nivel.path]
+			-- rutaPixeles alarga la ruta una celda afuera por cada punta (portón y base).
+			assert(ruta[2].x == p1.x and ruta[2].y == p1.y and ruta[#ruta - 1].x == pn.x and ruta[#ruta - 1].y == pn.y, `{id}: extremos de la ruta`)
+			local grilla, lado = Mapa.terreno(nivel)
+			assert(#grilla == 15 and #grilla[1] == 20 and lado == 40, `{id}: tamaño de la grilla`)
+			for i = 2, #ruta - 2 do
+				local a, b = ruta[i], ruta[i + 1]
+				for k = 0, 10 do
+					local x, y = a.x + (b.x - a.x) * k / 10, a.y + (b.y - a.y) * k / 10
+					local fila = grilla[math.clamp(math.floor(y / lado) + 1, 1, 15)]
+					assert(fila[math.clamp(math.floor(x / lado) + 1, 1, 20)] == 2, `{id}: la ruta pasa por una celda que no es camino ({x}, {y})`)
+				end
+			end
+			continue
+		end
 		assert(#ruta == #esperado.ruta, `{id}: {#ruta} puntos de ruta ≠ {#esperado.ruta}`)
 		for i, p in esperado.ruta do
 			assert(ruta[i].x == p.x and ruta[i].y == p.y, `{id}: punto {i} de la ruta`)
@@ -39,5 +57,12 @@ return function()
 	local ruta = Mapa.rutaPixeles(sanctum)
 	assert(Despliegue.error(heroes.korg, 240, 320, sanctum, ruta, {}) == "Celda reservada para una defensa de la misión.", "runa reservada")
 	assert(not Despliegue.reservada(sanctum, 100, 100), "lejos de las runas no hay reserva")
-	return "OK: 4 mapas idénticos al 3D"
+
+	-- Instituto Xavier: las balizas reservan su zona (radio 54 + 16 px) y hay agua y altura al alcance.
+	local xavier = niveles[5]
+	local rutaX = Mapa.rutaPixeles(xavier)
+	assert(Despliegue.error(heroes.korg, 220, 300, xavier, rutaX, {}) == "Celda reservada para una defensa de la misión.", "baliza reservada")
+	assert(Despliegue.terreno(xavier, 340, 420) == 0, "estanque de Xavier")
+	assert(Despliegue.terreno(xavier, 260, 180) == 3, "ala oeste de Xavier")
+	return "OK: 4 mapas idénticos al 3D y los nuevos con su ruta"
 end
