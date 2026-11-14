@@ -53,11 +53,17 @@ Los encargados no giran ni hablan: sólo su reposo. Se definen con `personaje` y
   lobby), de 72 × 72 studs y 24 de alto antes de agrandar: piso, paredes con columnas cada 12 studs, techo,
   zócalos de luz, focos (cálido al centro y del color de acento en las esquinas) y polvo flotando. Para las
   estaciones funcionan como una isla más (`lugar()`). Los muebles son modelos generados (`Plantillas.Hub/int_*`).
-- **Sanctum Sanctorum** (mejorado el 15/11/2026): Doctor Strange junto a la ventana del sello; círculo mágico
-  que gira en el piso (lo gira `Hub.animar` como el sello del portal) con chispas; estanterías de libros, el Ojo
-  de Agamotto, la Capa de Levitación, un atril con el Libro de los Vishanti, una alfombra, un candelabro colgante
-  y libros flotando con brillo; un **balcón** de madera por tres paredes a 12 studs, con barandas, y una
-  **escalera** de 12 escalones contra la pared +X.
+- **Sanctum Sanctorum** (rehecho el 15/11/2026 a partir de tres fotos de referencia que pasó el usuario;
+  `extrasSanctum` en `Hub.luau`): paredes de **madera oscura** con molduras doradas y apliques de luz cálida en
+  las columnas; **piso lustrado** (refleja) con incrustaciones de bronce (dos anillos y ocho rayos alrededor del
+  círculo mágico); **techo artesonado** (vigas cruzadas cada 8 studs con filete dorado); el **ventanal redondo**
+  de 22 studs en la pared del fondo, sobre una **tarima** con dos escalones y barandas de bronce, con los
+  **parantes curvos** dibujados con arcos de bronce oscuro, luz que entra (`SurfaceLight`) y polvo flotando en el
+  haz; **vitrinas** de vidrio con reliquias a los costados, un **cofre** tallado, un **escritorio** antiguo con
+  lámpara, una **estatua** dorada, estanterías, el atril con el Libro de los Vishanti, la alfombra, el candelabro,
+  el Ojo de Agamotto y la Capa de Levitación sobre la tarima, libros flotando y Doctor Strange. Balcones con
+  **barandas de bronce** en las paredes de los costados (en el fondo no, para no tapar el ventanal) y la escalera.
+  El neón del ventanal es de un color medio a propósito: más claro encandila y tapa los parantes.
 - **Laboratorio de la Torre Baxter** (mejorado el 15/11/2026): Sue y Johnny Storm junto a Mister Fantastic;
   **portal a la Zona Negativa** en la pared +X (marco generado y remolino violeta con partículas y luz);
   **ventanal** de vidrio en la pared −X con rascacielos afuera (da al cielo vacío: del otro lado, +X, está el

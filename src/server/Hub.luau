@@ -196,25 +196,29 @@ end
 -- entra por la puerta de un edificio. Para las estaciones funcionan como una isla más (pos y radio).
 -- muebles: { plantilla de Plantillas.Hub, x, z, alto, giro en grados } relativos al centro del piso.
 local INTERIORES = {
+	-- Sanctum: inspirado en las fotos de referencia del usuario (docs/LOBBY.md): madera oscura con molduras doradas,
+	-- piso lustrado con incrustaciones de bronce, techo artesonado, ventanal redondo sobre una tarima, vitrinas
+	-- con reliquias, cofre y barandas de bronce.
 	sanctum_interior = {
-		pos = Vector3.new(70, 170, 420), radio = 34, alto = 24, edificio = "sanctum", nombre = "Sanctum Sanctorum",
-		piso = "madera", pared = "6b2a22", columna = "3e1712", material = Enum.Material.Brick,
-		luz = "ffb46a", acento = "b77cff", sello = true, balcon = true, circulo = true,
-		personajes = { { "doctor_strange", 10, -28, 0 } },
+		pos = Vector3.new(70, 170, 420), radio = 34, alto = 28, edificio = "sanctum", nombre = "Sanctum Sanctorum",
+		piso = "madera", pared = "2b1d15", columna = "180f0a", material = Enum.Material.Wood,
+		luz = "ffd49a", acento = "ffb46a", brillo = 0.7, estilo = "sanctum", balcon = true, circulo = true,
+		personajes = { { "doctor_strange", 12, -23, 0 } },
 		muebles = {
-			{ "int_estanteria", -34, -18, 9, 90 }, { "int_estanteria", -34, 0, 9, 90 }, { "int_estanteria", -34, 18, 9, 90 },
-			{ "int_estanteria", 34, -18, 9, -90 },
-			{ "int_artefacto", -16, -24, 5, 0 }, { "int_capa", 20, -26, 6, 0 },
-			{ "int_atril", -16, 14, 4.5, 135 }, { "int_alfombra", 0, 26, 0.4, 0 },
+			{ "int_vitrina", -34, -20, 8, 90 }, { "int_vitrina", -34, -8, 8, 90 }, { "int_estanteria", -34, 6, 9, 90 },
+			{ "int_estanteria", -34, 20, 9, 90 }, { "int_vitrina", 34, -20, 8, -90 }, { "int_vitrina", 34, -8, 8, -90 },
+			{ "int_artefacto", -12, -31, 5, 0, 2 }, { "int_capa", 12, -31, 6, 0, 2 },
+			{ "int_atril", -16, 14, 4.5, 135 }, { "int_alfombra", 0, 26, 0.4, 0 }, { "int_cofre", 13, 15, 3, -20 },
+			{ "int_escritorio", -21, 26, 4, 90 }, { "int_estatua", 22, 30, 6, 200 },
 		},
 		-- Libros flotando (alto sobre el piso).
-		flotantes = { { "int_libro", -26, -8, 7 }, { "int_libro", -24, 10, 9 }, { "int_libro", 26, -12, 8 }, { "int_libro", -12, -30, 10 }, { "int_libro", 14, 20, 6 } },
-		colgantes = { { "int_candelabro", 0, 0, 6 } },
+		flotantes = { { "int_libro", -26, -2, 8 }, { "int_libro", -22, 12, 10 }, { "int_libro", 24, -14, 9 }, { "int_libro", -8, 22, 7 } },
+		colgantes = { { "int_candelabro", 0, 4, 6 } },
 	},
 	baxter_interior = {
 		pos = Vector3.new(-70, 170, 420), radio = 34, alto = 24, edificio = "torre_baxter", nombre = "Laboratorio de la Torre Baxter",
 		piso = "metal", pared = "dfe6ee", columna = "9fb3c8", material = Enum.Material.SmoothPlastic,
-		luz = "b6dcff", acento = "4fa3ff", ventanal = true, zonaNegativa = true, logo = true,
+		luz = "b6dcff", acento = "4fa3ff", brillo = 1, ventanal = true, zonaNegativa = true, logo = true,
 		personajes = { { "invisible_woman", -14, -25, 0 }, { "human_torch", 14, -25, 0 } },
 		muebles = {
 			{ "int_consola", -22, -34, 6, 0 }, { "int_consola", 22, -34, 6, 0 },
@@ -835,6 +839,120 @@ marcador = function(padre, nombre: string, cf: CFrame): Part
 	return p
 end
 
+local BRONCE = Color3.fromRGB(181, 140, 72)
+
+-- Sanctum como en las fotos de referencia: molduras doradas y apliques en las paredes, techo artesonado,
+-- incrustaciones de bronce en el piso lustrado y el ventanal redondo sobre una tarima con escalones y barandas.
+local function extrasSanctum(m, c: Vector3, r: number, alto: number, datos)
+	local madera = Color3.fromHex(datos.columna)
+	-- Molduras doradas en las cuatro paredes (la del medio no cruza el ventanal del fondo).
+	for _, d in { Vector3.new(1, 0, 0), Vector3.new(-1, 0, 0), Vector3.new(0, 0, 1), Vector3.new(0, 0, -1) } do
+		for _, y in if d.Z < 0 then { 3, alto - 2 } else { 3, 11, alto - 2 } do
+			parte(m, BRONCE, CFrame.new(c + d * (r - 0.55) + Vector3.new(0, y, 0)), if d.X ~= 0 then Vector3.new(0.2, 0.35, r * 2) else Vector3.new(r * 2, 0.35, 0.2), Enum.Material.Metal)
+		end
+		-- Apliques de luz cálida en las columnas.
+		local tangente = Vector3.new(math.abs(d.Z), 0, math.abs(d.X))
+		for k = -r + 6, r - 6, 12 do
+			if d.Z < 0 and math.abs(k) < 13 then
+				continue -- delante del ventanal no hay columnas
+			end
+			local base = c + d * (r - 1.9) + tangente * k + Vector3.new(0, 8, 0)
+			parte(m, BRONCE, CFrame.new(base), Vector3.new(0.6, 1.2, 0.6), Enum.Material.Metal)
+			local foco = parte(m, "ffd49a", CFrame.new(base + Vector3.new(0, 1, 0)), Vector3.new(0.8, 0.8, 0.8), Enum.Material.Neon)
+			foco.Shape = Enum.PartType.Ball
+			local l = Instance.new("PointLight")
+			l.Color, l.Range, l.Brightness = Color3.fromRGB(255, 200, 140), 14, 0.9
+			l.Parent = foco
+		end
+	end
+	-- Techo artesonado: vigas cruzadas cada 8 studs con filete dorado.
+	for k = -r + 4, r - 4, 8 do
+		parte(m, madera, CFrame.new(c + Vector3.new(k, alto - 0.8, 0)), Vector3.new(1.2, 1.6, r * 2), Enum.Material.Wood)
+		parte(m, madera, CFrame.new(c + Vector3.new(0, alto - 0.8, k)), Vector3.new(r * 2, 1.6, 1.2), Enum.Material.Wood)
+		parte(m, BRONCE, CFrame.new(c + Vector3.new(k, alto - 1.65, 0)), Vector3.new(0.3, 0.1, r * 2), Enum.Material.Metal)
+	end
+	-- Incrustaciones de bronce en el piso: dos anillos alrededor del círculo mágico y ocho rayos entre ellos.
+	local centro = c + Vector3.new(0, 0.03, 6)
+	for _, radio in { 11, 22 } do
+		local n = 40
+		for i = 1, n do
+			local a = (i - 0.5) / n * math.pi * 2
+			local p = centro + Vector3.new(math.cos(a) * radio, 0, math.sin(a) * radio)
+			local seg = parte(m, BRONCE, CFrame.lookAt(p, p + Vector3.new(-math.sin(a), 0, math.cos(a))), Vector3.new(0.35, 0.06, radio * 2 * math.pi / n + 0.1), Enum.Material.Metal)
+			seg.CanCollide = false
+		end
+	end
+	for i = 0, 7 do
+		local a = i / 8 * math.pi * 2
+		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+		local rayo = parte(m, BRONCE, CFrame.lookAt(centro + dir * 16.5, centro + dir * 30), Vector3.new(0.25, 0.06, 11), Enum.Material.Metal)
+		rayo.CanCollide = false
+	end
+	-- Tarima del ventanal contra la pared del fondo, con dos escalones y barandas de bronce a los costados.
+	local fondo = -r + 1
+	texturar(parte(m, madera, CFrame.new(c + Vector3.new(0, 1, fondo + 5)), Vector3.new(32, 2, 10)), "madera")
+	for k, alturaEscalon in { 1.33, 0.66 } do
+		texturar(parte(m, madera, CFrame.new(c + Vector3.new(0, alturaEscalon / 2, fondo + 9.25 + k * 1.5)), Vector3.new(14, alturaEscalon, 1.5)), "madera")
+	end
+	for _, x in { -11.5, 11.5 } do
+		parte(m, BRONCE, CFrame.new(c + Vector3.new(x, 4.6, fondo + 10)), Vector3.new(9, 0.3, 0.3), Enum.Material.Metal)
+		for k = -4, 4, 2 do
+			parte(m, BRONCE, CFrame.new(c + Vector3.new(x + k, 3.4, fondo + 10)), Vector3.new(0.22, 2.6, 0.22), Enum.Material.Metal)
+		end
+	end
+	-- Ventanal redondo: disco de luz cálida, marco generado con los parantes curvos, luz que entra y polvo en el haz.
+	local cfV = CFrame.new(c + Vector3.new(0, 15, -r + 0.7))
+	-- Neón de color medio: más claro encandila y tapa los parantes del marco.
+	local disco0 = parte(m, "b49c74", cfV * CFrame.Angles(0, math.rad(90), 0), Vector3.new(0.2, 22, 22), Enum.Material.Neon)
+	disco0.Shape = Enum.PartType.Cylinder
+	local entra = Instance.new("SurfaceLight")
+	entra.Face = Enum.NormalId.Left -- el eje del cilindro mira al salón
+	entra.Color, entra.Range, entra.Brightness, entra.Angle = Color3.fromRGB(255, 236, 205), 60, 1.8, 75
+	entra.Parent = disco0
+	local marco = plantilla("int_ventanal")
+	if marco then
+		local v = clonar(marco, "Y", 24)
+		v:PivotTo(cfV * CFrame.new(0, 0, 0.6))
+		v.Parent = m
+	else
+		-- Sin modelo: el sello de Strange sobre el disco.
+		local sello = Instance.new("Decal")
+		sello.Texture = "rbxassetid://" .. SELLO
+		sello.Face = Enum.NormalId.Left
+		sello.Parent = disco0
+	end
+	-- Parantes curvos (como en las fotos): arcos de círculos corridos, recortados dentro del ventanal, y un aro chico
+	-- al centro. Tramos rectos cortos de bronce oscuro delante del disco de luz.
+	local RV = 10.6
+	local arcos = { { 7.5, 0, 11 }, { -7.5, 0, 11 }, { 0, 7.5, 11 }, { 0, -7.5, 11 }, { 0, 0, 3.2 } }
+	for _, arco in arcos do
+		local prev
+		for i = 0, 72 do
+			local a = i / 72 * math.pi * 2
+			local x, y = arco[1] + math.cos(a) * arco[3], arco[2] + math.sin(a) * arco[3]
+			local dentro = x * x + y * y < RV * RV
+			local p = (cfV * CFrame.new(x, y, 0.5)).Position
+			if dentro and prev then
+				local tramo = parte(m, "4a3524", CFrame.lookAt((prev + p) / 2, p), Vector3.new(0.45, 0.3, (p - prev).Magnitude + 0.15), Enum.Material.Metal)
+				tramo.CanCollide = false
+			end
+			prev = if dentro then p else nil
+		end
+	end
+	local haz = parte(m, "ffffff", cfV * CFrame.new(0, -6, 12), Vector3.new(18, 16, 22))
+	haz.Transparency, haz.CanCollide, haz.CanQuery, haz.CanTouch = 1, false, false, false
+	local motas = Instance.new("ParticleEmitter")
+	motas.Color = ColorSequence.new(Color3.fromRGB(255, 240, 210))
+	motas.LightEmission = 0.8
+	motas.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.2), NumberSequenceKeypoint.new(1, 1) })
+	motas.Size = NumberSequence.new(0.15)
+	motas.Lifetime = NumberRange.new(5, 8)
+	motas.Rate = 45
+	motas.Speed = NumberRange.new(0.2, 0.5)
+	motas.SpreadAngle = Vector2.new(180, 180)
+	motas.Parent = haz
+end
+
 -- Sala cerrada de un interior: piso, paredes con columnas, techo, luces, polvo flotando, muebles, personajes y la
 -- puerta de salida (pared +Z); después, los extras de cada lugar (balcón, círculo, ventanal, portal, logo).
 local function construirInterior(padre, id: string, datos)
@@ -842,7 +960,11 @@ local function construirInterior(padre, id: string, datos)
 	m.Name = "Interior_" .. id
 	local c, r, alto = datos.pos, datos.radio + 2, datos.alto
 	local colorPared, luz, acento = Color3.fromHex(datos.pared), Color3.fromHex(datos.luz), Color3.fromHex(datos.acento)
-	texturar(parte(m, "ffffff", CFrame.new(c - Vector3.new(0, 0.5, 0)), Vector3.new(r * 2, 1, r * 2)), datos.piso)
+	local piso = parte(m, "ffffff", CFrame.new(c - Vector3.new(0, 0.5, 0)), Vector3.new(r * 2, 1, r * 2))
+	texturar(piso, datos.piso)
+	if datos.estilo == "sanctum" then
+		piso.Reflectance = 0.18 -- piso lustrado
+	end
 	parte(m, colorPared, CFrame.new(c + Vector3.new(0, alto + 0.5, 0)), Vector3.new(r * 2, 1, r * 2), datos.material)
 	for _, d in { Vector3.new(1, 0, 0), Vector3.new(-1, 0, 0), Vector3.new(0, 0, 1), Vector3.new(0, 0, -1) } do
 		local tam = if d.X ~= 0 then Vector3.new(1, alto, r * 2) else Vector3.new(r * 2, alto, 1)
@@ -855,6 +977,9 @@ local function construirInterior(padre, id: string, datos)
 		-- Zócalo de luz al pie y columnas cada 12 studs.
 		parte(m, luz, CFrame.new(c + d * (r - 0.6) + Vector3.new(0, 0.2, 0)), if d.X ~= 0 then Vector3.new(0.3, 0.3, r * 2) else Vector3.new(r * 2, 0.3, 0.3), Enum.Material.Neon)
 		for k = -r + 6, r - 6, 12 do
+			if datos.estilo == "sanctum" and d.Z < 0 and math.abs(k) < 13 then
+				continue -- el ventanal del Sanctum ocupa el centro de la pared del fondo
+			end
 			parte(m, datos.columna, CFrame.new(c + d * (r - 0.9) + tangente * k + Vector3.new(0, alto / 2, 0)), Vector3.new(1.6, alto, 1.6), datos.material)
 		end
 	end
@@ -863,7 +988,7 @@ local function construirInterior(padre, id: string, datos)
 		local color = if i == 1 then luz else acento
 		local foco = parte(m, color, CFrame.new(c + esquina * (r * 0.55) + Vector3.new(0, alto - 0.6, 0)), Vector3.new(2.4, 0.4, 2.4), Enum.Material.Neon)
 		local l = Instance.new("PointLight")
-		l.Color, l.Range, l.Brightness = color, 36, if i == 1 then 2 else 1.4
+		l.Color, l.Range, l.Brightness = color, 36, (if i == 1 then 2 else 1.4) * datos.brillo
 		l.Parent = foco
 	end
 	-- Polvo flotando en todo el salón.
@@ -894,7 +1019,7 @@ local function construirInterior(padre, id: string, datos)
 		-- Los que van contra una pared se apoyan en ella (x o z = ±radio).
 		local x = if math.abs(mu[2]) >= datos.radio then math.sign(mu[2]) * (r - 1.6) else mu[2]
 		local z = if math.abs(mu[3]) >= datos.radio then math.sign(mu[3]) * (r - 1.6) else mu[3]
-		poner(mu[1], x, z, mu[4], mu[5])
+		poner(mu[1], x, z, mu[4], mu[5], mu[6])
 	end
 	for _, f in datos.flotantes do
 		local libro = poner(f[1], f[2], f[3], 1.2, (f[2] * 37) % 360, f[4])
@@ -968,10 +1093,16 @@ local function construirInterior(padre, id: string, datos)
 		for _, tramo in {
 			{ Vector3.new(-r + ancho / 2, 0, 0), Vector3.new(ancho, 0.8, r * 2), Vector3.new(-r + ancho, 0, 0), Vector3.new(0.4, 3, r * 2 - ancho * 2) },
 			{ Vector3.new(r - ancho / 2, 0, -r / 2), Vector3.new(ancho, 0.8, r), Vector3.new(r - ancho, 0, -r / 2 - 3), Vector3.new(0.4, 3, r - ancho - 6) },
-			{ Vector3.new(0, 0, -r + ancho / 2), Vector3.new(r * 2, 0.8, ancho), Vector3.new(0, 0, -r + ancho), Vector3.new(r * 2 - ancho * 2, 3, 0.4) },
 		} do
+			-- (Sin balcón en la pared del fondo: ahí va el ventanal.)
 			texturar(parte(m, madera, CFrame.new(c + tramo[1] + Vector3.new(0, y0, 0)), tramo[2]), "madera")
-			parte(m, "3e2414", CFrame.new(c + tramo[3] + Vector3.new(0, y0 + 1.9, 0)), tramo[4], Enum.Material.Wood)
+			-- Baranda de bronce: pasamanos y postes cada 3 studs.
+			parte(m, BRONCE, CFrame.new(c + tramo[3] + Vector3.new(0, y0 + 3.2, 0)), Vector3.new(math.max(tramo[4].X, 0.35), 0.35, math.max(tramo[4].Z, 0.35)), Enum.Material.Metal)
+			local largo = math.max(tramo[4].X, tramo[4].Z)
+			local eje = if tramo[4].X > tramo[4].Z then Vector3.new(1, 0, 0) else Vector3.new(0, 0, 1)
+			for k = -largo / 2, largo / 2, 3 do
+				parte(m, BRONCE, CFrame.new(c + tramo[3] + eje * k + Vector3.new(0, y0 + 1.8, 0)), Vector3.new(0.25, 2.8, 0.25), Enum.Material.Metal)
+			end
 		end
 		-- Escalera contra la pared +X: sube de z = +24 a z = 0 (12 escalones de 1 stud).
 		for k = 1, 12 do
@@ -1051,6 +1182,9 @@ local function construirInterior(padre, id: string, datos)
 			local pantalla = parte(m, "4fa3ff", CFrame.new(c + Vector3.new(x, 14, -r + 0.7)), Vector3.new(14, 7, 0.2), Enum.Material.Neon)
 			pantalla.Transparency = 0.15
 		end
+	end
+	if datos.estilo == "sanctum" then
+		extrasSanctum(m, c, r, alto, datos)
 	end
 	-- Entrada: se aparece de espaldas a la puerta de salida, mirando al fondo (la estación).
 	local salida = CFrame.lookAt(c + Vector3.new(0, 0, r - 0.6), c)
