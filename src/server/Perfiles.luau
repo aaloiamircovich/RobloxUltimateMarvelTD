@@ -180,19 +180,65 @@ local function conReintentos(f)
 	return false, res
 end
 
--- Carga el perfil. Si el DataStore falla, el jugador juega con un perfil nuevo que NO se guarda,
--- para no pisar sus datos reales. Devuelve el perfil y un aviso para mostrar, si corresponde.
-function Perfiles.cargar(jugador: Player): ({ any }, string?)
-	local ok, res = conReintentos(function()
-		almacen = almacen or DataStoreService:GetDataStore("PerfilesUMTD_v1")
+-- Guardado con ProfileStore (src/server/ProfileStore.luau, Apache 2.0, licencias/): bloqueo de sesión, así el
+-- mismo jugador en dos servidores (p. ej. al teletransportarse a una partida) no pisa ni duplica sus datos.
+-- Almacén v2; la primera vez se copia lo que había en v1 (que queda intacto como respaldo).
+local ALMACEN_NUEVO, ALMACEN_VIEJO = "PerfilesUMTD_v2", "PerfilesUMTD_v1"
+local tienda -- se crea al primer uso: requerir ProfileStore arranca tareas de DataStore (no en las pruebas)
+
+-- Lee el perfil del almacén viejo para migrarlo. Devuelve (ok, datos o nil).
+local function leerViejo(jugador: Player)
+	return conReintentos(function()
+		almacen = almacen or DataStoreService:GetDataStore(ALMACEN_VIEJO)
 		return almacen:GetAsync(clave(jugador))
 	end)
-	local entrada = { datos = Perfiles.normalizar(if ok then res else nil), guardable = ok, sucio = false }
-	perfiles[jugador] = entrada
-	if not ok then
-		warn(`[UMTD] No se pudo cargar el perfil de {jugador.Name}: {res}`)
+end
+
+-- Carga el perfil y toma la sesión. Si no se puede, el jugador juega con un perfil nuevo que NO se guarda,
+-- para no pisar sus datos reales. Devuelve el perfil y un aviso para mostrar, si corresponde.
+function Perfiles.cargar(jugador: Player): ({ any }, string?)
+	local ProfileStore = require(script.Parent:WaitForChild("ProfileStore"))
+	tienda = tienda or ProfileStore.New(ALMACEN_NUEVO, {})
+	local perfil = tienda:StartSessionAsync(clave(jugador), {
+		Cancel = function()
+			return jugador.Parent == nil
+		end,
+	})
+	if not perfil then
+		local entrada = { datos = Perfiles.normalizar(nil), guardable = false, sucio = false }
+		perfiles[jugador] = entrada
+		warn(`[UMTD] No se pudo abrir la sesión del perfil de {jugador.Name}`)
 		return entrada.datos, "No se pudo cargar tu progreso: esta sesión no se guardará"
 	end
+	if jugador.Parent == nil then
+		perfil:EndSession()
+		return Perfiles.normalizar(nil), nil
+	end
+	perfil:AddUserId(jugador.UserId)
+	-- Primera vez en v2: traer los datos de v1. Si v1 no responde, no se arranca de cero (se perdería todo al guardar).
+	local crudo = perfil.Data
+	if next(crudo) == nil then
+		local ok, viejo = leerViejo(jugador)
+		if not ok then
+			perfil:EndSession()
+			local entrada = { datos = Perfiles.normalizar(nil), guardable = false, sucio = false }
+			perfiles[jugador] = entrada
+			return entrada.datos, "No se pudo cargar tu progreso: esta sesión no se guardará"
+		end
+		crudo = viejo
+	end
+	perfil.Data = Perfiles.normalizar(crudo)
+	local entrada = { datos = perfil.Data, guardable = true, sucio = false, sesion = perfil }
+	perfiles[jugador] = entrada
+	-- Si otro servidor se queda con la sesión, este deja de guardar y saca al jugador.
+	perfil.OnSessionEnd:Connect(function()
+		if perfiles[jugador] == entrada then
+			perfiles[jugador] = nil
+		end
+		if jugador.Parent then
+			jugador:Kick("Tu partida se abrió en otro servidor. Volvé a entrar.")
+		end
+	end)
 	return entrada.datos, nil
 end
 
@@ -208,26 +254,24 @@ function Perfiles.marcar(jugador: Player)
 	end
 end
 
--- shortcut: sin bloqueo de sesión; si el mismo jugador entra a dos servidores a la vez gana el último guardado.
+-- ProfileStore autoguarda cada 5 min y al cerrar; esto adelanta el guardado cuando hubo cambios (fin de partida,
+-- compras) para perder lo menos posible si el servidor se cae.
 function Perfiles.guardar(jugador: Player)
 	local e = perfiles[jugador]
-	if not e or not e.guardable or not e.sucio then
+	if not e or not e.guardable or not e.sucio or not e.sesion or not e.sesion:IsActive() then
 		return
 	end
-	local copia = table.clone(e.datos)
-	local ok, err = conReintentos(function()
-		almacen:SetAsync(clave(jugador), copia, { jugador.UserId })
-	end)
-	if ok then
-		e.sucio = false
-	else
-		warn(`[UMTD] No se pudo guardar el perfil de {jugador.Name}: {err}`)
-	end
+	e.sucio = false
+	e.sesion:Save()
 end
 
+-- Al salir: último guardado y se libera la sesión para que otro servidor pueda tomarla.
 function Perfiles.soltar(jugador: Player)
-	Perfiles.guardar(jugador)
+	local e = perfiles[jugador]
 	perfiles[jugador] = nil
+	if e and e.sesion and e.sesion:IsActive() then
+		e.sesion:EndSession()
+	end
 end
 
 function Perfiles.guardarTodos()
