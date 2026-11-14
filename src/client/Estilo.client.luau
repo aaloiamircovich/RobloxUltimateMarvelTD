@@ -85,6 +85,7 @@ end
 
 -- Botones para celular / mouse (arriba a la izquierda, libre en el lobby y en la partida).
 local botones = Comic.crear("Frame", { Position = UDim2.fromOffset(16, 10), Size = UDim2.fromOffset(140, 64), BackgroundTransparency = 1 }, gui)
+Comic.escalar(botones)
 Comic.crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8) }, botones)
 local botonMontar = Comic.boton("🛹 G", { Size = UDim2.fromOffset(64, 56), TextSize = 22 }, botones, montar)
 Comic.boton("💃 B", { Size = UDim2.fromOffset(64, 56), TextSize = 22, BackgroundColor3 = Color3.fromRGB(150, 30, 90) }, botones, alternarRueda)

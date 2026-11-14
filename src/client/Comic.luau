@@ -118,6 +118,25 @@ function Comic.panel(gui: Instance, titulo: string, tamano: UDim2)
 	return p, cuerpo
 end
 
+-- Escala un bloque del HUD según la pantalla (diseño base 1280×720, PC primero; docs/INTERFAZ.md).
+Comic.BASE_ANCHO, Comic.BASE_ALTO = 1280, 720
+function Comic.escala(): number
+	local v = workspace.CurrentCamera.ViewportSize
+	return math.clamp(math.min(v.X / Comic.BASE_ANCHO, v.Y / Comic.BASE_ALTO), 0.55, 1.35)
+end
+function Comic.escalar(bloque: GuiObject, alCambiar: ((number) -> ())?)
+	local escala = Comic.crear("UIScale", {}, bloque)
+	local camara = workspace.CurrentCamera
+	local function ajustar()
+		escala.Scale = Comic.escala()
+		if alCambiar then
+			alCambiar(escala.Scale)
+		end
+	end
+	camara:GetPropertyChangedSignal("ViewportSize"):Connect(ajustar)
+	ajustar()
+end
+
 -- Retrato 3D del personaje (modelo de ReplicatedStorage.Retratos) o, si no tiene modelo, sus iniciales.
 function Comic.retrato(padre: GuiObject, id: string, nombre: string, color: Color3, respaldo: string?)
 	local retratos = game:GetService("ReplicatedStorage"):FindFirstChild("Retratos")

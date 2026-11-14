@@ -861,15 +861,19 @@ local function pronto(que: string)
 end
 
 --------------------------------------------------------------------------------
--- Botones: columna izquierda (como Anime Galaxy) y derecha
+-- Disposición «barras compactas» (docs/INTERFAZ.md): columnas de íconos a los costados, monedas y nivel arriba,
+-- escuadrón abajo y ¡JUGAR! abajo a la derecha. Diseñado para 1280×720; cada bloque se escala con la pantalla.
 --------------------------------------------------------------------------------
-local izquierda = Comic.crear("Frame", { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 16, 0.5, 20), Size = UDim2.fromOffset(232, 470), BackgroundTransparency = 1 }, gui)
-Comic.botonIcono("TIENDA", Iconos.tienda, { Size = UDim2.fromOffset(232, 120), BackgroundColor3 = Color3.fromRGB(40, 150, 60) }, izquierda, function()
-	abrir("tienda")
-end)
-local grilla = Comic.crear("Frame", { Position = UDim2.fromOffset(0, 132), Size = UDim2.fromOffset(232, 338), BackgroundTransparency = 1 }, izquierda)
-Comic.crear("UIGridLayout", { CellSize = UDim2.fromOffset(110, 104), CellPadding = UDim2.fromOffset(12, 12), SortOrder = Enum.SortOrder.LayoutOrder }, grilla)
+local LADO = 84
+local escalar = Comic.escalar
+
+local grilla = Comic.crear("Frame", { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 12, 0.5, 0), Size = UDim2.fromOffset(LADO, 6 * LADO + 5 * 8), BackgroundTransparency = 1 }, gui)
+Comic.crear("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }, grilla)
+escalar(grilla)
 local BOTONES_IZQ = {
+	{ "TIENDA", "tienda", function()
+		abrir("tienda")
+	end },
 	{ "UNIDADES", "unidades", function()
 		usarHud:FireServer("unidades")
 	end },
@@ -887,17 +891,28 @@ local BOTONES_IZQ = {
 		pedirTemporada("estado")
 		abrir("pase")
 	end },
-	{ "¡JUGAR!", "jugar", function()
-		abrir("jugar")
-	end },
 }
 for i, b in BOTONES_IZQ do
-	local boton = Comic.botonIcono(b[1], Iconos[b[2]], { LayoutOrder = i, BackgroundColor3 = if b[2] == "jugar" then Color3.fromRGB(230, 150, 20) else Comic.ROJO }, grilla, b[3])
+	local boton = Comic.botonIcono(b[1], Iconos[b[2]], { LayoutOrder = i, Size = UDim2.fromOffset(LADO, LADO), BackgroundColor3 = if b[2] == "tienda" then Comic.VERDE else Comic.ROJO }, grilla, b[3])
 	boton.Name = b[2]
 end
 
-local derecha = Comic.crear("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -16, 0.5, 0), Size = UDim2.fromOffset(104, 452), BackgroundTransparency = 1 }, gui)
-Comic.crear("UIListLayout", { Padding = UDim.new(0, 12) }, derecha)
+-- ¡JUGAR!: el botón principal, grande y abajo a la derecha.
+local jugar = Comic.botonIcono("¡JUGAR!", Iconos.jugar, { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -16, 1, -16), Size = UDim2.fromOffset(190, 120), BackgroundColor3 = Color3.fromRGB(230, 150, 20) }, gui, function()
+	abrir("jugar")
+end)
+jugar.Name = "jugar"
+-- En ventanas angostas el escuadrón llega a la esquina: ahí ¡JUGAR! sube por encima de él.
+escalar(jugar, function(s)
+	local v = workspace.CurrentCamera.ViewportSize
+	local anchoEscuadron = (6 * 92 + 5 * 8) * s
+	local choca = v.X / 2 + anchoEscuadron / 2 > v.X - 16 - 190 * s
+	jugar.Position = UDim2.new(1, -16, 1, if choca then -(16 + (92 + 12) * s) else -16)
+end)
+
+local derecha = Comic.crear("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, -40), Size = UDim2.fromOffset(LADO, 4 * LADO + 3 * 8), BackgroundTransparency = 1 }, gui)
+Comic.crear("UIListLayout", { Padding = UDim.new(0, 8) }, derecha)
+escalar(derecha)
 for _, b in {
 	{ "VIAJAR", "teleport", function()
 		abrir("teleport")
@@ -912,28 +927,34 @@ for _, b in {
 		abrir("log")
 	end },
 } do
-	Comic.botonIcono(b[1], Iconos[b[2]], { Size = UDim2.fromOffset(104, 104) }, derecha, b[3])
+	Comic.botonIcono(b[1], Iconos[b[2]], { Size = UDim2.fromOffset(LADO, LADO) }, derecha, b[3])
 end
 
 --------------------------------------------------------------------------------
--- Abajo: monedas, escuadrón y nivel de cuenta
+-- Arriba: monedas y nivel de cuenta
 --------------------------------------------------------------------------------
-local abajo = Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -10), Size = UDim2.fromOffset(780, 230), BackgroundTransparency = 1 }, gui)
-
-local monedas = Comic.crear("Frame", { Size = UDim2.new(1, 0, 0, 46), BackgroundTransparency = 1 }, abajo)
-Comic.crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 18), HorizontalAlignment = Enum.HorizontalAlignment.Center }, monedas)
+local arriba = Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), Size = UDim2.fromOffset(540, 76), BackgroundTransparency = 1 }, gui)
+escalar(arriba)
+local monedas = Comic.crear("Frame", { Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1 }, arriba)
+Comic.crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 14), HorizontalAlignment = Enum.HorizontalAlignment.Center }, monedas)
 local etiquetas = {}
 for _, m in { { "Gemas", "💎", Color3.fromRGB(120, 60, 200) }, { "Creditos", "💰", Color3.fromRGB(190, 130, 20) }, { "Nucleos", "🔷", Color3.fromRGB(30, 110, 200) } } do
-	local f = Comic.crear("Frame", { Size = UDim2.fromOffset(170, 44), BackgroundColor3 = m[3], Rotation = -2 }, monedas)
+	local f = Comic.crear("Frame", { Size = UDim2.fromOffset(160, 38), BackgroundColor3 = m[3], Rotation = -2 }, monedas)
 	Comic.borde(f, 3)
 	etiquetas[m[1]] = Comic.texto({ Text = m[2] .. " …", Size = UDim2.new(1, -16, 1, -6), Position = UDim2.fromOffset(8, 3) }, f)
 	etiquetas[m[1]]:SetAttribute("Simbolo", m[2])
 end
 
-local casillas = Comic.crear("Frame", { Position = UDim2.fromOffset(0, 58), Size = UDim2.new(1, 0, 0, 120), BackgroundTransparency = 1 }, abajo)
-Comic.crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 10), HorizontalAlignment = Enum.HorizontalAlignment.Center }, casillas)
+--------------------------------------------------------------------------------
+-- Abajo: escuadrón
+--------------------------------------------------------------------------------
+local CASILLA = 92
+local abajo = Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12), Size = UDim2.fromOffset(6 * CASILLA + 5 * 8, CASILLA), BackgroundTransparency = 1 }, gui)
+escalar(abajo)
+local casillas = Comic.crear("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, abajo)
+Comic.crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), HorizontalAlignment = Enum.HorizontalAlignment.Center }, casillas)
 
-local barraNivel = Comic.crear("Frame", { Position = UDim2.fromOffset(60, 190), Size = UDim2.new(1, -120, 0, 30), BackgroundColor3 = Comic.FONDO }, abajo)
+local barraNivel = Comic.crear("Frame", { Position = UDim2.fromOffset(70, 50), Size = UDim2.new(1, -140, 0, 24), BackgroundColor3 = Comic.FONDO }, arriba)
 Comic.borde(barraNivel, 3)
 local relleno = Comic.crear("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Comic.AMARILLO }, barraNivel)
 Comic.crear("UICorner", { CornerRadius = UDim.new(0, 6) }, relleno)
@@ -959,17 +980,17 @@ local function dibujarEscuadron()
 		end
 		local h = u and Personajes.de(u.heroId)
 		local cerrada = i > abiertas
-		local c = Comic.crear("TextButton", { Text = "", Size = UDim2.fromOffset(118, 118), BackgroundColor3 = if h then Comic.ROJO_OSCURO elseif cerrada then Color3.fromRGB(45, 45, 52) else Color3.fromRGB(70, 22, 28) }, casillas)
+		local c = Comic.crear("TextButton", { Text = "", Size = UDim2.fromOffset(CASILLA, CASILLA), BackgroundColor3 = if h then Comic.ROJO_OSCURO elseif cerrada then Color3.fromRGB(45, 45, 52) else Color3.fromRGB(70, 22, 28) }, casillas)
 		Comic.borde(c, 3)
 		if h then
 			c:FindFirstChildOfClass("UIStroke").Color = COLOR_RAREZA[h.rarity] or Comic.NEGRO
-			Comic.texto({ Text = h.name, Position = UDim2.fromOffset(6, 8), Size = UDim2.new(1, -12, 0, 40), TextWrapped = true }, c)
-			Comic.texto({ Text = `Nv {u.level}`, TextColor3 = Comic.AMARILLO, Position = UDim2.fromOffset(6, 52), Size = UDim2.new(1, -12, 0, 24) }, c)
-			Comic.texto({ Text = `💰 {Mejoras.costoColocar(h)}`, Font = Comic.TEXTO, TextSize = 15, Position = UDim2.fromOffset(6, 84), Size = UDim2.new(1, -12, 0, 22) }, c)
+			Comic.texto({ Text = h.name, Position = UDim2.fromOffset(5, 6), Size = UDim2.new(1, -10, 0, 32), TextWrapped = true }, c)
+			Comic.texto({ Text = `Nv {u.level}`, TextColor3 = Comic.AMARILLO, Position = UDim2.fromOffset(5, 40), Size = UDim2.new(1, -10, 0, 20) }, c)
+			Comic.texto({ Text = `💰 {Mejoras.costoColocar(h)}`, Font = Comic.TEXTO, TextSize = 13, Position = UDim2.fromOffset(5, 66), Size = UDim2.new(1, -10, 0, 18) }, c)
 		elseif cerrada then
-			Comic.texto({ Text = `🔒 Nv {Cuenta.nivelCasilla(i) or "?"}`, Size = UDim2.new(1, -12, 0, 40), Position = UDim2.new(0, 6, 0.5, -20) }, c)
+			Comic.texto({ Text = `🔒 Nv {Cuenta.nivelCasilla(i) or "?"}`, Size = UDim2.new(1, -10, 0, 32), Position = UDim2.new(0, 5, 0.5, -16) }, c)
 		else
-			Comic.texto({ Text = "+ Vacía", Size = UDim2.new(1, -12, 0, 40), Position = UDim2.new(0, 6, 0.5, -20) }, c)
+			Comic.texto({ Text = "+ Vacía", Size = UDim2.new(1, -10, 0, 32), Position = UDim2.new(0, 5, 0.5, -16) }, c)
 		end
 		c.Activated:Connect(function()
 			if not cerrada then
@@ -1032,6 +1053,7 @@ task.spawn(function()
 	local coleccionGui = jugador:WaitForChild("PlayerGui"):WaitForChild("Coleccion")
 	coleccionGui:GetPropertyChangedSignal("Enabled"):Connect(function()
 		abajo.Visible = not coleccionGui.Enabled -- el panel ocupa el centro: no mostrar el escuadrón detrás
+		jugar.Visible = abajo.Visible
 		if not coleccionGui.Enabled then
 			pedirEstado()
 		end

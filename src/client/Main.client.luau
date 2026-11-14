@@ -608,7 +608,44 @@ local previa = disco()
 previa.Size = Vector3.new(0.3, 4, 4)
 local anillo = disco()
 anillo.Color = Comic.AMARILLO
-mouse.TargetFilter = previa
+-- Al colocar: personaje fantasma, anillo de alcance verde/rojo y cartel con el motivo si no se puede.
+local carpetaPrevia = crear("Folder", { Name = "VistaPrevia" }, workspace)
+previa.Parent = carpetaPrevia
+local anilloPrevia = disco()
+anilloPrevia.Parent = carpetaPrevia
+mouse.TargetFilter = carpetaPrevia
+-- Motivo por el que no se puede colocar, junto al puntero.
+local cartelPrevia = crear("Frame", { AnchorPoint = Vector2.new(0.5, 1), Size = UDim2.fromOffset(240, 32), BackgroundColor3 = Comic.ROJO_OSCURO, Visible = false, ZIndex = 20 }, gui)
+Comic.borde(cartelPrevia, 2)
+local textoPrevia = texto({ Font = Comic.TEXTO, TextSize = 16, Size = UDim2.fromScale(1, 1), ZIndex = 21 }, cartelPrevia)
+local fantasma, fantasmaDe = nil, nil
+local function ponerFantasma(heroeId: string?)
+	if fantasmaDe == heroeId then
+		return
+	end
+	if fantasma then
+		fantasma:Destroy()
+		fantasma = nil
+	end
+	fantasmaDe = heroeId
+	local retratos = heroeId and game:GetService("ReplicatedStorage"):FindFirstChild("Retratos")
+	local plantilla = retratos and (retratos:FindFirstChild(heroeId) or retratos:FindFirstChild(Personajes.base(heroeId)))
+	if not plantilla then
+		return
+	end
+	fantasma = plantilla:Clone()
+	for _, d in fantasma:GetDescendants() do
+		if d:IsA("BasePart") then
+			-- Sólo la raíz anclada: el Humanoid acomoda el resto del esqueleto (anclar todo deja las piezas desarmadas).
+			d.Anchored = d.Name == "HumanoidRootPart"
+			d.CanCollide, d.CanQuery, d.CastShadow = false, false, false
+			d.Transparency = math.max(d.Transparency, 0.45)
+		elseif d:IsA("Script") or d:IsA("LocalScript") then
+			d:Destroy()
+		end
+	end
+	fantasma.Parent = carpetaPrevia
+end
 
 local function unidadesActuales()
 	local l = {}
@@ -641,6 +678,9 @@ RunService.RenderStepped:Connect(function()
 
 	local heroeId = enBatalla() and modo and (modo.tipo == "colocar" or modo.tipo == "mover") and modo.heroe
 	previa.Transparency = if heroeId then 0.4 else 1
+	anilloPrevia.Transparency = if heroeId then 0.8 else 1
+	cartelPrevia.Visible = false
+	ponerFantasma(heroeId or nil)
 	if not heroeId then
 		return
 	end
@@ -649,8 +689,23 @@ RunService.RenderStepped:Connect(function()
 	local config = Progresion.paraDespliegue(heroes[heroeId], 1)
 	local err, cx, cy = Despliegue.error(config, x, y, NIVEL, rutaPx, unidadesActuales(), moviendo or nil, true, true)
 	local suelo = origen + Vector3.new(cx * Mapa.ESCALA, Mapa.alturaSuelo(NIVEL, cx, cy) + 0.2, cy * Mapa.ESCALA)
+	local color = if err then Color3.fromRGB(230, 70, 70) else Color3.fromRGB(70, 230, 110)
 	previa.CFrame = CFrame.new(suelo) * CFrame.Angles(0, 0, math.rad(90))
-	previa.Color = if err then Color3.fromRGB(230, 70, 70) else Color3.fromRGB(70, 230, 110)
+	previa.Color = color
+	local alcance = (config.range or 0) * Mapa.ESCALA
+	anilloPrevia.Size = Vector3.new(0.1, alcance * 2, alcance * 2)
+	anilloPrevia.CFrame = CFrame.new(suelo + Vector3.new(0, 0.05, 0)) * CFrame.Angles(0, 0, math.rad(90))
+	anilloPrevia.Color = color
+	cartelPrevia.Visible = err ~= nil
+	textoPrevia.Text = err or ""
+	cartelPrevia.Position = UDim2.fromOffset(mouse.X, mouse.Y - 90)
+	if fantasma then
+		-- Pies sobre el suelo, mirando hacia la cámara como al colocarse.
+		local pie = fantasma:FindFirstChild("LeftFoot")
+		local alto = if pie then fantasma:GetPivot().Position.Y - (pie.Position.Y - pie.Size.Y / 2) else 2
+		local camara = workspace.CurrentCamera.CFrame.Position
+		fantasma:PivotTo(CFrame.lookAt(suelo + Vector3.new(0, alto, 0), Vector3.new(camara.X, suelo.Y + alto, camara.Z)))
+	end
 end)
 
 local TECLAS = { Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four, Enum.KeyCode.Five, Enum.KeyCode.Six }
