@@ -16,8 +16,9 @@ sin ForgeGUI); cada mapa con **su mecánica del 2D** portada (`MissionSystem.js`
    automática falla, repetir con `segmentation = "none"`.
 4. Sumar el id a `Mapa.JUGABLES` y `Actos.MAPAS` (orden de desbloqueo). Enemigos y jefes ya están por facción en
    `Oleadas.luau`.
-5. **Probar** en Studio con `workspace.PruebaMapas = true` (abre todos los mapas y actos sin abrirlos en el perfil, aunque una victoria sí se guarda;
-   sólo en Studio) y sacarlo al terminar.
+5. **Probar** en Studio con `workspace.PruebaMapas = true` (abre todos los mapas y actos sin abrirlos en el perfil)
+   y `workspace.PerfilDePrueba = true` (juega con una copia en memoria del perfil real: ganar, gastar o abrir mapas
+   no llega al DataStore). Los dos son sólo de Studio; sacarlos al terminar.
 
 ## Hechos
 | Mapa | Terreno | Mecánica |
@@ -45,3 +46,18 @@ sin ForgeGUI); cada mapa con **su mecánica del 2D** portada (`MissionSystem.js`
 
 ## Estado
 Los 11 mapas del 2D son jugables (15/11/2026).
+
+## Dificultad (prueba del 15/11/2026)
+Acto 1 de los 11 mapas con el escuadrón de la cuenta de prueba (Hawkeye, Triton y Dagger nivel 6; cuenta nivel 3),
+a ×3, con un script que coloca en la primera celda válida más cerca del camino y mejora con lo que gana.
+- **Originales**: Base de los Vengadores y Nueva York llegan a la oleada 10 (jefe); Wakanda y Sanctum caen en la 5.
+- **Nuevos**: caen entre la oleada 1 (Instituto Xavier) y la 3 (Knowhere). No es un problema de los mapas: la vida
+  de las oleadas viene del 2D y crece con la posición del mapa. El **acto 1 de cada mapa nuevo es ~10 veces más
+  fácil que el acto 5 del anterior** (oleada 5: Sanctum acto 5 = 147.227 de vida; Xavier acto 1 = 15.543), así que
+  quien llega ahí lo pasa. Rareza heredada del 2D: el acto 1 del Instituto Xavier (15.543) es un poco más difícil
+  que su acto 2 (13.889) por las aperturas con Centinelas.
+- Con dinero de partida ilimitado (unidades al máximo): Latveria llega a la oleada 9 y su **sabotaje se disparó 8
+  veces** (verificado); la Dimensión Oscura cae en la 3. Ahí las dos runas (radio 72 + 16 de reserva) ocupan las
+  curvas del camino, que son los mejores lugares, y la paradoja acelera la mitad del tiempo: las dos cosas son del 2D.
+- **Sin probar**: un escuadrón realista de quien ya pasó el mapa anterior (habría que armar un perfil de prueba
+  con unidades de ese nivel).

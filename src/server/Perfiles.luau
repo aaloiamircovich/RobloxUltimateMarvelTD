@@ -205,7 +205,10 @@ end
 function Perfiles.cargar(jugador: Player): ({ any }, string?)
 	local ProfileStore = require(script.Parent:WaitForChild("ProfileStore"))
 	tienda = tienda or ProfileStore.New(ALMACEN_NUEVO, {})
-	local perfil = tienda:StartSessionAsync(clave(jugador), {
+	-- Prueba en Studio: workspace.PerfilDePrueba = true juega con una copia en memoria del perfil real
+	-- (ProfileStore.Mock): se puede ganar, gastar o abrir mapas sin que nada llegue al DataStore.
+	local prueba = game:GetService("RunService"):IsStudio() and workspace:GetAttribute("PerfilDePrueba") == true
+	local perfil = (if prueba then tienda.Mock else tienda):StartSessionAsync(clave(jugador), {
 		Cancel = function()
 			return jugador.Parent == nil
 		end,
@@ -223,6 +226,11 @@ function Perfiles.cargar(jugador: Player): ({ any }, string?)
 	perfil:AddUserId(jugador.UserId)
 	-- Primera vez en v2: traer los datos de v1. Si v1 no responde, no se arranca de cero (se perdería todo al guardar).
 	local crudo = perfil.Data
+	if prueba and next(crudo) == nil then
+		local real = tienda:GetAsync(clave(jugador)) -- sólo lectura: no toma la sesión ni guarda
+		crudo = if real then table.clone(real.Data) else {}
+		warn(`[UMTD] Perfil de prueba en memoria para {jugador.Name}: nada de esta sesión se guarda`)
+	end
 	if next(crudo) == nil then
 		local ok, viejo = leerViejo(jugador)
 		if not ok then
