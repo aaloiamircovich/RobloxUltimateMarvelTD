@@ -10,7 +10,7 @@ local Mapa = {}
 Mapa.ESCALA = 1 / 4 -- studs por píxel del 2D: el mapa mide 200×150 studs y una baldosa de 32 px, 8 (docs/PARTIDA.md)
 Mapa.ORIGEN = Vector3.new(300, 0, -40) -- lejos del HUB, que está en el centro
 Mapa.ANCHO, Mapa.ALTO = 800, 600 -- tamaño lógico del 2D (combat-data.js)
-Mapa.JUGABLES = { "level_1", "level_2", "level_3", "level_4", "level_5", "level_6", "level_7", "level_8", "level_9", "level_10" } -- PLAYABLE_MISSIONS del 3D
+Mapa.JUGABLES = { "level_1", "level_2", "level_3", "level_4", "level_5", "level_6", "level_7", "level_8", "level_9", "level_10", "level_11" } -- PLAYABLE_MISSIONS del 3D
 
 -- Códigos de TerrainRules.js del 2D.
 local AGUA, PASTO, CAMINO, MONTANA, BOSQUE, BLOQUEADO, VEREDA, DETALLE = 0, 1, 2, 3, 4, 5, 11, 12
@@ -191,6 +191,24 @@ local TEMAS = {
 		sueltosEn = { BLOQUEADO, PASTO },
 		sueltos = { { "arbol", 9, 260 }, { "helecho", 2.2, 180 }, { "arbusto", 2.8, 150 }, { "hueso", 2.4, 25 } },
 		motas = Color3.fromRGB(230, 255, 140),
+	},
+	-- The Raft: cubierta de acero de la prisión en el mar, pasillo con franjas de peligro, bloques de celdas y
+	-- torres (altura), mar alrededor (agua), celdas de energía en la esquina y luces rojas de emergencia (docs/MAPAS.md).
+	["the-raft"] = {
+		aspecto = {
+			[CAMINO] = { color = Color3.fromRGB(150, 156, 166), alto = 1, material = Enum.Material.Metal, variante = "Hub_hangar" },
+			[PASTO] = { color = Color3.fromRGB(70, 82, 100), alto = 1.4, material = Enum.Material.DiamondPlate },
+			[DETALLE] = { color = Color3.fromRGB(46, 56, 72), alto = 1.4, material = Enum.Material.Metal },
+			[BLOQUEADO] = { color = Color3.fromRGB(40, 46, 58), alto = 1.4, material = Enum.Material.Concrete },
+			[MONTANA] = { color = Color3.fromRGB(110, 118, 130), alto = 9, material = Enum.Material.Concrete, techo = "Hub_techo", techoColor = Color3.fromRGB(90, 96, 108) },
+		},
+		orilla = "peligro",
+		banda = Color3.fromRGB(255, 60, 60),
+		bandaMaterial = Enum.Material.Neon,
+		bancos = false,
+		arboles = false,
+		sueltos = { { "cajas", 2, 70 } },
+		motas = Color3.fromRGB(88, 214, 255),
 	},
 }
 
@@ -409,6 +427,21 @@ local TERRENOS = {
 			return BLOQUEADO
 		end
 		return if ruido < 0.05 then DETALLE elseif ruido < 0.2 then BOSQUE else PASTO
+	end,
+	-- The Raft: el camino entra por la fila 4, baja por la columna 5, cruza la 10, sube por la 10, cruza la 5, baja
+	-- por la 16 y sale por la 12. Bloques de celdas y torres entre los tramos (altura), mar arriba a la izquierda y
+	-- abajo (agua), celdas de energía arriba a la derecha.
+	level_11 = function(x, y, ruido)
+		if (x >= 7 and x <= 8 and y >= 6 and y <= 8) or (x >= 12 and x <= 14 and y >= 7 and y <= 9) or (x >= 18 and y >= 6 and y <= 9) then
+			return MONTANA
+		end
+		if (y <= 2 and x <= 8) or (y >= 12 and x <= 13) then
+			return AGUA
+		end
+		if y <= 2 and x >= 11 then
+			return BLOQUEADO
+		end
+		return if ruido < 0.1 then DETALLE else PASTO
 	end,
 }
 

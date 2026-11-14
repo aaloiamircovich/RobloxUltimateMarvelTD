@@ -89,5 +89,10 @@ return function()
 	assert(#Mapa.rutasPixeles(selva) == 2, "senderos de Savage Land")
 	assert(Despliegue.terreno(selva, 20, 470) == 2 and Despliegue.terreno(selva, 20, 190) == 2, "las dos entradas de la selva son camino")
 	assert(Despliegue.terreno(selva, 420, 260) == 3 and Despliegue.terreno(selva, 300, 540) == 0, "templo y río de Savage Land")
-	return "OK: 4 mapas idénticos al 3D y los nuevos con su ruta"
+	-- The Raft: bloque de celdas (altura) y mar (agua) al alcance; las celdas reservan 58 + 16 px.
+	local raft = niveles[11]
+	assert(Despliegue.terreno(raft, 300, 280) == 3 and Despliegue.terreno(raft, 200, 520) == 0, "bloque y mar de The Raft")
+	assert(Despliegue.reservada(raft, 440, 380), "celda B-2 reservada")
+	assert(#Mapa.JUGABLES == 11, "los 11 mapas son jugables")
+	return "OK: 4 mapas idénticos al 3D y los 7 nuevos con su ruta"
 end

@@ -108,7 +108,7 @@ local ANIMACION_ENEMIGO = {
 local function vestir(cuerpo: Part, config): (number, Model?, BasePart?, CFrame?)
 	local plantillas = ServerStorage:FindFirstChild("Plantillas")
 	local carpeta = plantillas and plantillas:FindFirstChild("Enemigos")
-	local plantilla = carpeta and carpeta:FindFirstChild((config.id:gsub("_elite$", "")))
+	local plantilla = carpeta and carpeta:FindFirstChild(config.modelo or (config.id:gsub("_elite$", "")))
 	if not plantilla then
 		return cuerpo.Size.Y, nil
 	end
@@ -259,6 +259,7 @@ function Partida.nueva(op)
 	local balizasUsadas = {} -- [índice de zona] = true: balizas del Instituto Xavier ya usadas en esta oleada
 	local invertida, cicloInversion = false, 6 -- Dimensión Oscura: estado de la paradoja y segundos al próximo cambio
 	local vegetacion, frenados = 0, {} -- Savage Land: masas de vegetación que quedan en la oleada y enemigos ya frenados
+	local celdasRotas = {} -- The Raft: [índice de celda] = true si ya liberó su prisionero en esta oleada
 	local danoJefe = {} -- [Player] = daño hecho al jefe
 	local function nombreActo(): string
 		return if infinito then "Infinito" elseif esEvento then "Evento" elseif esRaid then "Raid" else tostring(op.acto)
@@ -1018,6 +1019,26 @@ function Partida.nueva(op)
 				end
 			end
 		end
+		if mecanica and mecanica.type == "raft" and mecanica.prisoner then
+			-- Celdas inestables (updateRaft del 2D): un enemigo herido dentro de una celda la rompe y libera al
+			-- prisionero 24 px detrás de él, por su misma ruta; cada celda una vez por oleada.
+			for i, celda in mecanica.landmarks or {} do
+				if celdasRotas[i] then
+					continue
+				end
+				for _, c in enPixeles do
+					local e = c.e
+					if vivo(e) and e.vida < e.vidaMax and math.sqrt((c.x - celda.x) ^ 2 + (c.y - celda.y) ^ 2) <= (celda.radius or 58) then
+						celdasRotas[i] = true
+						local config = table.clone(mecanica.prisoner)
+						config.modelo = "abomination" -- el prisionero Gamma usa el modelo de Abominación
+						crearEnemigo(config, math.max(0, e.avance - 24 * Mapa.ESCALA), e.ruta)
+						fijar("Mensaje", `Brecha en celda {celda.label or i}: prisionero liberado`)
+						break
+					end
+				end
+			end
+		end
 		if mecanica and mecanica.type == "jungle" and vegetacion > 0 then
 			-- Vegetación (updateJungle del 2D): cada zona frena 3 s (−62 %) a un enemigo nuevo hasta gastar las de la oleada.
 			for _, zona in mecanica.landmarks or {} do
@@ -1253,6 +1274,7 @@ function Partida.nueva(op)
 			table.clear(balizasUsadas)
 			invertida = false
 			cicloInversion = (NIVEL.mission and NIVEL.mission.mechanic and NIVEL.mission.mechanic.cycle) or 6
+			table.clear(celdasRotas)
 			-- Rutas alternas: el Bifrost cambia cada oleada (switchReactiveRoute del 2D); la selva cada tres (jungle).
 			local tipoMecanica = NIVEL.mission and NIVEL.mission.mechanic and NIVEL.mission.mechanic.type
 			if tipoMecanica == "jungle" then
