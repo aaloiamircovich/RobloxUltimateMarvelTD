@@ -421,6 +421,12 @@ function Partida.nueva(op)
 	end
 
 	local function crearEnemigo(config, avanceInicial: number?, ruta: number?)
+		if NIVEL.mission and NIVEL.mission.mechanic and NIVEL.mission.mechanic.type == "inversion" then
+			-- Dimensión Oscura: enemigos al 80 % de velocidad (decidido por el usuario el 15/11/2026, se aparta del
+			-- 2D): su facción es la más rápida y el mapa quedaba mucho más difícil que los vecinos.
+			config = table.clone(config)
+			config.speed = (config.speed or 50) * 0.8
+		end
 		if pesadilla then
 			config = table.clone(config)
 			config.hp = math.floor(config.hp * Actos.PESADILLA.vida + 0.5)
