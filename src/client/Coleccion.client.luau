@@ -86,6 +86,8 @@ local ventana = crear("Frame", {
 	BackgroundColor3 = OSCURO,
 	BackgroundTransparency = 0.05,
 }, gui)
+-- Se achica o agranda con la pantalla como el resto del HUD (docs/INTERFAZ.md).
+require(script.Parent:WaitForChild("Comic")).escalar(ventana)
 local bordeVentana = Instance.new("UIStroke")
 bordeVentana.Thickness = 5
 bordeVentana.Parent = ventana
@@ -555,13 +557,22 @@ function pantallaHistoria()
 	end)
 end
 
--- Mientras el panel de Historia está abierto, refrescar la sala (para ver quién entra).
+-- Mientras el panel de Historia está abierto, refrescar la sala (para ver quién entra). Sólo se redibuja si
+-- cambió algo: redibujar cada 2 s destruía los botones y a veces se perdía el clic en SOLO.
+local HttpService = game:GetService("HttpService")
+local function firmaSala(res): string
+	local ok, s = pcall(HttpService.JSONEncode, HttpService, { res.sala, res.abiertas, res.historia })
+	return if ok then s else tostring(os.clock())
+end
 task.spawn(function()
 	while true do
 		task.wait(2)
 		if gui.Enabled and enHistoria and not Players.LocalPlayer:GetAttribute("Partida") then
-			pedirSala("estado")
-			pantallaHistoria()
+			local antes = ultimaHistoria and firmaSala(ultimaHistoria)
+			local res = pedirSala("estado")
+			if res.historia and firmaSala(res) ~= antes then
+				pantallaHistoria()
+			end
 		end
 	end
 end)
