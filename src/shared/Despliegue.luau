@@ -38,7 +38,9 @@ end
 -- getPlacementBlock del 2D: celdas a menos de (radio o 34) + 16 px de una zona de la misión.
 function Despliegue.reservada(nivel, x: number, y: number): boolean
 	local m = nivel.mission and nivel.mission.mechanic
-	if not m then
+	-- Dimensión Oscura (inversion): sus runas no reservan lugar (decidido por el usuario el 15/11/2026, se aparta
+	-- del 2D): ocupaban las curvas del camino y dejaban el mapa mucho más difícil que los vecinos.
+	if not m or m.type == "inversion" then
 		return false
 	end
 	local zonas = { m.zone }

@@ -80,10 +80,10 @@ return function()
 	assert(Despliegue.terreno(asgard, 410, 40) == 2 and Despliegue.terreno(asgard, 20, 170) == 2, "las dos entradas son camino")
 	assert(Despliegue.error(heroes.korg, 260, 140, asgard, rutasA, {}) == "Celda reservada para una defensa de la misión.", "portal reservado")
 	assert(Despliegue.terreno(asgard, 340, 300) == 3 and Despliegue.terreno(asgard, 300, 540) == 0, "palacio y mar de Asgard")
-	-- Dimensión Oscura: plataforma (altura) y charco (agua) al alcance; las runas reservan 72 + 16 px.
+	-- Dimensión Oscura: plataforma (altura) y charco (agua) al alcance; las runas no reservan (ajuste sobre el 2D).
 	local oscura = niveles[9]
 	assert(Despliegue.terreno(oscura, 340, 200) == 3 and Despliegue.terreno(oscura, 620, 200) == 0, "plataforma y charco de la Dimensión Oscura")
-	assert(Despliegue.reservada(oscura, 300, 300), "runa NEXO reservada")
+	assert(not Despliegue.reservada(oscura, 300, 300), "las runas de la Dimensión Oscura no reservan lugar")
 	-- Savage Land: dos senderos (selva) pintados como camino; templo (altura) y río (agua) al alcance.
 	local selva = niveles[10]
 	assert(#Mapa.rutasPixeles(selva) == 2, "senderos de Savage Land")
