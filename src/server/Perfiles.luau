@@ -13,6 +13,7 @@ local Rasgos = require(Shared.Rasgos)
 local Mascotas = require(Shared.Mascotas)
 local Estilo = require(Shared.Estilo)
 local Preferencias = require(Shared.Preferencias)
+local Recompensas = require(Shared.Recompensas)
 local items = require(Shared.Data.items)
 
 local Perfiles = {}
@@ -36,7 +37,12 @@ end
 -- Frontera de confianza: lo que viene del DataStore puede estar viejo o roto.
 function Perfiles.normalizar(crudo)
 	local datos = if type(crudo) == "table" then crudo else {}
+	local rec = Recompensas.normalizar(datos) -- premio diario, códigos, logros y contadores (docs/RECOMPENSAS.md)
 	local p = {
+		diario = rec.diario,
+		codigos = rec.codigos,
+		logros = rec.logros,
+		estadisticas = rec.estadisticas,
 		version = Perfiles.VERSION,
 		credits = Perfiles.CREDITOS_INICIALES,
 		gems = entero(datos.gems, 0, 1e9, Perfiles.GEMAS_INICIALES),

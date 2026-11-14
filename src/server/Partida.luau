@@ -22,6 +22,7 @@ local Mejoras = require(Shared.Mejoras)
 local Cuenta = require(Shared.Cuenta)
 local Actos = require(Shared.Actos)
 local Temporada = require(Shared.Temporada)
+local Recompensas = require(Shared.Recompensas)
 local Evento = require(Shared.Evento)
 local Raid = require(Shared.Raid)
 local Rasgos = require(Shared.Rasgos)
@@ -293,6 +294,7 @@ function Partida.nueva(op)
 		local perfil = j and Perfiles.de(j)
 		if perfil then
 			Temporada.registrar(perfil, nombre, n, os.time())
+			Recompensas.contar(perfil, nombre, n) -- contadores de logros (docs/RECOMPENSAS.md)
 			if xpPase then
 				Temporada.ganarXP(perfil, xpPase, os.time())
 			end
@@ -406,6 +408,9 @@ function Partida.nueva(op)
 			local extra = if e.ultimaUnidad then Rasgos.dinero(e.ultimaUnidad) else 0
 			dar(e.ultimoAtacante, math.floor((e.config.reward or 0) * (1 + extra) + 0.5))
 			evento(e.ultimoAtacante, "derrota", 1)
+			if e.config.isBoss then
+				evento(e.ultimoAtacante, "jefe", 1)
+			end
 			derrotados += 1
 			quitarEnemigo(e)
 		end

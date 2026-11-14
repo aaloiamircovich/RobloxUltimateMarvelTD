@@ -10,6 +10,7 @@ local Iconos = require(Shared.Iconos)
 local Personajes = require(Shared.Personajes)
 local Cuenta = require(Shared.Cuenta)
 local Mejoras = require(Shared.Mejoras)
+local Recompensas = require(Shared.Recompensas)
 local coleccion = ReplicatedStorage:WaitForChild("Coleccion")
 local usarHud = ReplicatedStorage:WaitForChild("UsarHud")
 local teletransportar = ReplicatedStorage:WaitForChild("Teletransportar")
@@ -910,7 +911,7 @@ escalar(jugar, function(s)
 	jugar.Position = UDim2.new(1, -16, 1, if choca then -(16 + (92 + 12) * s) else -16)
 end)
 
-local derecha = Comic.crear("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, -40), Size = UDim2.fromOffset(LADO, 5 * LADO + 4 * 8), BackgroundTransparency = 1 }, gui)
+local derecha = Comic.crear("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, -40), Size = UDim2.fromOffset(LADO, 6 * LADO + 5 * 8), BackgroundTransparency = 1 }, gui)
 Comic.crear("UIListLayout", { Padding = UDim.new(0, 8) }, derecha)
 escalar(derecha)
 for _, b in {
@@ -981,6 +982,114 @@ do
 	Ajustes.cambio:Connect(pintar)
 	pintar(Ajustes.valores)
 end
+--------------------------------------------------------------------------------
+-- Premios (docs/RECOMPENSAS.md): racha diaria, logros y códigos.
+--------------------------------------------------------------------------------
+local abrirPremios
+do
+	local recompensasRemoto = ReplicatedStorage:WaitForChild("Recompensas")
+	local p, cuerpo = Comic.panel(gui, "PREMIOS", UDim2.fromOffset(820, 470))
+	paneles.premios = p
+	local pestana = "diario"
+	local ultimo
+	local mensaje = Comic.texto({ Font = Comic.TEXTO, TextSize = 18, TextColor3 = Comic.AMARILLO, AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, 0), Size = UDim2.new(1, 0, 0, 24) }, cuerpo)
+	local area = Comic.crear("Frame", { Position = UDim2.fromOffset(0, 52), Size = UDim2.new(1, 0, 1, -82), BackgroundTransparency = 1 }, cuerpo)
+	local armar
+	local function pedir(nombre: string, a)
+		local res = recompensasRemoto:InvokeServer(nombre, a)
+		ultimo = res
+		mensaje.Text = res.error or (if res.premio then `¡Recibiste {res.premio}!` else "")
+		armar()
+	end
+	local botonesPestana = {}
+	for i, t in { { "diario", "DIARIO" }, { "logros", "LOGROS" }, { "codigos", "CÓDIGOS" } } do
+		botonesPestana[t[1]] = Comic.boton(t[2], { Position = UDim2.fromOffset((i - 1) * 170, 0), Size = UDim2.fromOffset(160, 40), TextSize = 22 }, cuerpo, function()
+			pestana = t[1]
+			mensaje.Text = ""
+			armar()
+		end)
+	end
+	local cajaCodigo
+	function armar()
+		for k, b in botonesPestana do
+			b.BackgroundColor3 = if k == pestana then Comic.AMARILLO else Comic.ROJO_OSCURO
+			b.TextColor3 = if k == pestana then Comic.ROJO_OSCURO else Comic.CREMA
+		end
+		area:ClearAllChildren()
+		local res = ultimo
+		if not res or not res.diario then
+			return
+		end
+		if pestana == "diario" then
+			local d = res.diario
+			Comic.texto({ Text = if d.reclamado then `Volvé mañana · próximo premio en {duracion(d.finDia - os.time())}` else `¡Tu premio del día {d.dia} está listo!`, TextSize = 24, TextColor3 = Comic.AMARILLO, Size = UDim2.new(1, 0, 0, 30), TextXAlignment = Enum.TextXAlignment.Left }, area)
+			for i, premio in res.premiosDiarios do
+				local hoy = i == d.dia
+				local hecho = i < d.dia or (hoy and d.reclamado)
+				local f = Comic.crear("Frame", { Position = UDim2.fromOffset((i - 1) * 112, 44), Size = UDim2.fromOffset(104, 170), BackgroundColor3 = if hoy then Comic.ROJO elseif hecho then Comic.GRIS else Comic.ROJO_OSCURO, Rotation = if hoy then -2 else 0 }, area)
+				Comic.borde(f, if hoy then 4 else 2)
+				Comic.texto({ Text = `DÍA {i}`, TextSize = 22, TextColor3 = Comic.AMARILLO, Position = UDim2.fromOffset(0, 6), Size = UDim2.new(1, 0, 0, 26) }, f)
+				Comic.texto({ Text = string.gsub(Recompensas.texto(premio), " %+ ", "\n"), Font = Comic.TEXTO, TextSize = 17, TextWrapped = true, Position = UDim2.fromOffset(4, 40), Size = UDim2.new(1, -8, 0, 90) }, f)
+				if hecho then
+					Comic.texto({ Text = "✔", TextSize = 30, TextColor3 = Comic.VERDE, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -6), Size = UDim2.fromOffset(40, 34) }, f)
+				end
+			end
+			if not d.reclamado then
+				Comic.boton("¡RECLAMAR!", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 232), Size = UDim2.fromOffset(260, 56), TextSize = 30, BackgroundColor3 = Comic.VERDE }, area, function()
+					pedir("diario")
+				end)
+			end
+			Comic.texto({ Text = "Si faltás un día, la racha vuelve al día 1. Se renueva a las 00:00 UTC.", Font = Comic.TEXTO, TextSize = 15, Position = UDim2.fromOffset(0, 300), Size = UDim2.new(1, 0, 0, 22), TextXAlignment = Enum.TextXAlignment.Left }, area)
+		elseif pestana == "logros" then
+			local lista = Comic.crear("ScrollingFrame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ScrollBarThickness = 8, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new() }, area)
+			Comic.crear("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }, lista)
+			for i, l in res.logros do
+				local listo = l.progreso >= l.meta
+				local f = Comic.crear("Frame", { LayoutOrder = (if l.reclamado then 1000 elseif listo then 0 else 500) + i, Size = UDim2.new(1, -14, 0, 56), BackgroundColor3 = if l.reclamado then Comic.GRIS else Comic.ROJO_OSCURO }, lista)
+				Comic.borde(f, 2)
+				Comic.texto({ Text = `{l.categoria} · {l.nombre}`, Font = Comic.TEXTO, TextSize = 18, Position = UDim2.fromOffset(10, 4), Size = UDim2.new(0.55, 0, 0, 24), TextXAlignment = Enum.TextXAlignment.Left }, f)
+				Comic.texto({ Text = Recompensas.texto(l.premio), Font = Comic.TEXTO, TextSize = 15, TextColor3 = Comic.AMARILLO, Position = UDim2.fromOffset(10, 30), Size = UDim2.new(0.55, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Left }, f)
+				local fondo = Comic.crear("Frame", { Position = UDim2.new(0.57, 0, 0.5, -10), Size = UDim2.new(0.22, 0, 0, 20), BackgroundColor3 = Comic.FONDO }, f)
+				Comic.crear("Frame", { Size = UDim2.fromScale(l.progreso / l.meta, 1), BackgroundColor3 = Comic.VERDE, BorderSizePixel = 0 }, fondo)
+				Comic.texto({ Text = `{l.progreso}/{l.meta}`, TextSize = 14, Size = UDim2.fromScale(1, 1) }, fondo)
+				Comic.boton(if l.reclamado then "✔" elseif listo then "RECLAMAR" else "EN CURSO", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0), Size = UDim2.fromOffset(130, 40), TextSize = 18, AutoButtonColor = listo and not l.reclamado, BackgroundColor3 = if listo and not l.reclamado then Comic.VERDE else Comic.GRIS }, f, function()
+					if listo and not l.reclamado then
+						pedir("logro", l.id)
+					end
+				end)
+			end
+		else
+			Comic.texto({ Text = "Escribí un código para canjear premios", TextSize = 24, TextColor3 = Comic.AMARILLO, Size = UDim2.new(1, 0, 0, 30), TextXAlignment = Enum.TextXAlignment.Left }, area)
+			cajaCodigo = Comic.crear("TextBox", { Text = "", PlaceholderText = "CÓDIGO", ClearTextOnFocus = false, Font = Comic.TITULO, TextSize = 30, TextColor3 = Comic.FONDO, BackgroundColor3 = Comic.CREMA, Position = UDim2.fromOffset(0, 50), Size = UDim2.fromOffset(420, 56) }, area)
+			Comic.borde(cajaCodigo, 3)
+			Comic.boton("CANJEAR", { Position = UDim2.fromOffset(436, 50), Size = UDim2.fromOffset(180, 56), TextSize = 28, BackgroundColor3 = Comic.VERDE }, area, function()
+				pedir("codigo", cajaCodigo.Text)
+			end)
+			Comic.texto({ Text = "Los códigos se anuncian en el grupo y en Novedades. Cada código se canjea una vez por cuenta.", Font = Comic.TEXTO, TextSize = 15, TextWrapped = true, Position = UDim2.fromOffset(0, 120), Size = UDim2.new(1, 0, 0, 40), TextXAlignment = Enum.TextXAlignment.Left }, area)
+		end
+	end
+	function abrirPremios()
+		if not p.Visible then
+			abrir("premios")
+		end
+		pedir("estado")
+	end
+end
+local botonPremios = Comic.botonIcono("PREMIOS", "", { Size = UDim2.fromOffset(LADO, LADO), BackgroundColor3 = Color3.fromRGB(200, 130, 20) }, derecha, function()
+	abrirPremios()
+end)
+Comic.texto({ Text = "🎁", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 4), Size = UDim2.new(1, -8, 0.68, 0) }, botonPremios)
+-- Globo «!» cuando el premio diario está listo.
+local globoPremios = Comic.crear("Frame", { BackgroundColor3 = Comic.ROJO, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1, -8, 0, 8), Size = UDim2.fromOffset(30, 30), ZIndex = 3 }, botonPremios)
+Comic.crear("UICorner", { CornerRadius = UDim.new(1, 0) }, globoPremios)
+Comic.crear("UIStroke", { Color = Comic.NEGRO, Thickness = 2 }, globoPremios)
+Comic.texto({ Text = "!", TextSize = 24, Size = UDim2.fromScale(1, 1), ZIndex = 4 }, globoPremios)
+local function globo()
+	globoPremios.Visible = jugador:GetAttribute("DiarioDisponible") == true
+end
+jugador:GetAttributeChangedSignal("DiarioDisponible"):Connect(globo)
+globo()
+
 local botonAjustes = Comic.botonIcono("AJUSTES", "", { Size = UDim2.fromOffset(LADO, LADO), BackgroundColor3 = Comic.GRIS }, derecha, function()
 	abrir("ajustes")
 end)

@@ -20,6 +20,7 @@ local Rasgos = require(Shared.Rasgos)
 local Mascotas = require(Shared.Mascotas)
 local Estilo = require(Shared.Estilo)
 local Preferencias = require(Shared.Preferencias)
+local Recompensas = require(Shared.Recompensas)
 local Banners = require(Shared.Banners)
 local Hub = require(script.Parent.Hub)
 local Perfiles = require(script.Parent.Perfiles)
@@ -51,6 +52,7 @@ local mascotasRemoto = remoto("RemoteFunction", "Mascotas")
 local estiloRemoto = remoto("RemoteFunction", "Estilo")
 local bannersRemoto = remoto("RemoteFunction", "Banners")
 local preferenciasRemoto = remoto("RemoteFunction", "Preferencias")
+local recompensasRemoto = remoto("RemoteFunction", "Recompensas")
 
 --------------------------------------------------------------------------------
 -- Partidas: cada una en su arena, lejos del HUB
@@ -660,6 +662,7 @@ local function alEntrar(jugador: Player)
 	publicarSaldo(jugador, perfil)
 	jugador:SetAttribute("Mascotas", Mascotas.texto(perfil))
 	jugador:SetAttribute("Rueda", table.concat(perfil.estilo.rueda, ","))
+	jugador:SetAttribute("DiarioDisponible", not Recompensas.estadoDiario(perfil, os.time()).reclamado)
 	-- Récords que ya tenía: entran al ranking aunque no juegue en esta sesión.
 	if perfil.modeRecords.survival.bestWave > 0 then
 		Ranking.anotar("infinito", jugador.UserId, perfil.modeRecords.survival.bestWave)
@@ -808,6 +811,48 @@ estiloRemoto.OnServerInvoke = function(jugador, nombre, a)
 	end
 	return { error = err, estilo = perfil.estilo, gemas = perfil.gems, monturas = Estilo.MONTURAS, bailes = Estilo.BAILES, rueda = Estilo.RUEDA }
 end
+
+--------------------------------------------------------------------------------
+-- Premio diario, códigos y logros (docs/RECOMPENSAS.md)
+--------------------------------------------------------------------------------
+local ultimoCanje = {} -- [Player] = os.clock() del último intento de código (frena el probar códigos al azar)
+recompensasRemoto.OnServerInvoke = function(jugador, nombre, a)
+	local perfil = Perfiles.de(jugador)
+	if not perfil then
+		return { error = "Tu perfil todavía no cargó" }
+	end
+	local ahora = os.time()
+	local res = {}
+	local premio, err
+	if nombre == "diario" then
+		premio, err = Recompensas.reclamarDiario(perfil, ahora)
+	elseif nombre == "codigo" then
+		if os.clock() - (ultimoCanje[jugador] or 0) < 2 then
+			err = "Esperá un momento antes de probar otro código"
+		else
+			ultimoCanje[jugador] = os.clock()
+			premio, err = Recompensas.canjear(perfil, a, ahora)
+		end
+	elseif nombre == "logro" then
+		premio, err = Recompensas.reclamarLogro(perfil, a)
+	elseif nombre ~= "estado" then
+		err = "Acción desconocida"
+	end
+	if premio then
+		Perfiles.marcar(jugador)
+		publicarSaldo(jugador, perfil)
+		res.premio = Recompensas.texto(premio)
+	end
+	res.error = err
+	res.diario = Recompensas.estadoDiario(perfil, ahora)
+	res.premiosDiarios = Recompensas.DIARIO
+	res.logros = Recompensas.estadoLogros(perfil)
+	jugador:SetAttribute("DiarioDisponible", not res.diario.reclamado)
+	return res
+end
+Players.PlayerRemoving:Connect(function(j)
+	ultimoCanje[j] = nil
+end)
 
 --------------------------------------------------------------------------------
 -- Ajustes y tutorial (docs/TUTORIAL.md)
