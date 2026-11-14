@@ -47,7 +47,7 @@ do
 	paneles.jugar = p
 	Comic.crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 16), HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center }, cuerpo)
 	for _, m in { { "HISTORIA", "story", Comic.ROJO }, { "INFINITO", "infinite", Color3.fromRGB(90, 60, 190) }, { "RAIDS", "raids", Color3.fromRGB(150, 30, 90) } } do
-		local b = Comic.boton(m[1], { Size = UDim2.fromOffset(150, 170), BackgroundColor3 = m[3], TextSize = 34 }, cuerpo, function()
+		local b = Comic.boton(m[1], { Name = "Modo_" .. m[2], Size = UDim2.fromOffset(150, 170), BackgroundColor3 = m[3], TextSize = 34 }, cuerpo, function()
 			if m[2] then
 				p.Visible = false
 				usarHud:FireServer(m[2])
@@ -910,7 +910,7 @@ escalar(jugar, function(s)
 	jugar.Position = UDim2.new(1, -16, 1, if choca then -(16 + (92 + 12) * s) else -16)
 end)
 
-local derecha = Comic.crear("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, -40), Size = UDim2.fromOffset(LADO, 4 * LADO + 3 * 8), BackgroundTransparency = 1 }, gui)
+local derecha = Comic.crear("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, -40), Size = UDim2.fromOffset(LADO, 5 * LADO + 4 * 8), BackgroundTransparency = 1 }, gui)
 Comic.crear("UIListLayout", { Padding = UDim.new(0, 8) }, derecha)
 escalar(derecha)
 for _, b in {
@@ -929,6 +929,62 @@ for _, b in {
 } do
 	Comic.botonIcono(b[1], Iconos[b[2]], { Size = UDim2.fromOffset(LADO, LADO) }, derecha, b[3])
 end
+
+--------------------------------------------------------------------------------
+-- Ajustes (docs/TUTORIAL.md): volumen, calidad baja, números de daño y auto-saltar; se guardan en el perfil.
+--------------------------------------------------------------------------------
+do
+	local Ajustes = require(script.Parent:WaitForChild("Ajustes"))
+	local p, cuerpo = Comic.panel(gui, "AJUSTES", UDim2.fromOffset(460, 330))
+	paneles.ajustes = p
+	Comic.crear("UIListLayout", { Padding = UDim.new(0, 10) }, cuerpo)
+	local filas = {}
+	local function fila(titulo: string)
+		local f = Comic.crear("Frame", { Size = UDim2.new(1, 0, 0, 44), BackgroundColor3 = Comic.ROJO_OSCURO }, cuerpo)
+		Comic.borde(f, 2)
+		Comic.texto({ Text = titulo, Font = Comic.TEXTO, TextSize = 18, Position = UDim2.fromOffset(12, 0), Size = UDim2.new(0.55, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Left }, f)
+		return f
+	end
+	local function volumen(clave: string, titulo: string)
+		local f = fila(titulo)
+		local valor = Comic.texto({ TextSize = 22, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -56, 0.5, 0), Size = UDim2.fromOffset(70, 30) }, f)
+		Comic.boton("−", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -132, 0.5, 0), Size = UDim2.fromOffset(38, 34), TextSize = 26 }, f, function()
+			Ajustes.fijar(clave, Ajustes.valores[clave] - 0.1)
+		end)
+		Comic.boton("+", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0), Size = UDim2.fromOffset(38, 34), TextSize = 26 }, f, function()
+			Ajustes.fijar(clave, Ajustes.valores[clave] + 0.1)
+		end)
+		table.insert(filas, function(v)
+			valor.Text = `{math.floor(v[clave] * 100 + 0.5)}%`
+		end)
+	end
+	local function interruptor(clave: string, titulo: string)
+		local f = fila(titulo)
+		local b = Comic.boton("", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0), Size = UDim2.fromOffset(120, 34), TextSize = 20 }, f, function()
+			Ajustes.fijar(clave, not Ajustes.valores[clave])
+		end)
+		table.insert(filas, function(v)
+			b.Text = if v[clave] then "SÍ" else "NO"
+			b.BackgroundColor3 = if v[clave] then Comic.VERDE else Comic.GRIS
+		end)
+	end
+	volumen("musica", "🎵 Volumen de la música")
+	volumen("efectos", "🔊 Volumen de los efectos")
+	interruptor("calidadBaja", "🖥 Calidad baja (más FPS)")
+	interruptor("numerosDano", "💥 Números de daño")
+	interruptor("autoSaltar", "⏩ Juego automático al empezar")
+	local function pintar(v)
+		for _, f in filas do
+			f(v)
+		end
+	end
+	Ajustes.cambio:Connect(pintar)
+	pintar(Ajustes.valores)
+end
+local botonAjustes = Comic.botonIcono("AJUSTES", "", { Size = UDim2.fromOffset(LADO, LADO), BackgroundColor3 = Comic.GRIS }, derecha, function()
+	abrir("ajustes")
+end)
+Comic.texto({ Text = "⚙", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 4), Size = UDim2.new(1, -8, 0.68, 0), TextColor3 = Comic.CREMA }, botonAjustes)
 
 --------------------------------------------------------------------------------
 -- Arriba: monedas y nivel de cuenta

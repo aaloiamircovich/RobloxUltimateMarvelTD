@@ -26,6 +26,9 @@ Sonido.EFECTOS = {
 }
 Sonido.VOLUMEN_MUSICA = 0.35
 Sonido.VOLUMEN_EFECTOS = 0.6
+-- Multiplicadores de los Ajustes del jugador (0 a 1).
+Sonido.ajusteMusica = 1
+Sonido.ajusteEfectos = 1
 
 local function id(v: string): string?
 	if v == "" then
@@ -53,7 +56,7 @@ function Sonido.efecto(nombre: string, volumen: number?)
 	ultimo[nombre] = ahora
 	local s = Instance.new("Sound")
 	s.SoundId = a
-	s.Volume = (volumen or 1) * Sonido.VOLUMEN_EFECTOS
+	s.Volume = (volumen or 1) * Sonido.VOLUMEN_EFECTOS * Sonido.ajusteEfectos
 	s.Parent = carpeta
 	s.Ended:Once(function()
 		s:Destroy()
@@ -92,8 +95,15 @@ function Sonido.musica(nombre: string?)
 	s.Volume = 0
 	s.Parent = carpeta
 	s:Play()
-	TweenService:Create(s, TweenInfo.new(1), { Volume = Sonido.VOLUMEN_MUSICA }):Play()
+	TweenService:Create(s, TweenInfo.new(1), { Volume = Sonido.VOLUMEN_MUSICA * Sonido.ajusteMusica }):Play()
 	pista = s
+end
+
+function Sonido.fijarVolumenes(musica: number, efectos: number)
+	Sonido.ajusteMusica, Sonido.ajusteEfectos = musica, efectos
+	if pista then
+		pista.Volume = Sonido.VOLUMEN_MUSICA * musica
+	end
 end
 
 return Sonido

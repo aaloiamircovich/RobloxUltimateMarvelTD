@@ -12,6 +12,7 @@ local Raid = require(Shared.Raid)
 local Rasgos = require(Shared.Rasgos)
 local Mascotas = require(Shared.Mascotas)
 local Estilo = require(Shared.Estilo)
+local Preferencias = require(Shared.Preferencias)
 local items = require(Shared.Data.items)
 
 local Perfiles = {}
@@ -61,6 +62,9 @@ function Perfiles.normalizar(crudo)
 		pityRasgo = entero(datos.pityRasgo, 0, 1000, 0),
 		mascotas = Mascotas.normalizar(datos.mascotas), -- docs/MASCOTAS.md
 		estilo = Estilo.normalizar(datos.estilo), -- monturas y bailes (docs/ESTILO.md)
+		ajustes = Preferencias.normalizarAjustes(datos.ajustes), -- docs/TUTORIAL.md
+		-- Las cuentas que ya jugaban antes del tutorial no lo ven (ni cobran su premio).
+		tutorial = Preferencias.normalizarTutorial(datos.tutorial or (if type(datos.units) == "table" and next(datos.units) ~= nil then { terminado = true, premiado = true, paso = Preferencias.PASOS } else nil)),
 	}
 	local c = tonumber(datos.credits)
 	if c and c == c and c >= 0 and c < math.huge then

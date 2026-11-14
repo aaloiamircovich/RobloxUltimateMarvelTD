@@ -19,6 +19,7 @@ local Raid = require(Shared.Raid)
 local Rasgos = require(Shared.Rasgos)
 local Mascotas = require(Shared.Mascotas)
 local Estilo = require(Shared.Estilo)
+local Preferencias = require(Shared.Preferencias)
 local Banners = require(Shared.Banners)
 local Hub = require(script.Parent.Hub)
 local Perfiles = require(script.Parent.Perfiles)
@@ -49,6 +50,7 @@ local rasgosRemoto = remoto("RemoteFunction", "Rasgos")
 local mascotasRemoto = remoto("RemoteFunction", "Mascotas")
 local estiloRemoto = remoto("RemoteFunction", "Estilo")
 local bannersRemoto = remoto("RemoteFunction", "Banners")
+local preferenciasRemoto = remoto("RemoteFunction", "Preferencias")
 
 --------------------------------------------------------------------------------
 -- Partidas: cada una en su arena, lejos del HUB
@@ -657,6 +659,47 @@ estiloRemoto.OnServerInvoke = function(jugador, nombre, a)
 		jugador:SetAttribute("Rueda", table.concat(perfil.estilo.rueda, ","))
 	end
 	return { error = err, estilo = perfil.estilo, gemas = perfil.gems, monturas = Estilo.MONTURAS, bailes = Estilo.BAILES, rueda = Estilo.RUEDA }
+end
+
+--------------------------------------------------------------------------------
+-- Ajustes y tutorial (docs/TUTORIAL.md)
+--------------------------------------------------------------------------------
+preferenciasRemoto.OnServerInvoke = function(jugador, nombre, a)
+	local perfil = Perfiles.de(jugador)
+	if not perfil then
+		return { error = "Tu perfil todavía no cargó" }
+	end
+	local res = {}
+	-- Prueba en Studio: workspace.TutorialPrueba = true muestra el tutorial desde cero sin tocar el perfil ni dar premio.
+	if game:GetService("RunService"):IsStudio() and workspace:GetAttribute("TutorialPrueba") then
+		return { ajustes = perfil.ajustes, tutorial = Preferencias.normalizarTutorial(nil), tieneUnidades = #perfil.units > 0, premio = 0, ganoActo = workspace:GetAttribute("TutorialPruebaGano") == true }
+	end
+	if nombre == "ajustes" and type(a) == "table" then
+		perfil.ajustes = Preferencias.normalizarAjustes(a)
+		Perfiles.marcar(jugador)
+	elseif nombre == "paso" and type(a) == "number" and a == a then
+		local t = perfil.tutorial
+		if not t.terminado then
+			t.paso = math.clamp(math.floor(a), 0, Preferencias.PASOS)
+			Perfiles.marcar(jugador)
+		end
+	elseif nombre == "terminar" or nombre == "saltar" then
+		if nombre == "saltar" then
+			perfil.tutorial.terminado = true
+		else
+			res.premio = Preferencias.terminar(perfil)
+			publicarSaldo(jugador, perfil)
+		end
+		Perfiles.marcar(jugador)
+	elseif nombre ~= "estado" then
+		res.error = "Acción desconocida"
+	end
+	res.ajustes = perfil.ajustes
+	res.tutorial = perfil.tutorial
+	res.tieneUnidades = #perfil.units > 0
+	local prog = perfil.acts[Preferencias.MAPA_TUTORIAL]
+	res.ganoActo = prog ~= nil and (prog.normal or 0) >= 1
+	return res
 end
 
 -- Al reaparecer, el personaje nuevo viene sin montura.

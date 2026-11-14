@@ -539,7 +539,7 @@ function pantallaHistoria()
 		end)
 	end
 	local datos = { mapa = sel.mapa, acto = sel.acto, pesadilla = sel.pesadilla and pesadillaPosible, soloAmigos = sel.soloAmigos }
-	boton("SOLO", { Position = UDim2.new(0, 10, 1, -50), Size = UDim2.new(0.5, -15, 0, 42), BackgroundColor3 = Color3.fromRGB(110, 60, 200) }, der, function()
+	boton("SOLO", { Name = "Solo", Position = UDim2.new(0, 10, 1, -50), Size = UDim2.new(0.5, -15, 0, 42), BackgroundColor3 = Color3.fromRGB(110, 60, 200) }, der, function()
 		datos.solo = true
 		local r = pedirSala("crear", datos)
 		if r.empezo then

@@ -8,6 +8,7 @@ local TweenService = game:GetService("TweenService")
 
 local Comic = require(script.Parent:WaitForChild("Comic"))
 local Sonido = require(script.Parent:WaitForChild("Sonido"))
+local Ajustes = require(script.Parent:WaitForChild("Ajustes"))
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Mapa = require(Shared.Mapa)
 local Despliegue = require(Shared.Despliegue)
@@ -298,7 +299,7 @@ end
 local function tarjeta(i: number, ranura: number, id: string, nivel: number, limite: number)
 	local config = heroes[id]
 	local color = Comic.RAREZA[config.rarity] or Comic.CREMA
-	local t = crear("TextButton", { Text = "", Size = UDim2.fromOffset(106, 120), BackgroundColor3 = Comic.FONDO, AutoButtonColor = true, LayoutOrder = i }, tarjetas)
+	local t = crear("TextButton", { Name = "Tarjeta" .. i, Text = "", Size = UDim2.fromOffset(106, 120), BackgroundColor3 = Comic.FONDO, AutoButtonColor = true, LayoutOrder = i }, tarjetas)
 	crear("UIStroke", { Color = color, Thickness = 4, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, t)
 	crear("UICorner", { CornerRadius = UDim.new(0, 8) }, t)
 	crear("UIScale", {}, t)
@@ -358,6 +359,7 @@ botonMejorar = botonUnidad("MEJORAR", Color3.fromRGB(200, 130, 20), 1, function(
 	end
 end)
 botonMejorar.Size = UDim2.new(1, 0, 0, 74)
+botonMejorar.Name = "Mejorar"
 botonMejorar.RichText = true
 botonMejorar.TextSize = 19
 botonPrioridad = botonUnidad("OBJETIVO", Comic.ROJO, 2, function()
@@ -391,6 +393,7 @@ botonListo = botonLateral("✔ ¡LISTO!", Comic.VERDE, 1, function()
 	pedir("listo")
 end)
 botonListo.Size = UDim2.fromOffset(190, 70)
+botonListo.Name = "Listo" -- el tutorial lo señala por nombre
 botonListo.TextSize = 36
 botonSaltar = botonLateral("⏩ SALTAR (+10%)", Color3.fromRGB(200, 130, 20), 2, function()
 	pedir("saltar")
@@ -493,7 +496,7 @@ end
 local numerosActivos = 0
 local function numeroDano(cuerpo: BasePart, cantidad: number)
 	local camara = workspace.CurrentCamera
-	if numerosActivos >= 40 or (camara.CFrame.Position - cuerpo.Position).Magnitude > 160 then
+	if not Ajustes.valores.numerosDano or numerosActivos >= 40 or (camara.CFrame.Position - cuerpo.Position).Magnitude > 160 then
 		return
 	end
 	numerosActivos += 1
@@ -556,6 +559,10 @@ local function cambiarPartida()
 			if n.id == estado:GetAttribute("Nivel") then
 				NIVEL, rutaPx = n, Mapa.rutaPixeles(n)
 			end
+		end
+		-- Ajuste «Juego automático al empezar».
+		if Ajustes.valores.autoSaltar and not jugador:GetAttribute("Auto") then
+			task.spawn(accion.InvokeServer, accion, "auto")
 		end
 		table.insert(conexiones, estado.AttributeChanged:Connect(function(nombre)
 			if nombre == "Oleada" and (estado:GetAttribute("Oleada") or 0) > 0 then
