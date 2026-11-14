@@ -496,6 +496,14 @@ function Partida.nueva(op)
 			end
 			derrotados += 1
 			quitarEnemigo(e)
+			-- Latveria (fortress del 2D): cada 10 bajas, sabotaje que rompe el blindaje de todos (−16 % por 5 s).
+			local mecanica = NIVEL.mission and NIVEL.mission.mechanic
+			if mecanica and mecanica.type == "fortress" and derrotados % 10 == 0 then
+				for _, otro in enemigos do
+					Combate.aplicarEstado(otro, { type = "armorBreak", duration = 5, power = 0.16 })
+				end
+				fijar("Mensaje", "Sabotaje S.H.I.E.L.D.: blindaje Doombot comprometido")
+			end
 		end
 	end
 

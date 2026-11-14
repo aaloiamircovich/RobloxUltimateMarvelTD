@@ -69,5 +69,8 @@ return function()
 	local rutaK = Mapa.rutaPixeles(knowhere)
 	assert(Despliegue.error(heroes.korg, 260, 170, knowhere, rutaK, {}) == "Celda reservada para una defensa de la misión.", "carga reservada")
 	assert(Despliegue.terreno(knowhere, 280, 320) == 3 and Despliegue.terreno(knowhere, 500, 360) == 3, "plataformas de Knowhere")
+	-- Latveria: torres junto al camino (altura) y foso (agua).
+	local latveria = niveles[7]
+	assert(Despliegue.terreno(latveria, 300, 220) == 3 and Despliegue.terreno(latveria, 60, 380) == 0, "torre y foso de Latveria")
 	return "OK: 4 mapas idénticos al 3D y los nuevos con su ruta"
 end

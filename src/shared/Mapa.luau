@@ -10,7 +10,7 @@ local Mapa = {}
 Mapa.ESCALA = 1 / 4 -- studs por píxel del 2D: el mapa mide 200×150 studs y una baldosa de 32 px, 8 (docs/PARTIDA.md)
 Mapa.ORIGEN = Vector3.new(300, 0, -40) -- lejos del HUB, que está en el centro
 Mapa.ANCHO, Mapa.ALTO = 800, 600 -- tamaño lógico del 2D (combat-data.js)
-Mapa.JUGABLES = { "level_1", "level_2", "level_3", "level_4", "level_5", "level_6" } -- PLAYABLE_MISSIONS del 3D
+Mapa.JUGABLES = { "level_1", "level_2", "level_3", "level_4", "level_5", "level_6", "level_7" } -- PLAYABLE_MISSIONS del 3D
 
 -- Códigos de TerrainRules.js del 2D.
 local AGUA, PASTO, CAMINO, MONTANA, BOSQUE, BLOQUEADO, VEREDA, DETALLE = 0, 1, 2, 3, 4, 5, 11, 12
@@ -117,6 +117,25 @@ local TEMAS = {
 		arboles = false, -- sin el árbol del jardín del HUB de respaldo
 		sueltos = { { "cristal", 2.2, 120 } },
 		motas = Color3.fromRGB(255, 107, 214),
+	},
+	-- Latveria: patio de piedra de Castle Doom, murallas y torres (altura), foso (agua), fábricas en las
+	-- esquinas, vapor en el camino y filo de energía verde (docs/MAPAS.md).
+	latveria = {
+		aspecto = {
+			[CAMINO] = { color = Color3.fromRGB(92, 94, 98), alto = 1, material = Enum.Material.Concrete },
+			[PASTO] = { color = Color3.fromRGB(96, 98, 92), alto = 1.4, material = Enum.Material.Cobblestone },
+			[DETALLE] = { color = Color3.fromRGB(70, 72, 68), alto = 1.4, material = Enum.Material.Slate },
+			[BLOQUEADO] = { color = Color3.fromRGB(60, 62, 66), alto = 1.4, material = Enum.Material.Slate },
+			[MONTANA] = { color = Color3.fromRGB(88, 90, 92), alto = 10, material = Enum.Material.Slate, techo = "Hub_techo" },
+		},
+		orilla = "neon",
+		orillaColor = Color3.fromRGB(123, 224, 109),
+		banda = Color3.fromRGB(123, 224, 109),
+		bandaMaterial = Enum.Material.Neon,
+		bancos = false,
+		vapor = true,
+		sueltos = { { "barril", 1.8, 70 }, { "arbol", 7, 40 } },
+		motas = Color3.fromRGB(123, 224, 109),
 	},
 }
 
@@ -259,6 +278,20 @@ local TERRENOS = {
 			return BLOQUEADO
 		end
 		return if ruido < 0.12 then DETALLE else PASTO
+	end,
+	-- Latveria: el camino entra por la fila 7, sube por la columna 4, cruza la fila 2, baja por la 12 y sale
+	-- por la fila 12. Muralla arriba, torres junto a los tramos (altura), foso (agua) y fábricas lejos del camino.
+	level_7 = function(x, y, ruido)
+		if y == 0 or (x >= 6 and x <= 7 and y >= 4 and y <= 6) or (x >= 9 and x <= 10 and y >= 6 and y <= 9) or (x >= 14 and x <= 16 and y >= 9 and y <= 10) then
+			return MONTANA
+		end
+		if (x <= 3 and y >= 9 and y <= 10) or (x >= 13 and y == 14) then
+			return AGUA
+		end
+		if (x >= 15 and y >= 2 and y <= 6) or (x >= 6 and x <= 10 and y >= 12) then
+			return BLOQUEADO
+		end
+		return if ruido < 0.18 then DETALLE else PASTO
 	end,
 }
 
