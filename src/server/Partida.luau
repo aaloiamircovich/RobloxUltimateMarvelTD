@@ -273,13 +273,19 @@ function Partida.nueva(op)
 	local carpetaUnidades = Instance.new("Folder")
 	carpetaUnidades.Name = "Unidades"
 	carpetaUnidades.Parent = mundo
-	local rutaPx = Mapa.rutaPixeles(NIVEL)
-	local ruta = Mapa.construir(NIVEL, origen, mundo)
-	local largoTramo, largoTotal = {}, 0
-	for i = 1, #ruta - 1 do
-		largoTramo[i] = (ruta[i + 1] - ruta[i]).Magnitude
-		largoTotal += largoTramo[i]
+	local rutaPx = Mapa.rutasPixeles(NIVEL) -- Despliegue acepta la lista: alcance contra cualquier ruta
+	local ruta, _, rutas = Mapa.construir(NIVEL, origen, mundo)
+	-- Largo de cada tramo y total de cada ruta (Asgard tiene dos que se turnan por oleada; docs/MAPAS.md).
+	local largos = {}
+	for k, r in rutas do
+		local tramos, total = {}, 0
+		for i = 1, #r - 1 do
+			tramos[i] = (r[i + 1] - r[i]).Magnitude
+			total += tramos[i]
+		end
+		largos[k] = { tramos = tramos, total = total }
 	end
+	local rutaActual = 1 -- la que toman los enemigos que salen ahora
 
 	-- Estado visible para los clientes de esta partida.
 	local estado = Instance.new("Folder")
@@ -357,14 +363,45 @@ function Partida.nueva(op)
 		end
 	end
 
-	local function puntoEnRuta(distancia: number): Vector3
-		for i, largo in largoTramo do
+	local function puntoEnRuta(distancia: number, k: number?): Vector3
+		local ruta = rutas[k or 1]
+		for i, largo in largos[k or 1].tramos do
 			if distancia <= largo then
 				return ruta[i]:Lerp(ruta[i + 1], distancia / largo)
 			end
 			distancia -= largo
 		end
 		return ruta[#ruta]
+	end
+
+	-- Destello arcoíris del Bifrost donde un enemigo entra y sale del salto.
+	local ARCOIRIS = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 80, 80)),
+		ColorSequenceKeypoint.new(0.25, Color3.fromRGB(255, 210, 70)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(90, 230, 120)),
+		ColorSequenceKeypoint.new(0.75, Color3.fromRGB(90, 170, 255)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(190, 110, 255)),
+	})
+	local function destelloBifrost(pos: Vector3)
+		local p = Instance.new("Part")
+		p.Anchored, p.CanCollide, p.CanQuery, p.Transparency = true, false, false, 1
+		p.Size = Vector3.new(1, 1, 1)
+		p.CFrame = CFrame.new(pos)
+		local rayo = Instance.new("ParticleEmitter")
+		rayo.Color = ARCOIRIS
+		rayo.LightEmission = 1
+		rayo.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.2), NumberSequenceKeypoint.new(1, 0) })
+		rayo.Lifetime = NumberRange.new(0.4, 0.7)
+		rayo.Speed = NumberRange.new(6, 12)
+		rayo.SpreadAngle = Vector2.new(180, 180)
+		rayo.Rate = 0
+		rayo.Parent = p
+		local luz = Instance.new("PointLight")
+		luz.Color, luz.Range, luz.Brightness = Color3.fromRGB(150, 210, 255), 12, 3
+		luz.Parent = p
+		p.Parent = mundo
+		rayo:Emit(40)
+		task.delay(0.9, p.Destroy, p)
 	end
 
 	------------------------------------------------------------------------------
@@ -380,7 +417,7 @@ function Partida.nueva(op)
 		end
 	end
 
-	local function crearEnemigo(config, avanceInicial: number?)
+	local function crearEnemigo(config, avanceInicial: number?, ruta: number?)
 		if pesadilla then
 			config = table.clone(config)
 			config.hp = math.floor(config.hp * Actos.PESADILLA.vida + 0.5)
@@ -403,12 +440,13 @@ function Partida.nueva(op)
 		local e = Combate.nuevoEnemigo(config)
 		e.modelo, e.raiz, e.desfase = modelo, raiz, desfase
 		e.avance = avanceInicial or 0
+		e.ruta = ruta or rutaActual
 		Conductas.preparar(e)
 		e.altura = if config.flying then 4 else tam / 2
 		e.cuerpo = cuerpo
 		e.barra = cartel(cuerpo, config.name, tam / 2 + 1)
 		cuerpo:SetAttribute("Vida", math.ceil(e.vida)) -- el cliente dibuja los números de daño
-		moverEnemigo(e, CFrame.new(puntoEnRuta(e.avance) + Vector3.new(0, e.altura, 0)))
+		moverEnemigo(e, CFrame.new(puntoEnRuta(e.avance, e.ruta) + Vector3.new(0, e.altura, 0)))
 		if config.isBoss then
 			-- Aura del color de su categoría para distinguirlo de lejos.
 			local color = COLORES[config.category] or Color3.fromRGB(200, 40, 40)
@@ -482,7 +520,7 @@ function Partida.nueva(op)
 				for i = 1, Raid.REFUERZOS do
 					local config = table.clone(enemigosDatos.normal[ids[math.random(#ids)]])
 					config.reward = 0
-					task.delay(i * 0.4, crearEnemigo, config, math.max(0, e.avance - 2))
+					task.delay(i * 0.4, crearEnemigo, config, math.max(0, e.avance - 2), e.ruta)
 				end
 			end
 		end
@@ -918,7 +956,7 @@ function Partida.nueva(op)
 			local config = table.clone(base)
 			config.hp = math.floor(base.hp * factorVida + 0.5)
 			config.reward = 0
-			crearEnemigo(config, origenEnemigo.avance)
+			crearEnemigo(config, origenEnemigo.avance, origenEnemigo.ruta)
 			return true
 		end,
 		aviso = function(texto)
@@ -947,15 +985,15 @@ function Partida.nueva(op)
 			velocidad *= Conductas.actualizar(e, dt, entornoConductas)
 			e.barra.Size = UDim2.fromScale(math.clamp(e.vida / e.vidaMax, 0, 1), 1)
 			e.avance += e.config.speed * velocidad * Mapa.ESCALA * dt
-			if e.avance >= largoTotal then
+			if e.avance >= largos[e.ruta].total then
 				-- La base pierde la vida restante del enemigo ÷ 10 (mínimo 5); un jefe la destruye.
 				local base = estado:GetAttribute("Base")
 				local perdida = if e.config.isBoss then base else math.max(5, math.ceil(e.vida / 10))
 				fijar("Base", math.max(0, base - perdida))
 				quitarEnemigo(e)
 			else
-				local aqui = puntoEnRuta(e.avance)
-				local adelante = puntoEnRuta(e.avance + 0.5)
+				local aqui = puntoEnRuta(e.avance, e.ruta)
+				local adelante = puntoEnRuta(e.avance + 0.5, e.ruta)
 				local alto = Vector3.new(0, e.altura, 0)
 				moverEnemigo(e, if (adelante - aqui).Magnitude > 1e-3 then CFrame.lookAt(aqui + alto, adelante + alto) else CFrame.new(aqui + alto))
 			end
@@ -964,6 +1002,20 @@ function Partida.nueva(op)
 		-- Zonas de la misión (MissionSystem.updateLandmarks del 2D). Sanctum: las runas marcan hasta 4 enemigos
 		-- (+12 % de daño recibido). Instituto Xavier: cada baliza aturde 0,8 s a los 2 primeros, una vez por oleada.
 		local mecanica = NIVEL.mission and NIVEL.mission.mechanic
+		if mecanica and mecanica.type == "bifrost" then
+			-- Portales del Bifrost (updateBifrost del 2D): adelantan una sola vez a cada enemigo por su ruta.
+			for _, portal in mecanica.portals or {} do
+				for _, c in enPixeles do
+					local e = c.e
+					if vivo(e) and not e.saltoBifrost and math.sqrt((c.x - portal.x) ^ 2 + (c.y - portal.y) ^ 2) <= (portal.radius or 42) then
+						e.saltoBifrost = true
+						destelloBifrost(e.cuerpo.Position)
+						e.avance += (mecanica.jumpDistance or 140) * Mapa.ESCALA
+						destelloBifrost(puntoEnRuta(e.avance, e.ruta) + Vector3.new(0, e.altura, 0))
+					end
+				end
+			end
+		end
 		if mecanica and (mecanica.type == "ward" or mecanica.type == "academy") then
 			for i, zona in mecanica.landmarks or {} do
 				if mecanica.type == "academy" and balizasUsadas[i] then
@@ -1150,6 +1202,11 @@ function Partida.nueva(op)
 			n += 1
 			fijar("Oleada", n)
 			table.clear(balizasUsadas)
+			-- Bifrost (switchReactiveRoute del 2D): cada oleada sale por la ruta (n − 1) mod cantidad + 1.
+			rutaActual = (n - 1) % #rutas + 1
+			if #rutas > 1 then
+				aviso(`Ancla {if n % 2 == 0 then "Vanaheim" else "Asgard"} conectada al Bifrost`)
+			end
 			fijar("Fase", "combate")
 			for j, d in p.jugadores do
 				d.saltar = false
@@ -1325,6 +1382,7 @@ function Partida.nueva(op)
 		op.acto, pesadilla = acto, conPesadilla and not sinFin
 		superadas, derrotados = 0, 0
 		jefeVivo, jefeBarra, danoJefe = nil, nil, {}
+		rutaActual = 1
 		for _, a in { "JefeVida", "JefeVidaMax", "NombreJefe" } do
 			fijar(a, nil)
 		end

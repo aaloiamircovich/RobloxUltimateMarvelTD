@@ -10,7 +10,7 @@ local Mapa = {}
 Mapa.ESCALA = 1 / 4 -- studs por píxel del 2D: el mapa mide 200×150 studs y una baldosa de 32 px, 8 (docs/PARTIDA.md)
 Mapa.ORIGEN = Vector3.new(300, 0, -40) -- lejos del HUB, que está en el centro
 Mapa.ANCHO, Mapa.ALTO = 800, 600 -- tamaño lógico del 2D (combat-data.js)
-Mapa.JUGABLES = { "level_1", "level_2", "level_3", "level_4", "level_5", "level_6", "level_7" } -- PLAYABLE_MISSIONS del 3D
+Mapa.JUGABLES = { "level_1", "level_2", "level_3", "level_4", "level_5", "level_6", "level_7", "level_8" } -- PLAYABLE_MISSIONS del 3D
 
 -- Códigos de TerrainRules.js del 2D.
 local AGUA, PASTO, CAMINO, MONTANA, BOSQUE, BLOQUEADO, VEREDA, DETALLE = 0, 1, 2, 3, 4, 5, 11, 12
@@ -137,6 +137,23 @@ local TEMAS = {
 		sueltos = { { "barril", 1.8, 70 }, { "arbol", 7, 40 } },
 		motas = Color3.fromRGB(123, 224, 109),
 	},
+	-- Asgard: piso de mármol, el Bifrost como puente de cristal con filo dorado, palacios dorados entre las
+	-- dos rutas (altura), mar cósmico abajo (agua) y ruinas en el vacío arriba (docs/MAPAS.md).
+	asgard = {
+		aspecto = {
+			[CAMINO] = { color = Color3.fromRGB(70, 140, 235), alto = 1, material = Enum.Material.Glass },
+			[PASTO] = { color = Color3.fromRGB(226, 208, 168), alto = 1.4, material = Enum.Material.Marble, variante = "Hub_marmol" },
+			[BLOQUEADO] = { color = Color3.fromRGB(30, 28, 60), alto = 1.4, material = Enum.Material.Slate },
+			[MONTANA] = { color = Color3.fromRGB(240, 196, 90), alto = 9, material = Enum.Material.Metal, techo = "Hub_marmol", techoMaterial = Enum.Material.Marble },
+		},
+		orilla = "neon",
+		orillaColor = Color3.fromRGB(255, 209, 102),
+		banda = Color3.fromRGB(255, 209, 102),
+		bandaMaterial = Enum.Material.Neon,
+		bancos = false,
+		sueltos = { { "runa", 2, 60 }, { "arbol", 7, 40 } },
+		motas = Color3.fromRGB(255, 209, 102),
+	},
 }
 
 local function tema(nivel)
@@ -184,10 +201,10 @@ end
 
 -- normalizeLevelPath del 2D: ruta "exacta" (Wakanda) o normalizePath, ortogonal con entrada y salida
 -- 40 px fuera del mapa.
-function Mapa.rutaPixeles(nivel): { { x: number, y: number } }
+local function extenderRuta(nivel, puntos): { { x: number, y: number } }
 	local ancho, alto = Mapa.ANCHO, Mapa.ALTO
 	local dentro = {}
-	for _, p in nivel.path do
+	for _, p in puntos do
 		table.insert(dentro, { x = math.clamp(p.x, 0, ancho), y = math.clamp(p.y, 0, alto) })
 	end
 	if nivel.rendering and nivel.rendering.pathMode == "exact" then
@@ -218,10 +235,28 @@ function Mapa.rutaPixeles(nivel): { { x: number, y: number } }
 	return sinRepetidos(ruta)
 end
 
+function Mapa.rutaPixeles(nivel): { { x: number, y: number } }
+	return extenderRuta(nivel, nivel.path)
+end
+
+-- Todas las rutas del mapa: en Asgard (Bifrost) las de alternatePaths, que se turnan por oleada; en los demás,
+-- sólo la principal (sus alternatePaths del 2D no se usan).
+function Mapa.rutasPixeles(nivel): { { { x: number, y: number } } }
+	local m = nivel.mission and nivel.mission.mechanic
+	if m and m.type == "bifrost" and nivel.alternatePaths then
+		local r = {}
+		for _, puntos in nivel.alternatePaths do
+			table.insert(r, extenderRuta(nivel, puntos))
+		end
+		return r
+	end
+	return { Mapa.rutaPixeles(nivel) }
+end
+
 -- sanctumTerrain del 3D (GameLoop.generateLevelMap del 2D): ruido fijo y la ruta pintada en celdas de 40 px.
 -- Grilla de 20×15 celdas de 40 px para los niveles sin terrainRows: `celda(x, y, ruido)` da el código de cada
 -- celda (x 0–19, y 0–14, ruido fijo 0–1) y después se pinta el camino de la ruta encima.
-local function terrenoDeRuta(ruta, celda: (number, number, number) -> number)
+local function terrenoDeRuta(rutas, celda: (number, number, number) -> number)
 	local lado, cols, filas = 40, 20, 15
 	local t = {}
 	for y = 0, filas - 1 do
@@ -232,17 +267,19 @@ local function terrenoDeRuta(ruta, celda: (number, number, number) -> number)
 		end
 		t[y + 1] = fila
 	end
-	for i = 1, #ruta - 1 do
-		local x0, y0 = math.floor(ruta[i].x / lado), math.floor(ruta[i].y / lado)
-		local x1, y1 = math.floor(ruta[i + 1].x / lado), math.floor(ruta[i + 1].y / lado)
-		for x = math.max(0, math.min(x0, x1)), math.min(cols - 1, math.max(x0, x1)) do
-			if t[y0 + 1] then
-				t[y0 + 1][x + 1] = CAMINO
+	for _, ruta in rutas do
+		for i = 1, #ruta - 1 do
+			local x0, y0 = math.floor(ruta[i].x / lado), math.floor(ruta[i].y / lado)
+			local x1, y1 = math.floor(ruta[i + 1].x / lado), math.floor(ruta[i + 1].y / lado)
+			for x = math.max(0, math.min(x0, x1)), math.min(cols - 1, math.max(x0, x1)) do
+				if t[y0 + 1] then
+					t[y0 + 1][x + 1] = CAMINO
+				end
 			end
-		end
-		for y = math.max(0, math.min(y0, y1)), math.min(filas - 1, math.max(y0, y1)) do
-			if t[y + 1] and t[y + 1][x1 + 1] ~= nil then
-				t[y + 1][x1 + 1] = CAMINO
+			for y = math.max(0, math.min(y0, y1)), math.min(filas - 1, math.max(y0, y1)) do
+				if t[y + 1] and t[y + 1][x1 + 1] ~= nil then
+					t[y + 1][x1 + 1] = CAMINO
+				end
 			end
 		end
 	end
@@ -293,6 +330,20 @@ local TERRENOS = {
 		end
 		return if ruido < 0.18 then DETALLE else PASTO
 	end,
+	-- Asgard: dos rutas que se turnan (A entra por la fila 4 y sale por la 5; B entra por la columna 10 arriba
+	-- y sale por la 16 abajo). Palacios entre las dos (altura), mar cósmico abajo (agua), ruinas en el vacío arriba.
+	level_8 = function(x, y, _ruido)
+		if (x >= 8 and x <= 9 and y >= 6 and y <= 8) or (x >= 11 and x <= 12 and y >= 6 and y <= 8) or (x >= 17 and y >= 7 and y <= 9) then
+			return MONTANA
+		end
+		if y >= 13 and x <= 13 then
+			return AGUA
+		end
+		if y <= 2 and (x <= 8 or x >= 12) then
+			return BLOQUEADO
+		end
+		return PASTO
+	end,
 }
 
 local cache = {}
@@ -305,7 +356,7 @@ function Mapa.terreno(nivel): ({ { number } }, number)
 	if nivel.id == "level_2" then
 		grilla = require(Data.mapas.manhattan).rows
 	elseif TERRENOS[nivel.id] then
-		grilla = terrenoDeRuta(Mapa.rutaPixeles(nivel), TERRENOS[nivel.id])
+		grilla = terrenoDeRuta(Mapa.rutasPixeles(nivel), TERRENOS[nivel.id])
 	else
 		grilla = {}
 		for _, texto in nivel.rendering.terrainRows do
@@ -415,7 +466,7 @@ local function vecina(grilla, f: number, c: number): number?
 	return grilla[f] and grilla[f][c]
 end
 
-agregarDecorado = function(nivel, carpeta: Model, celdas, lado: number, origen: Vector3, ruta: { Vector3 }, anchoCamino: number, grilla)
+agregarDecorado = function(nivel, carpeta: Model, celdas, lado: number, origen: Vector3, rutas: { { Vector3 } }, anchoCamino: number, grilla)
 	local deco = Instance.new("Model")
 	deco.Name = "Decorado"
 	local estilo = tema(nivel)
@@ -512,8 +563,10 @@ agregarDecorado = function(nivel, carpeta: Model, celdas, lado: number, origen: 
 	local function ponerBorde(x: number, z: number, mira: Vector3)
 		local pos = origen + Vector3.new(x, suelo.alto, z)
 		local plano = Vector3.new(1, 0, 1)
-		if ((pos - ruta[1]) * plano).Magnitude < libre or ((pos - ruta[#ruta]) * plano).Magnitude < libre then
-			return
+		for _, ruta in rutas do
+			if ((pos - ruta[1]) * plano).Magnitude < libre or ((pos - ruta[#ruta]) * plano).Magnitude < libre then
+				return
+			end
 		end
 		i += 1
 		local h = hash(math.floor(x), math.floor(z))
@@ -548,7 +601,12 @@ agregarDecorado = function(nivel, carpeta: Model, celdas, lado: number, origen: 
 	end
 
 	-- Barreras a los lados de la entrada y de la base; vehículos estacionados junto al portón.
-	for k, extremo in { { ruta[1], ruta[2] }, { ruta[#ruta], ruta[#ruta - 1] } } do
+	local extremos = {}
+	for _, ruta in rutas do
+		table.insert(extremos, { ruta[1], ruta[2] })
+		table.insert(extremos, { ruta[#ruta], ruta[#ruta - 1] })
+	end
+	for k, extremo in extremos do
 		local dir = ((extremo[2] - extremo[1]) * Vector3.new(1, 0, 1)).Unit
 		local costado = Vector3.new(-dir.Z, 0, dir.X)
 		local piso = Vector3.new(extremo[1].X, origen.Y + suelo.alto, extremo[1].Z)
@@ -675,8 +733,8 @@ local function porton(nivel, padre: Instance, pos: Vector3, dir: Vector3, ancho:
 end
 
 -- Construye el terreno, las zonas de la misión y la base en `origen`, dentro de `padre`;
--- devuelve la ruta en el mundo y el modelo.
-function Mapa.construir(nivel, origen: Vector3, padre: Instance): ({ Vector3 }, Model)
+-- devuelve la ruta principal en el mundo, el modelo y todas las rutas (Asgard tiene dos).
+function Mapa.construir(nivel, origen: Vector3, padre: Instance): ({ Vector3 }, Model, { { Vector3 } })
 	local carpeta = Instance.new("Model")
 	carpeta.Name = "Mapa"
 	local agua, pasto, huecos, celdas = {}, {}, {}, {}
@@ -798,10 +856,15 @@ function Mapa.construir(nivel, origen: Vector3, padre: Instance): ({ Vector3 }, 
 		end
 	end
 
-	local ruta = {}
-	for _, punto in Mapa.rutaPixeles(nivel) do
-		table.insert(ruta, Mapa.aMundo(punto.x, punto.y, origen))
+	local rutas = {}
+	for _, rp in Mapa.rutasPixeles(nivel) do
+		local r = {}
+		for _, punto in rp do
+			table.insert(r, Mapa.aMundo(punto.x, punto.y, origen))
+		end
+		table.insert(rutas, r)
 	end
+	local ruta = rutas[1]
 	-- Ancho del camino donde entra: celdas de camino contiguas en el borde, a lo ancho de la entrada.
 	local rp = Mapa.rutaPixeles(nivel)
 	local fe = math.clamp(math.floor((rp[1].y + rp[2].y) / 2 / ladoPx) + 1, 1, filas)
@@ -871,12 +934,18 @@ function Mapa.construir(nivel, origen: Vector3, padre: Instance): ({ Vector3 }, 
 		terreno:FillBlock(r[1], r[2], Enum.Material.Water)
 	end
 	carpeta:SetAttribute("Agua", #agua)
-	agregarDecorado(nivel, carpeta, celdas, lado, origen, ruta, anchoCamino, grilla)
-	porton(nivel, carpeta, ruta[1] - Vector3.new(0, 1 - aspecto(nivel, CAMINO).alto, 0), ((ruta[2] - ruta[1]) * Vector3.new(1, 0, 1)).Unit, anchoCamino)
+	agregarDecorado(nivel, carpeta, celdas, lado, origen, rutas, anchoCamino, grilla)
+	for _, r in rutas do
+		porton(nivel, carpeta, r[1] - Vector3.new(0, 1 - aspecto(nivel, CAMINO).alto, 0), ((r[2] - r[1]) * Vector3.new(1, 0, 1)).Unit, anchoCamino)
+	end
 
 	-- Zonas de la misión (runas de Sanctum): discos de luz con su radio.
 	local mecanica = nivel.mission and nivel.mission.mechanic or {}
-	for _, zona in mecanica.landmarks or {} do
+	local zonas = table.clone(mecanica.landmarks or {})
+	for _, portal in mecanica.portals or {} do
+		table.insert(zonas, { x = portal.x, y = portal.y, radius = portal.radius, color = "#65cdff" }) -- portales del Bifrost
+	end
+	for _, zona in zonas do
 		local d = Instance.new("Part")
 		d.Name = "Zona"
 		d.Anchored, d.CanCollide = true, false
@@ -890,20 +959,22 @@ function Mapa.construir(nivel, origen: Vector3, padre: Instance): ({ Vector3 }, 
 		d.Parent = carpeta
 	end
 
-	-- Base que defienden: modelo "base" del kit del mapa o un bloque de luz.
+	-- Base que defienden (una por ruta): modelo "base" del kit del mapa o un bloque de luz.
 	local kitBase = kit(nivel, "base")
-	if kitBase then
-		local b = clonarKit(kitBase, "Y", 11)
-		b:PivotTo(CFrame.lookAt(ruta[#ruta], ruta[#ruta - 1] * Vector3.new(1, 0, 1) + Vector3.new(0, ruta[#ruta].Y, 0)) * CFrame.new(0, b:GetExtentsSize().Y / 2 - 1, 0))
-		b.Name = "Base"
-		b.Parent = carpeta
-	else
-		local base = bloque(carpeta, CFrame.new(ruta[#ruta] + Vector3.new(0, 5, 0)), Vector3.new(6, 10, 6), Color3.fromRGB(240, 170, 40), Enum.Material.Neon)
-		base.Name = "Base"
+	for _, r in rutas do
+		if kitBase then
+			local b = clonarKit(kitBase, "Y", 11)
+			b:PivotTo(CFrame.lookAt(r[#r], r[#r - 1] * Vector3.new(1, 0, 1) + Vector3.new(0, r[#r].Y, 0)) * CFrame.new(0, b:GetExtentsSize().Y / 2 - 1, 0))
+			b.Name = "Base"
+			b.Parent = carpeta
+		else
+			local base = bloque(carpeta, CFrame.new(r[#r] + Vector3.new(0, 5, 0)), Vector3.new(6, 10, 6), Color3.fromRGB(240, 170, 40), Enum.Material.Neon)
+			base.Name = "Base"
+		end
 	end
 
 	carpeta.Parent = padre
-	return ruta, carpeta
+	return ruta, carpeta, rutas
 end
 
 -- Borra el terreno (pasto y agua) de un mapa construido; el resto se borra con el modelo.

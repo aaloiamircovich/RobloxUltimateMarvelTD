@@ -557,7 +557,7 @@ local function cambiarPartida()
 		origen = estado:GetAttribute("Origen")
 		for _, n in niveles do
 			if n.id == estado:GetAttribute("Nivel") then
-				NIVEL, rutaPx = n, Mapa.rutaPixeles(n)
+				NIVEL, rutaPx = n, Mapa.rutasPixeles(n)
 			end
 		end
 		-- Ajuste «Juego automático al empezar».

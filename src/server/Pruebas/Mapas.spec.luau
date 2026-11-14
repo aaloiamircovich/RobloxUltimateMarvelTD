@@ -72,5 +72,13 @@ return function()
 	-- Latveria: torres junto al camino (altura) y foso (agua).
 	local latveria = niveles[7]
 	assert(Despliegue.terreno(latveria, 300, 220) == 3 and Despliegue.terreno(latveria, 60, 380) == 0, "torre y foso de Latveria")
+	-- Asgard: dos rutas (Bifrost) pintadas como camino, los demás mapas con una; los portales reservan su
+	-- zona; el alcance vale contra cualquiera de las dos rutas.
+	local asgard = niveles[8]
+	local rutasA = Mapa.rutasPixeles(asgard)
+	assert(#rutasA == 2 and #Mapa.rutasPixeles(niveles[1]) == 1, "rutas del Bifrost")
+	assert(Despliegue.terreno(asgard, 410, 40) == 2 and Despliegue.terreno(asgard, 20, 170) == 2, "las dos entradas son camino")
+	assert(Despliegue.error(heroes.korg, 260, 140, asgard, rutasA, {}) == "Celda reservada para una defensa de la misión.", "portal reservado")
+	assert(Despliegue.terreno(asgard, 340, 300) == 3 and Despliegue.terreno(asgard, 300, 540) == 0, "palacio y mar de Asgard")
 	return "OK: 4 mapas idénticos al 3D y los nuevos con su ruta"
 end

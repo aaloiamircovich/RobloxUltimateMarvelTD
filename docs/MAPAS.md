@@ -25,10 +25,19 @@ sin ForgeGUI); cada mapa con **su mecánica del 2D** portada (`MissionSystem.js`
 | **Instituto Xavier** (`level_5`, `x-mansion`) | Jardín con árboles; la mansión de ladrillo arriba, abajo y en dos alas junto a los tramos laterales (altura); estanque pegado al tramo de abajo (agua). Sendero de grava. Kit: Cerebro (cúpula con la X), portón de hierro, cerco de arbustos, ala de la mansión, torre del reloj, sala de entrenamiento, roble y farol. | **Balizas de la Sala de Peligro**: cada una aturde 0,8 s a los 2 primeros enemigos que entran en su radio (54 px), **una vez por oleada** (`academy` en `Partida.luau`). |
 | **Knowhere** (`level_6`, `knowhere`) | Colonia minera en un cráneo Celestial: piso de roca oscura con vetas de cristal rosa y cian, piso metálico con filo de neón rosa, tres plataformas mineras de metal oxidado junto a las curvas (altura), vacío con maquinaria y contenedores en dos esquinas. Sin agua. Kit: nave en su plataforma, túnel en roca de hueso, cajones, mercado de chapas con neón, torre de perforación, aguja de hueso fosilizado, máquina minera, contenedores, farol de neón y cristales. | **Puerto de extracción**: como en el 2D, no tiene efecto activo; las zonas CARGA y NAVE reservan su lugar (34 + 16 px; el 2D no les da radio) y se ven en el piso. |
 | **Latveria** (`level_7`, `latveria`) | Patio de adoquines con losas oscuras de Castle Doom; muralla arriba y tres torres junto a los tramos (altura); foso a la izquierda y abajo a la derecha (agua); fábricas y chatarra en dos esquinas; vapor en el camino y filo de energía verde. Kit: torre del homenaje con reactor verde, puerta con rastrillo, barricada con pinchos, torre gótica, fábrica de guerra, estatua del rey enmascarado, maquinaria, chatarra de robots, pino, farol de llama verde y barril tóxico. | **Asedio a Castle Doom**: cada 10 bajas, todos los enemigos del mapa pierden 16 % de blindaje por 5 s y avisa «Sabotaje S.H.I.E.L.D.» (`fortress` en `Partida.luau`). **Sin verlo en partida**: con unidades de prueba débiles no se llegó a 10 bajas. |
+| **Asgard** (`level_8`, `asgard`) | Piso de mármol cálido; el Bifrost es un puente de cristal azul con filo dorado; palacios dorados entre las dos rutas y una torre a la derecha (altura); mar cósmico abajo (agua); ruinas de columnas y rocas rúnicas en el vacío de arriba. Kit: palacio dorado (base), observatorio con portal arcoíris (portón), escudos, torres doradas, salón vikingo, estatua del rey guerrero, ruinas, roca rúnica, árbol dorado, brasero y piedra rúnica. | **Anclas del Bifrost** (decidido por el usuario: fiel al 2D): **dos rutas** que se turnan por oleada (impares entran por la izquierda y salen por la derecha; pares bajan desde arriba y salen abajo), con un portón y una base en cada punta, y las dos le quitan vida a la base. Los **dos portales** adelantan 145 px por su ruta, una vez a cada enemigo, con un destello arcoíris donde entra y donde sale. |
+
+## Rutas alternas (Asgard)
+- `Mapa.rutasPixeles(nivel)` devuelve todas las rutas: las de `alternatePaths` si la mecánica es `bifrost`; en los
+  demás mapas, sólo la principal (los `alternatePaths` de los mapas 1–3 del 2D siguen sin usarse).
+- El terreno pinta todas como camino; `Mapa.construir` arma un portón y una base por ruta y devuelve la lista.
+- `Despliegue.error` acepta la lista: el alcance vale contra la ruta más cercana.
+- En `Partida.luau` cada enemigo guarda su ruta (`e.ruta`): la de la oleada en la que salió; los refuerzos y las
+  invocaciones salen por la ruta de quien los llama.
 
 ## Opciones nuevas de tema
 - `orilla = "neon"` con `orillaColor`: filo de luz a los lados del camino, sin las runas del Sanctum.
 - `arboles = false`: no usa el árbol del jardín del HUB cuando el kit no trae `arbol`.
 
 ## Pendientes
-Asgard, Dimensión Oscura, Savage Land y The Raft.
+Dimensión Oscura, Savage Land y The Raft.

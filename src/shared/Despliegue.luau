@@ -81,16 +81,20 @@ function Despliegue.enAlcance(ox: number, oy: number, px: number, py: number, al
 	return true
 end
 
+-- `ruta` es una ruta ({ {x, y} }) o una lista de rutas (Mapa.rutasPixeles): vale la más cercana de todas.
 local function puntoMasCercano(x, y, ruta)
+	local rutas = if ruta[1] and ruta[1].x == nil then ruta else { ruta }
 	local mejor, mejorD = nil, math.huge
-	for i = 2, #ruta do
-		local a, b = ruta[i - 1], ruta[i]
-		local dx, dy = b.x - a.x, b.y - a.y
-		local t = math.clamp(((x - a.x) * dx + (y - a.y) * dy) / (dx * dx + dy * dy), 0, 1)
-		local qx, qy = a.x + t * dx, a.y + t * dy
-		local d = math.sqrt((x - qx) ^ 2 + (y - qy) ^ 2)
-		if d < mejorD then
-			mejor, mejorD = { x = qx, y = qy }, d
+	for _, r in rutas do
+		for i = 2, #r do
+			local a, b = r[i - 1], r[i]
+			local dx, dy = b.x - a.x, b.y - a.y
+			local t = math.clamp(((x - a.x) * dx + (y - a.y) * dy) / (dx * dx + dy * dy), 0, 1)
+			local qx, qy = a.x + t * dx, a.y + t * dy
+			local d = math.sqrt((x - qx) ^ 2 + (y - qy) ^ 2)
+			if d < mejorD then
+				mejor, mejorD = { x = qx, y = qy }, d
+			end
 		end
 	end
 	return mejor
