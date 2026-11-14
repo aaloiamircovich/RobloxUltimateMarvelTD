@@ -16,9 +16,33 @@ las salas, los edificios (`HITOS`, modelos de `ServerStorage.Plantillas.Hub`), �
   multiplican por `ESCALA`, y `Hub.llegada` (Viajar) lleva las posiciones de `ISLAS` a la medida final.
 - Para cambiar el tamaño alcanza con tocar `ESCALA` y `ESCALA_EDIFICIOS` al principio de `Hub.luau`.
 
+## Estaciones con encargados (decidido por el usuario el 15/11/2026)
+Cada estación tiene un **encargado** del lore (el héroe de `Plantillas.Heroes`, con su animación de reposo, sólo
+la raíz anclada) y un **puesto** temático generado con la IA de Roblox (`Plantillas.Hub/puesto_*`, se guarda en
+el lugar). Las **invocaciones** de Asgard y la **Historia** siguen siendo portales, porque encajan con el lore.
+Los encargados no giran ni hablan: sólo su reposo. Se definen con `personaje` y `puesto` en `Hub.ESTACIONES`.
+
+| Estación | Isla | Encargado | Puesto |
+| --- | --- | --- | --- |
+| Misiones | Central | Nick Fury | Mesa holográfica de S.H.I.E.L.D. |
+| Bailes | Central | Star-Lord | Rocola (Awesome Mix) |
+| Evento | Central | Korg | Podio del Concurso de Campeones |
+| Ranking | Central | Valkyrie | Muro de trofeos (el cartel del Top 10 sigue arriba) |
+| Monturas | Central | Ghost Rider | Garaje de motos |
+| Banner 1 | Asgard | Heimdall | Portal (Banners 2 y 3 siguen sólo con portal) |
+| Rasgos | Wakanda | Shuri | Laboratorio de vibranium |
+| Grados | Wakanda | M'Baku | Forja de vibranium |
+| Mascotas | Wakanda | Rocket | Puesto de huevos y jaulas |
+| Raids | Nueva York | Capitán América | Mesa de guerra con el escudo |
+| Misiones de raid | Nueva York | Maria Hill | Kiosco de S.H.I.E.L.D. |
+| Tienda | Nueva York | Spider-Man | Almacén de esquina neoyorquino |
+| Infinito | Torre Baxter | Mister Fantastic | Máquina con portal |
+| Historia | Sanctum | Wong | Portal |
+
 ## Verificado en Play
 El personaje aparece y camina sobre el pasto a la misma altura que antes; Viajar deja en el piso de cada isla
-(mármol, pasto, concreto, metal, madera); sin errores en la consola.
+(mármol, pasto, concreto, metal, madera); las 16 estaciones se arman con su puesto o portal y los 14 encargados
+están en reposo (vistos: tienda, misiones, bailes, banner 1); sin errores en la consola.
 
 ## Sin probar
 - Usar cada estación y sala con el personaje (la distancia para activarlas creció ×1,5).

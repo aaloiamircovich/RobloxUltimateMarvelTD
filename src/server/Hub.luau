@@ -1,10 +1,13 @@
 -- HUB de islas flotantes. La isla central (aparición y Torre Vengadores) se conecta con Asgard por el
 -- Bifrost, con Wakanda por un puente de selva, con Nueva York por un puente de telarañas, con la Torre
 -- Baxter por una pasarela de vidrio y con el Sanctum por un portal.
--- Cada estación tiene un ProximityPrompt (tecla E) que llama a alUsar(jugador, id).
+-- Cada estación tiene un ProximityPrompt (tecla E) que llama a alUsar(jugador, id). Las estaciones tienen un
+-- encargado del lore (héroe de Plantillas.Heroes con su reposo) y un puesto temático (Plantillas.Hub/puesto_*);
+-- las invocaciones y la Historia siguen siendo portales (docs/LOBBY.md).
 -- Edificios: ServerStorage.Plantillas.Hub/<hito> si existe (modelos generados); si no, un bloque provisorio.
 local Players = game:GetService("Players")
 local ServerStorage = game:GetService("ServerStorage")
+local Reposo = require(game:GetService("ReplicatedStorage").Shared.Reposo)
 
 local Hub = {}
 
@@ -90,22 +93,22 @@ end
 
 -- Estaciones: isla, ángulo (grados, 0 = +X, 90 = +Z) y distancia al centro de la isla. Miran al centro de su isla.
 Hub.ESTACIONES = {
-	{ id = "misiones", nombre = "MISIONES", subtitulo = "Diarias y semanales", color = "64e5ff", isla = "central", angulo = 112, r = 24 },
-	{ id = "bailes", nombre = "BAILES", subtitulo = "Rueda de bailes", color = "ff8fd8", isla = "central", angulo = -135, r = 27 },
-	{ id = "evento", nombre = "EVENTO", subtitulo = "Desafío semanal", color = "ffb347", isla = "central", angulo = -45, r = 27 },
-	{ id = "ranking", nombre = "RANKING", subtitulo = "Top 10", color = "ffe066", isla = "central", angulo = 20, r = 26 },
-	{ id = "monturas", nombre = "MONTURAS", subtitulo = "Moverse rápido", color = "9be37a", isla = "central", angulo = 160, r = 26 },
-	{ id = "summon", nombre = "BANNER 1", subtitulo = "Invocaciones", color = "ffcf72", isla = "asgard", angulo = 120, r = 16 },
+	{ id = "misiones", nombre = "MISIONES", subtitulo = "Diarias y semanales", color = "64e5ff", isla = "central", angulo = 112, r = 24, personaje = "nick_fury", puesto = "puesto_misiones" },
+	{ id = "bailes", nombre = "BAILES", subtitulo = "Rueda de bailes", color = "ff8fd8", isla = "central", angulo = -135, r = 27, personaje = "star_lord", puesto = "puesto_bailes" },
+	{ id = "evento", nombre = "EVENTO", subtitulo = "Desafío semanal", color = "ffb347", isla = "central", angulo = -45, r = 27, personaje = "korg", puesto = "puesto_evento" },
+	{ id = "ranking", nombre = "RANKING", subtitulo = "Top 10", color = "ffe066", isla = "central", angulo = 20, r = 26, personaje = "valkyrie", puesto = "puesto_ranking" },
+	{ id = "monturas", nombre = "MONTURAS", subtitulo = "Moverse rápido", color = "9be37a", isla = "central", angulo = 160, r = 26, personaje = "ghost_rider", puesto = "puesto_monturas" },
+	{ id = "summon", nombre = "BANNER 1", subtitulo = "Invocaciones", color = "ffcf72", isla = "asgard", angulo = 120, r = 16, personaje = "heimdall" },
 	{ id = "banner_2", nombre = "BANNER 2", subtitulo = "Fichas de raid", color = "ffcf72", isla = "asgard", angulo = 90, r = 18 },
 	{ id = "banner_3", nombre = "BANNER 3", subtitulo = "Próximamente", color = "ffcf72", isla = "asgard", angulo = 60, r = 16 },
-	{ id = "traits", nombre = "RASGOS", subtitulo = "Fichas de rasgo", color = "7eefa9", isla = "wakanda", angulo = -40, r = 17 },
-	{ id = "grades", nombre = "GRADOS", subtitulo = "Cristales de grado", color = "ff8faa", isla = "wakanda", angulo = 0, r = 19 },
-	{ id = "pets", nombre = "MASCOTAS", subtitulo = "Huevos", color = "b69aff", isla = "wakanda", angulo = 40, r = 17 },
-	{ id = "raids", nombre = "RAIDS", subtitulo = "Jefe de la semana", color = "ff6b6b", isla = "nuevaYork", angulo = 220, r = 17 },
-	{ id = "misiones_raid", nombre = "MISIONES DE RAID", subtitulo = "Semanales", color = "ff9f6b", isla = "nuevaYork", angulo = 180, r = 20 },
-	{ id = "tienda", nombre = "TIENDA", subtitulo = "Objetos", color = "40c9ff", isla = "nuevaYork", angulo = 140, r = 17 },
-	{ id = "infinite", nombre = "INFINITO", subtitulo = "Resistí una oleada más", color = "6fb5ff", isla = "baxter", angulo = -52, r = 11 },
-	{ id = "story", nombre = "HISTORIA", subtitulo = "Modo campaña", color = "ff8f3d", isla = "sanctum", angulo = 232, r = 11 },
+	{ id = "traits", nombre = "RASGOS", subtitulo = "Fichas de rasgo", color = "7eefa9", isla = "wakanda", angulo = -40, r = 17, personaje = "shuri", puesto = "puesto_rasgos" },
+	{ id = "grades", nombre = "GRADOS", subtitulo = "Cristales de grado", color = "ff8faa", isla = "wakanda", angulo = 0, r = 19, personaje = "mbaku", puesto = "puesto_grados" },
+	{ id = "pets", nombre = "MASCOTAS", subtitulo = "Huevos", color = "b69aff", isla = "wakanda", angulo = 40, r = 17, personaje = "rocket_raccoon", puesto = "puesto_mascotas" },
+	{ id = "raids", nombre = "RAIDS", subtitulo = "Jefe de la semana", color = "ff6b6b", isla = "nuevaYork", angulo = 220, r = 17, personaje = "capitan_america", puesto = "puesto_raids" },
+	{ id = "misiones_raid", nombre = "MISIONES DE RAID", subtitulo = "Semanales", color = "ff9f6b", isla = "nuevaYork", angulo = 180, r = 20, personaje = "maria_hill", puesto = "puesto_misiones_raid" },
+	{ id = "tienda", nombre = "TIENDA", subtitulo = "Objetos", color = "40c9ff", isla = "nuevaYork", angulo = 140, r = 17, personaje = "spiderman", puesto = "puesto_tienda" },
+	{ id = "infinite", nombre = "INFINITO", subtitulo = "Resistí una oleada más", color = "6fb5ff", isla = "baxter", angulo = -52, r = 11, personaje = "mister_fantastic", puesto = "puesto_infinito" },
+	{ id = "story", nombre = "HISTORIA", subtitulo = "Modo campaña", color = "ff8f3d", isla = "sanctum", angulo = 232, r = 11, personaje = "wong" },
 }
 
 -- Edificios: isla, posición relativa (x, z), alto deseado y huella de la caja provisoria.
@@ -419,6 +422,39 @@ local function portal(padre, pos: Vector3, mira: Vector3, destino: CFrame)
 end
 
 -- Estación: base con luz, marco con portal y orbe que gira, cartel y ProximityPrompt.
+-- Encargado de una estación: el héroe con sólo la raíz anclada (para que lo mueva la animación) y los pies en
+-- `cf`, mirando a su −Z. La animación de reposo arranca cuando el lobby ya está en el workspace (Hub.construir).
+local encargados = {}
+local function encargado(padre, id: string, cf: CFrame)
+	local p = ServerStorage:FindFirstChild("Plantillas")
+	local heroes = p and p:FindFirstChild("Heroes")
+	local t = heroes and heroes:FindFirstChild(id)
+	if not t then
+		return
+	end
+	local m = t:Clone()
+	m.Name = "Encargado"
+	local raiz = m:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local hum = m:FindFirstChildOfClass("Humanoid")
+	if not (raiz and hum) then
+		m:Destroy()
+		return
+	end
+	for _, d in m:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.Anchored = d == raiz
+			d.CanCollide = d == raiz -- se choca con el cuerpo, no se lo atraviesa
+		end
+	end
+	hum.EvaluateStateMachine = false
+	hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	local caja, tam = m:GetBoundingBox()
+	local desfase = (CFrame.new(caja.Position) * raiz.CFrame.Rotation):ToObjectSpace(raiz.CFrame)
+	raiz.CFrame = cf * CFrame.new(0, tam.Y / 2, 0) * desfase
+	m.Parent = padre
+	table.insert(encargados, { modelo = m, id = id })
+end
+
 local function estacion(padre, e, alUsar)
 	local datos = ISLAS[e.isla]
 	local pos = enIsla(datos, e.angulo, e.r)
@@ -429,23 +465,37 @@ local function estacion(padre, e, alUsar)
 	local base = disco(m, "152438", pos + Vector3.new(0, 0.36, 0), 3.2, 0.36)
 	base.Name = "Base"
 	disco(m, color, pos + Vector3.new(0, 0.39, 0), 2.9, 0.035, Enum.Material.Neon)
-	-- El marco queda detrás de la base (lejos del centro de la isla) y mira hacia el centro.
-	local marco = plantilla("estacion")
-	if marco then
-		local c = clonar(marco, "Y", 6)
-		c:PivotTo(cf * CFrame.new(0, 3, 1.4))
+	-- Puesto temático detrás de la base (lejos del centro de la isla), mirando al centro; sin puesto, el portal.
+	local puesto = e.puesto and plantilla(e.puesto)
+	if puesto then
+		local c = clonar(puesto, "Y", 4)
+		c:PivotTo(cf * CFrame.new(0, c:GetExtentsSize().Y / 2, 2.4))
+		c.Name = "Puesto"
 		c.Parent = m
-	else
-		parte(m, "172e48", cf * CFrame.new(0, 2.8, 1.7), Vector3.new(6, 5.6, 0.7))
-		for _, lado in { -1, 1 } do
-			parte(m, color, cf * CFrame.new(lado * 2.5, 2.6, 1.22), Vector3.new(0.13, 4.7, 0.12), Enum.Material.Neon)
-		end
-		parte(m, color, cf * CFrame.new(0, 5, 1.22), Vector3.new(5.1, 0.14, 0.12), Enum.Material.Neon)
 	end
-	local aro = parte(m, color, cf * CFrame.new(0, 2.7, 1.16) * CFrame.Angles(0, math.rad(90), 0), Vector3.new(0.1, 3.3, 3.3), Enum.Material.Neon)
-	aro.Shape = Enum.PartType.Cylinder
-	local orbe = parte(m, color, cf * CFrame.new(0, 2.7, 0.9) * CFrame.Angles(math.rad(45), 0, math.rad(45)), Vector3.new(0.9, 0.9, 0.9), Enum.Material.Neon)
-	orbe.Name = "Orbe"
+	if e.personaje then
+		-- Encargado al costado, mirando al centro (al lado del puesto o del portal).
+		encargado(m, e.personaje, cf * CFrame.new(if puesto then 2.8 else 3.6, 0.36, if puesto then 0.9 else 0.6))
+	end
+	if not puesto then
+		-- Portal: el marco queda detrás de la base y mira hacia el centro.
+		local marco = plantilla("estacion")
+		if marco then
+			local c = clonar(marco, "Y", 6)
+			c:PivotTo(cf * CFrame.new(0, 3, 1.4))
+			c.Parent = m
+		else
+			parte(m, "172e48", cf * CFrame.new(0, 2.8, 1.7), Vector3.new(6, 5.6, 0.7))
+			for _, lado in { -1, 1 } do
+				parte(m, color, cf * CFrame.new(lado * 2.5, 2.6, 1.22), Vector3.new(0.13, 4.7, 0.12), Enum.Material.Neon)
+			end
+			parte(m, color, cf * CFrame.new(0, 5, 1.22), Vector3.new(5.1, 0.14, 0.12), Enum.Material.Neon)
+		end
+		local aro = parte(m, color, cf * CFrame.new(0, 2.7, 1.16) * CFrame.Angles(0, math.rad(90), 0), Vector3.new(0.1, 3.3, 3.3), Enum.Material.Neon)
+		aro.Shape = Enum.PartType.Cylinder
+		local orbe = parte(m, color, cf * CFrame.new(0, 2.7, 0.9) * CFrame.Angles(math.rad(45), 0, math.rad(45)), Vector3.new(0.9, 0.9, 0.9), Enum.Material.Neon)
+		orbe.Name = "Orbe"
+	end
 	letrero(m, (cf * CFrame.new(0, 6.3, 1)).Position, e.nombre, e.subtitulo, color, 8)
 
 	local prompt = Instance.new("ProximityPrompt")
@@ -645,6 +695,21 @@ function Hub.construir(alUsar: (Player, string) -> ())
 	end
 
 	hub.Parent = workspace
+	-- Reposo de los encargados (Shared/Reposo.luau), ya en el workspace para que la animación se replique.
+	for _, x in encargados do
+		local hum = x.modelo:FindFirstChildOfClass("Humanoid")
+		local animator = hum and (hum:FindFirstChildOfClass("Animator") or Instance.new("Animator", hum))
+		if animator then
+			local anim = Instance.new("Animation")
+			anim.AnimationId = Reposo.para(x.id, x.modelo:GetAttribute("Efecto"))
+			local ok, pista = pcall(animator.LoadAnimation, animator, anim)
+			if ok then
+				pista.Looped = true
+				pista:Play()
+			end
+		end
+	end
+	table.clear(encargados)
 	Hub.orbes, Hub.bifrost = {}, {}
 	for _, d in hub:GetDescendants() do
 		if d.Name == "Orbe" then
