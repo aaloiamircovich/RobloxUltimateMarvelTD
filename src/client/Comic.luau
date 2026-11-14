@@ -154,8 +154,22 @@ function Comic.retrato(padre: GuiObject, id: string, nombre: string, color: Colo
 		return Comic.texto({ Text = string.sub(iniciales, 1, 3), TextColor3 = color, Size = UDim2.fromScale(1, 1) }, padre)
 	end
 	local vista = Comic.crear("ViewportFrame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Ambient = Color3.fromRGB(200, 200, 200), LightDirection = Vector3.new(-1, -1, -1) }, padre)
+	-- WorldModel: deja animar el modelo dentro del ViewportFrame (reposo en bucle, docs/ANIMACION.md).
+	local mundo = Comic.crear("WorldModel", {}, vista)
 	local m = plantilla:Clone()
-	m.Parent = vista
+	m.Parent = mundo
+	local humanoide = m:FindFirstChildOfClass("Humanoid")
+	local animator = humanoide and humanoide:FindFirstChildOfClass("Animator")
+	if animator then
+		local Reposo = require(game:GetService("ReplicatedStorage").Shared.Reposo)
+		local anim = Instance.new("Animation")
+		anim.AnimationId = Reposo.para(id, m:GetAttribute("Efecto"))
+		local ok, pista = pcall(animator.LoadAnimation, animator, anim)
+		if ok then
+			pista.Looped = true
+			pista:Play(0)
+		end
+	end
 	local cf, tam = m:GetBoundingBox()
 	-- Plano medio: cabeza y torso, de frente (los modelos miran hacia su LookVector).
 	local foco = cf.Position + Vector3.new(0, tam.Y * 0.22, 0)

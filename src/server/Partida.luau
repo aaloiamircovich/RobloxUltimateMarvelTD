@@ -23,6 +23,7 @@ local Cuenta = require(Shared.Cuenta)
 local Actos = require(Shared.Actos)
 local Temporada = require(Shared.Temporada)
 local Recompensas = require(Shared.Recompensas)
+local Reposo = require(Shared.Reposo)
 local Evento = require(Shared.Evento)
 local Raid = require(Shared.Raid)
 local Rasgos = require(Shared.Rasgos)
@@ -149,6 +150,18 @@ local function crearModelo(config): (Model, BasePart, AnimationTrack?, number)
 		local anim = Instance.new("Animation")
 		anim.AnimationId = animacion
 		ataque = animator:LoadAnimation(anim)
+		ataque.Priority = Enum.AnimationPriority.Action -- el ataque tapa al reposo
+		-- Reposo en bucle según el estilo del personaje (docs/ANIMACION.md); arranca cuando el modelo ya está en el mapa.
+		local animReposo = Instance.new("Animation")
+		animReposo.AnimationId = Reposo.para(config.id, modelo:GetAttribute("Efecto"))
+		local reposo = animator:LoadAnimation(animReposo)
+		reposo.Priority = Enum.AnimationPriority.Idle
+		reposo.Looped = true
+		task.defer(function()
+			if modelo.Parent then
+				reposo:Play(0.3)
+			end
+		end)
 	end
 	modelo.Name = config.name
 	return modelo, raiz, ataque, modelo:GetAttribute("VelocidadAtaque") or 1
@@ -587,7 +600,12 @@ function Partida.nueva(op)
 			return "Héroe no disponible"
 		end
 		table.remove(unidades, i)
-		u.modelo:Destroy()
+		-- Los clientes la desvanecen en humo (Efectos.client.luau) antes de borrarla.
+		local modelo = u.modelo
+		modelo:SetAttribute("Vendida", true)
+		task.delay(0.7, function()
+			modelo:Destroy()
+		end)
 		dar(j, math.floor(u.invertido * Partida.REEMBOLSO))
 		return nil
 	end
