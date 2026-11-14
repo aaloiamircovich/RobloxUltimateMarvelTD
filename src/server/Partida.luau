@@ -257,6 +257,7 @@ function Partida.nueva(op)
 	-- shortcut: la barra muestra un solo jefe; si salen dos juntos, el segundo no aparece en la barra. Mejorar si hay oleadas con varios jefes.
 	local jefeBarra = nil -- el jefe que se ve en la barra de arriba (cualquier modo)
 	local balizasUsadas = {} -- [índice de zona] = true: balizas del Instituto Xavier ya usadas en esta oleada
+	local invertida, cicloInversion = false, 6 -- Dimensión Oscura: estado de la paradoja y segundos al próximo cambio
 	local danoJefe = {} -- [Player] = daño hecho al jefe
 	local function nombreActo(): string
 		return if infinito then "Infinito" elseif esEvento then "Evento" elseif esRaid then "Raid" else tostring(op.acto)
@@ -1016,6 +1017,33 @@ function Partida.nueva(op)
 				end
 			end
 		end
+		if mecanica and mecanica.type == "inversion" then
+			-- Ciclo de inversión (updateInversion del 2D): cada `cycle` s las runas pasan de frenar (−42 %) a
+			-- acelerar (+24 %) a los enemigos en su radio. Las zonas del piso se ponen rojas mientras está invertida.
+			cicloInversion -= dt
+			if cicloInversion <= 0 then
+				invertida = not invertida
+				cicloInversion += mecanica.cycle or 6
+				fijar("Mensaje", if invertida then "Paradoja activa: las runas aceleran invasores" else "Realidad estable: las runas vuelven a ralentizar")
+				local mapa = mundo:FindFirstChild("Mapa")
+				local zonas = mapa and mapa:GetChildren() or {}
+				local k = 0
+				for _, z in zonas do
+					if z.Name == "Zona" then
+						k += 1
+						local original = mecanica.landmarks[k] and mecanica.landmarks[k].color or "#ffd166"
+						z.Color = if invertida then Color3.fromRGB(255, 60, 40) else Color3.fromHex(original)
+					end
+				end
+			end
+			for _, zona in mecanica.landmarks or {} do
+				for _, c in enPixeles do
+					if vivo(c.e) and math.sqrt((c.x - zona.x) ^ 2 + (c.y - zona.y) ^ 2) <= (zona.radius or 70) then
+						Combate.aplicarEstado(c.e, if invertida then { type = "haste", duration = 0.45, power = 0.24 } else { type = "slow", duration = 0.45, power = 0.42 })
+					end
+				end
+			end
+		end
 		if mecanica and (mecanica.type == "ward" or mecanica.type == "academy") then
 			for i, zona in mecanica.landmarks or {} do
 				if mecanica.type == "academy" and balizasUsadas[i] then
@@ -1204,6 +1232,8 @@ function Partida.nueva(op)
 			table.clear(balizasUsadas)
 			-- Bifrost (switchReactiveRoute del 2D): cada oleada sale por la ruta (n − 1) mod cantidad + 1.
 			rutaActual = (n - 1) % #rutas + 1
+			invertida = false
+			cicloInversion = (NIVEL.mission and NIVEL.mission.mechanic and NIVEL.mission.mechanic.cycle) or 6
 			if #rutas > 1 then
 				aviso(`Ancla {if n % 2 == 0 then "Vanaheim" else "Asgard"} conectada al Bifrost`)
 			end

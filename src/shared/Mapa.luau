@@ -10,7 +10,7 @@ local Mapa = {}
 Mapa.ESCALA = 1 / 4 -- studs por píxel del 2D: el mapa mide 200×150 studs y una baldosa de 32 px, 8 (docs/PARTIDA.md)
 Mapa.ORIGEN = Vector3.new(300, 0, -40) -- lejos del HUB, que está en el centro
 Mapa.ANCHO, Mapa.ALTO = 800, 600 -- tamaño lógico del 2D (combat-data.js)
-Mapa.JUGABLES = { "level_1", "level_2", "level_3", "level_4", "level_5", "level_6", "level_7", "level_8" } -- PLAYABLE_MISSIONS del 3D
+Mapa.JUGABLES = { "level_1", "level_2", "level_3", "level_4", "level_5", "level_6", "level_7", "level_8", "level_9" } -- PLAYABLE_MISSIONS del 3D
 
 -- Códigos de TerrainRules.js del 2D.
 local AGUA, PASTO, CAMINO, MONTANA, BOSQUE, BLOQUEADO, VEREDA, DETALLE = 0, 1, 2, 3, 4, 5, 11, 12
@@ -153,6 +153,26 @@ local TEMAS = {
 		bancos = false,
 		sueltos = { { "runa", 2, 60 }, { "arbol", 7, 40 } },
 		motas = Color3.fromRGB(255, 209, 102),
+	},
+	-- Dimensión Oscura: obsidiana con grietas de energía carmesí, plataformas flotantes de obsidiana (altura),
+	-- charcos del vacío (agua) y geometría imposible alrededor (docs/MAPAS.md).
+	["dark-dimension"] = {
+		aspecto = {
+			[CAMINO] = { color = Color3.fromRGB(44, 26, 56), alto = 1, material = Enum.Material.Basalt },
+			[PASTO] = { color = Color3.fromRGB(58, 38, 74), alto = 1.4, material = Enum.Material.Slate },
+			[DETALLE] = { color = Color3.fromRGB(78, 18, 58), alto = 1.4, material = Enum.Material.Neon },
+			[BLOQUEADO] = { color = Color3.fromRGB(16, 10, 26), alto = 1.4, material = Enum.Material.Slate },
+			[MONTANA] = { color = Color3.fromRGB(34, 24, 46), alto = 8, material = Enum.Material.Basalt, techo = "obsidiana", techoMaterial = Enum.Material.Basalt, techoColor = Color3.fromRGB(70, 44, 90) },
+		},
+		orilla = "neon",
+		orillaColor = Color3.fromRGB(255, 79, 163),
+		banda = Color3.fromRGB(255, 79, 163),
+		bandaMaterial = Enum.Material.Neon,
+		parapeto = false,
+		bancos = false,
+		arboles = false,
+		sueltos = { { "cristal", 2, 110 } },
+		motas = Color3.fromRGB(255, 79, 163),
 	},
 }
 
@@ -343,6 +363,20 @@ local TERRENOS = {
 			return BLOQUEADO
 		end
 		return PASTO
+	end,
+	-- Dimensión Oscura: el camino entra por la fila 7, sube por la columna 5, cruza la fila 2, baja por la 14 y
+	-- sale por la fila 12. Plataformas flotantes (altura), charcos del vacío (agua), vacío arriba y abajo a la izquierda.
+	level_9 = function(x, y, ruido)
+		if (x >= 7 and x <= 8 and y >= 4 and y <= 6) or (x >= 10 and x <= 11 and y >= 8 and y <= 10) or (x >= 16 and x <= 18 and y >= 8 and y <= 9) then
+			return MONTANA
+		end
+		if (x <= 3 and y >= 9 and y <= 10) or (x >= 15 and x <= 16 and y >= 4 and y <= 6) then
+			return AGUA
+		end
+		if y == 0 or (x <= 12 and y >= 12) then
+			return BLOQUEADO
+		end
+		return if ruido < 0.12 then DETALLE else PASTO
 	end,
 }
 
@@ -771,7 +805,7 @@ function Mapa.construir(nivel, origen: Vector3, padre: Instance): ({ Vector3 }, 
 			end
 			if t.techo then
 				-- Edificio: losa del techo, y en cada lado que da afuera un parapeto y una banda roja.
-				bloque(carpeta, CFrame.new(centro + Vector3.new(0, t.alto - 0.2, 0)), Vector3.new(lado, 0.4, lado), blanco, t.techoMaterial or Enum.Material.Metal, t.techo)
+				bloque(carpeta, CFrame.new(centro + Vector3.new(0, t.alto - 0.2, 0)), Vector3.new(lado, 0.4, lado), t.techoColor or blanco, t.techoMaterial or Enum.Material.Metal, t.techo)
 				for _, d in LADOS do
 					if vecina(grilla, f + d[1], c + d[2]) ~= codigo then
 						local normal = Vector3.new(d[2], 0, d[1])

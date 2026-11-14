@@ -4,7 +4,7 @@ local Actos = {}
 
 Actos.POR_MAPA = 5
 Actos.OLEADAS = 10
-Actos.MAPAS = { "level_1", "level_2", "level_3", "level_4", "level_5", "level_6", "level_7", "level_8" } -- orden de desbloqueo (Mapa.JUGABLES)
+Actos.MAPAS = { "level_1", "level_2", "level_3", "level_4", "level_5", "level_6", "level_7", "level_8", "level_9" } -- orden de desbloqueo (Mapa.JUGABLES)
 Actos.GEMAS_PRIMERA = 50 -- × número de acto
 Actos.GEMAS_REPETIR = 10
 Actos.NUCLEOS_PRIMERA = 1
