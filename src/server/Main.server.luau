@@ -115,7 +115,9 @@ local function origenLibre(): (number, Vector3)
 		i += 1
 	end
 	-- Arenas en fila al este del HUB, separadas para que no se vean entre sí.
-	return i, Vector3.new(352 + (i - 1) * 352, 0, -112) -- mapas de 200×150 studs con 28 de borde; múltiplos de 4 para la grilla del terreno
+	-- Mapas de 200×150 studs con 28 de borde, en fila al este del HUB (que llega hasta x ≈ 320 con las islas ×2);
+	-- múltiplos de 4 para la grilla del terreno.
+	return i, Vector3.new(600 + (i - 1) * 352, 0, -112)
 end
 
 local function indiceNivel(mapaId: string): number?

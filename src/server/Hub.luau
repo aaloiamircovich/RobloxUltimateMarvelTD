@@ -14,7 +14,7 @@ local Hub = {}
 local ALTO = 1 -- altura del piso de las islas
 -- Tamaño del lobby (decidido por el usuario el 15/11/2026): se arma como antes y al final todo se agranda ×ESCALA
 -- (islas, puentes, estaciones, árboles, adornos); los edificios (HITOS) crecen además hasta ×ESCALA_EDIFICIOS.
-local ESCALA, ESCALA_EDIFICIOS = 1.5, 2
+local ESCALA, ESCALA_EDIFICIOS = 2, 3
 -- Centro del agrandado: justo debajo de la isla central, para que su piso (y el pasto de terreno) quede a la
 -- misma altura que antes.
 local PIVOTE = Vector3.new(0, ALTO - 2, 0)
@@ -107,8 +107,8 @@ Hub.ESTACIONES = {
 	{ id = "raids", nombre = "RAIDS", subtitulo = "Jefe de la semana", color = "ff6b6b", isla = "nuevaYork", angulo = 220, r = 17, personaje = "capitan_america", puesto = "puesto_raids" },
 	{ id = "misiones_raid", nombre = "MISIONES DE RAID", subtitulo = "Semanales", color = "ff9f6b", isla = "nuevaYork", angulo = 180, r = 20, personaje = "maria_hill", puesto = "puesto_misiones_raid" },
 	{ id = "tienda", nombre = "TIENDA", subtitulo = "Objetos", color = "40c9ff", isla = "nuevaYork", angulo = 140, r = 17, personaje = "spiderman", puesto = "puesto_tienda" },
-	{ id = "infinite", nombre = "INFINITO", subtitulo = "Resistí una oleada más", color = "6fb5ff", isla = "baxter", angulo = -52, r = 11, personaje = "mister_fantastic", puesto = "puesto_infinito" },
-	{ id = "story", nombre = "HISTORIA", subtitulo = "Modo campaña", color = "ff8f3d", isla = "sanctum", angulo = 232, r = 11, personaje = "wong" },
+	{ id = "infinite", nombre = "INFINITO", subtitulo = "Resistí una oleada más", color = "6fb5ff", isla = "baxter_interior", angulo = 270, r = 10, personaje = "mister_fantastic", puesto = "puesto_infinito" },
+	{ id = "story", nombre = "HISTORIA", subtitulo = "Modo campaña", color = "ff8f3d", isla = "sanctum_interior", angulo = 270, r = 10, personaje = "wong" },
 }
 
 -- Edificios: isla, posición relativa (x, z), alto deseado y huella de la caja provisoria.
@@ -123,6 +123,22 @@ local HITOS = {
 	{ id = "torre_baxter", isla = "baxter", x = -5, z = 6, alto = 32, huella = 9, color = "3a6fd8" },
 	{ id = "sanctum", isla = "sanctum", x = 5, z = 6, alto = 16, huella = 12, color = "7a3b2e" },
 }
+
+-- Lugares ocupados en el piso de las islas (antes de agrandar): { pos, radio } para que el decorado no tape
+-- estaciones, edificios, puentes ni la aparición.
+local ocupado = {}
+local function ocupar(pos: Vector3, radio: number)
+	table.insert(ocupado, { pos = pos, radio = radio })
+end
+local function libre(pos: Vector3, radio: number): boolean
+	for _, o in ocupado do
+		local d = (Vector3.new(pos.X, 0, pos.Z) - Vector3.new(o.pos.X, 0, o.pos.Z)).Magnitude
+		if d < radio + o.radio then
+			return false
+		end
+	end
+	return true
+end
 
 local function parte(padre, color, cf: CFrame, tam: Vector3, material: Enum.Material?): Part
 	local p = Instance.new("Part")
@@ -174,6 +190,33 @@ local function letrero(padre, pos: Vector3, titulo, subtitulo, color: Color3, an
 	local ancla = parte(padre, color, CFrame.new(pos), Vector3.new(0.1, 0.1, 0.1))
 	ancla.Transparency, ancla.CanCollide, ancla.CanQuery = 1, false, false
 	cartel(ancla, titulo, subtitulo, color, ancho)
+end
+
+-- Interiores (decidido por el usuario el 15/11/2026): salas cerradas lejos y arriba de las islas, a las que se
+-- entra por la puerta de un edificio. Para las estaciones funcionan como una isla más (pos y radio).
+-- muebles: { plantilla de Plantillas.Hub, x, z, alto, giro en grados } relativos al centro del piso.
+local INTERIORES = {
+	sanctum_interior = {
+		pos = Vector3.new(70, 170, 420), radio = 26, edificio = "sanctum", nombre = "Sanctum Sanctorum",
+		piso = "madera", pared = "6b2a22", material = Enum.Material.Brick, luz = "ffb46a", sello = true,
+		muebles = {
+			{ "int_estanteria", -20, -10, 9, 90 }, { "int_estanteria", -20, 8, 9, 90 },
+			{ "int_estanteria", 20, -10, 9, -90 }, { "int_estanteria", 20, 8, 9, -90 },
+			{ "int_artefacto", -12, 18, 5, 180 }, { "int_capa", 12, 18, 6, 180 },
+		},
+	},
+	baxter_interior = {
+		pos = Vector3.new(-70, 170, 420), radio = 26, edificio = "torre_baxter", nombre = "Laboratorio de la Torre Baxter",
+		piso = "metal", pared = "dfe6ee", material = Enum.Material.SmoothPlastic, luz = "b6dcff",
+		muebles = {
+			{ "int_consola", -21, -8, 6, 90 }, { "int_consola", 21, -8, 6, -90 },
+			{ "int_fantasticar", -14, 14, 3.5, 135 }, { "int_tubo", 16, 14, 6, 180 }, { "int_tubo", 21, 4, 6, -90 },
+		},
+	},
+}
+
+local function lugar(nombre: string)
+	return ISLAS[nombre] or INTERIORES[nombre]
 end
 
 local function enIsla(isla, angulo: number, r: number): Vector3
@@ -353,6 +396,7 @@ end
 
 -- Portal de pie: tocarlo lleva al jugador a `destino`.
 local function portal(padre, pos: Vector3, mira: Vector3, destino: CFrame)
+	ocupar(pos, 8)
 	local m = Instance.new("Model")
 	m.Name = "Portal"
 	local radio = 4.6
@@ -456,8 +500,9 @@ local function encargado(padre, id: string, cf: CFrame)
 end
 
 local function estacion(padre, e, alUsar)
-	local datos = ISLAS[e.isla]
+	local datos = lugar(e.isla)
 	local pos = enIsla(datos, e.angulo, e.r)
+	ocupar(pos, 7)
 	local cf = CFrame.lookAt(pos, Vector3.new(datos.pos.X, pos.Y, datos.pos.Z))
 	local color = Color3.fromHex(e.color)
 	local m = Instance.new("Model")
@@ -513,7 +558,7 @@ end
 
 -- 8 plataformas de sala alrededor de la estación del modo.
 local function salas(padre, islaId: string, modo: string, anguloCentro: number, alUsar)
-	local datos = ISLAS[islaId]
+	local datos = lugar(islaId)
 	for i = 1, 8 do
 		local angulo = anguloCentro + (i - 4.5) * 22
 		local pos = enIsla(datos, angulo, 19)
@@ -535,6 +580,8 @@ local function salas(padre, islaId: string, modo: string, anguloCentro: number, 
 end
 
 -- Edificio: el modelo de ServerStorage.Plantillas.Hub/<id> escalado al alto pedido, o una caja provisoria.
+local puerta, marcador -- de los interiores, definidas más abajo
+
 local function hito(padre, h)
 	local datos = ISLAS[h.isla]
 	local base = datos.pos + Vector3.new(h.x, 0, h.z)
@@ -548,6 +595,18 @@ local function hito(padre, h)
 		-- La plantilla mira a −Z con el pivote en el centro de la caja: apoyarla en el piso.
 		m:PivotTo(mira * CFrame.new(0, m:GetExtentsSize().Y / 2, 0))
 		m.Name = "Hito_" .. h.id
+		local tam = m:GetExtentsSize()
+		ocupar(base, math.max(tam.X, tam.Z) / 2 + 2)
+		for id, interior in INTERIORES do
+			if interior.edificio == h.id then
+				-- Puerta en la fachada (mira al centro de la isla) que lleva al interior.
+				local frente = mira * CFrame.new(0, 0, -m:GetExtentsSize().Z / 2 - 0.4)
+				puerta(m, frente, Color3.fromHex(interior.luz), "Entrar", interior.nombre, function()
+					return Hub.llegadas[id]
+				end)
+				marcador(m, "Afuera_" .. id, frente * CFrame.new(0, 0, -6)) -- al salir, de espaldas al edificio
+			end
+		end
 		m.Parent = padre
 		return
 	end
@@ -559,6 +618,7 @@ local function hito(padre, h)
 end
 
 local function arbol(padre, pos: Vector3, copa: string, id: string, alto: number)
+	ocupar(pos, 3)
 	local modelo = plantilla(id)
 	if modelo then
 		local c = clonar(modelo, "Y", alto)
@@ -574,6 +634,7 @@ end
 
 -- Decoración común (ServerStorage.Plantillas.Deco): apoyada en `pos`, mirando a `mira` si se da.
 local function adorno(padre, id: string, pos: Vector3, alto: number, mira: Vector3?): Model?
+	ocupar(pos, 2)
 	local p = ServerStorage:FindFirstChild("Plantillas")
 	local d = p and p:FindFirstChild("Deco")
 	local m = d and d:FindFirstChild(id)
@@ -586,6 +647,232 @@ local function adorno(padre, id: string, pos: Vector3, alto: number, mira: Vecto
 	c.Parent = padre
 	return c
 end
+
+--------------------------------------------------------------------------------
+-- Decorado de cada isla (decidido por el usuario el 15/11/2026: el lobby se veía vacío). Reusa los kits de los
+-- mapas de partida del mismo tema y piezas propias de Plantillas.Hub: { carpeta, nombre, alto, cantidad, luz? }.
+-- carpeta: "Hub" (Plantillas.Hub), "Deco" (Plantillas.Deco) o el tema de Plantillas.Mapas.
+--------------------------------------------------------------------------------
+local DECORADO = {
+	central = {
+		{ "Hub", "fuente", 7, 1 }, { "Hub", "estatua_heroe", 7, 3 }, { "Deco", "farol", 6, 4, "ffe2aa" },
+		{ "Deco", "arbusto", 2.4, 8 }, { "Deco", "flores", 1, 12 },
+	},
+	asgard = { { "asgard", "runa", 2.5, 6 }, { "asgard", "farol", 5, 4, "8fd0ff" }, { "asgard", "arbol", 8, 3 } },
+	wakanda = {
+		{ "Hub", "estatua_pantera", 6, 1 }, { "wakanda", "cristal", 2.5, 7, "b070ff" }, { "wakanda", "helecho", 2.2, 9 },
+		{ "wakanda", "farol", 5, 3, "ffd27a" },
+	},
+	nuevaYork = {
+		{ "new-york", "vehiculo", 3, 2 }, { "new-york", "hidrante", 1.6, 3 }, { "new-york", "basurero", 2, 3 },
+		{ "new-york", "farol", 6, 4, "ffe2aa" }, { "new-york", "arbol", 7, 2 },
+	},
+	baxter = { { "the-raft", "cajas", 2, 4 }, { "the-raft", "farol", 6, 3, "b6dcff" } },
+	sanctum = { { "sanctum", "brasero", 2.6, 4, "ff9a40" }, { "sanctum", "arbol", 7, 3 }, { "sanctum", "farol", 5, 3, "ffb46a" } },
+}
+
+local function plantillaDe(carpeta: string, nombre: string): Model?
+	local p = ServerStorage:FindFirstChild("Plantillas")
+	if not p then
+		return nil
+	end
+	local f = if carpeta == "Hub" or carpeta == "Deco" then p:FindFirstChild(carpeta) else (p:FindFirstChild("Mapas") and p.Mapas:FindFirstChild(carpeta))
+	return f and f:FindFirstChild(nombre)
+end
+
+local function hash(a: number, b: number): number
+	return (a * 73856093 + b * 19349663) % 1000
+end
+
+-- Reparte el decorado de una isla en lugares libres (sorteo fijo, siempre igual), entre el 30 % y el 88 % del radio.
+local function decorarIsla(padre, islaId: string)
+	local datos = ISLAS[islaId]
+	for k, item in DECORADO[islaId] or {} do
+		local modelo = plantillaDe(item[1], item[2])
+		if not modelo then
+			continue
+		end
+		local puestos, intento = 0, 0
+		while puestos < item[4] and intento < 60 do
+			intento += 1
+			local h1, h2 = hash(k * 31 + intento, #islaId), hash(intento * 17 + k, puestos + 3)
+			local angulo = h1 / 1000 * 360
+			local r = datos.radio * (0.3 + 0.58 * h2 / 1000)
+			local pos = enIsla(datos, angulo, r)
+			local radio = math.max(1.5, item[3] * 0.45)
+			if libre(pos, radio) then
+				ocupar(pos, radio)
+				puestos += 1
+				local c = clonar(modelo, "Y", item[3])
+				c:PivotTo(CFrame.new(pos + Vector3.new(0, c:GetExtentsSize().Y / 2, 0)) * CFrame.Angles(0, h2 / 1000 * math.pi * 2, 0))
+				if item[5] then
+					-- Faroles y cristales: luz en la parte más alta.
+					local arriba
+					for _, d in c:GetDescendants() do
+						if d:IsA("BasePart") and (not arriba or d.Position.Y > arriba.Position.Y) then
+							arriba = d
+						end
+					end
+					if arriba then
+						local luz = Instance.new("PointLight")
+						luz.Color, luz.Range, luz.Brightness = Color3.fromHex(item[5]), 14, 1.3
+						luz.Parent = arriba
+					end
+				end
+				if item[2] == "fuente" then
+					-- Chorro de agua de la fuente.
+					local chorro = Instance.new("ParticleEmitter")
+					chorro.Color = ColorSequence.new(Color3.fromRGB(170, 220, 255))
+					chorro.LightEmission = 0.3
+					chorro.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) })
+					chorro.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 0.15) })
+					chorro.Lifetime = NumberRange.new(1, 1.4)
+					chorro.Rate = 60
+					chorro.Speed = NumberRange.new(8, 11)
+					chorro.SpreadAngle = Vector2.new(14, 14)
+					chorro.Acceleration = Vector3.new(0, -18, 0)
+					local boca = Instance.new("Attachment")
+					boca.Position = Vector3.new(0, c:GetExtentsSize().Y * 0.4, 0)
+					local raiz = c.PrimaryPart or c:FindFirstChildWhichIsA("BasePart", true)
+					boca.Parent = raiz
+					chorro.Parent = boca
+				end
+				c.Parent = padre
+			end
+		end
+	end
+end
+
+-- Cielo: el Helicarrier de S.H.I.E.L.D. quieto en el aire, un Quinjet que el cliente hace dar vueltas
+-- (CieloHub.client.luau) e islotes de roca flotando alrededor.
+local ISLOTES = {
+	{ Vector3.new(-170, 22, -90), 7 }, { Vector3.new(175, 30, -100), 6 }, { Vector3.new(-40, 40, 190), 8 },
+	{ Vector3.new(60, 18, -200), 5 }, { Vector3.new(200, 12, 80), 6 }, { Vector3.new(-200, 35, 60), 5 },
+}
+local function cielo(padre)
+	local m = Instance.new("Model")
+	m.Name = "Cielo"
+	local heli = plantillaDe("Hub", "helicarrier")
+	if heli then
+		local c = clonar(heli, "X", 70)
+		c:PivotTo(CFrame.new(-60, 70, -150) * CFrame.Angles(0, math.rad(30), 0))
+		c.Name = "Helicarrier"
+		c.Parent = m
+	end
+	local jet = plantillaDe("Hub", "quinjet")
+	if jet then
+		local c = clonar(jet, "X", 9)
+		c:PivotTo(CFrame.new(0, 45, -60))
+		c.Name = "Quinjet"
+		c.Parent = m
+	end
+	for i, d in ISLOTES do
+		isla(m, { pos = d[1], radio = d[2], color = "ffffff", textura = "roca" })
+		local adornoIslote = if i % 2 == 0 then plantillaDe("wakanda", "cristal") else plantillaDe("asgard", "arbol")
+		if adornoIslote then
+			local c = clonar(adornoIslote, "Y", if i % 2 == 0 then 3 else 6)
+			c:PivotTo(CFrame.new(d[1] + Vector3.new(0, c:GetExtentsSize().Y / 2, 0)))
+			c.Parent = m
+		end
+	end
+	m.Parent = padre
+end
+
+-- Lleva al jugador a una parte marcadora (su CFrame ya agrandado), pidiendo antes que cargue esa zona.
+local function viajar(jugador: Player, destino: BasePart)
+	local c = jugador.Character
+	if not c then
+		return
+	end
+	pcall(jugador.RequestStreamAroundAsync, jugador, destino.Position, 3)
+	c:PivotTo(destino.CFrame + Vector3.new(0, 3, 0))
+end
+
+-- Puerta con «tecla E» (marco de luz y una parte invisible con el ProximityPrompt) que lleva a `destino`.
+puerta = function(padre, cf: CFrame, color: Color3, accion: string, objeto: string, destino: () -> BasePart?)
+	local m = Instance.new("Model")
+	m.Name = "Puerta"
+	for _, lado in { -1, 1 } do
+		parte(m, color, cf * CFrame.new(lado * 2.6, 3.6, 0), Vector3.new(0.5, 7.2, 0.5), Enum.Material.Neon)
+	end
+	parte(m, color, cf * CFrame.new(0, 7.2, 0), Vector3.new(5.7, 0.5, 0.5), Enum.Material.Neon)
+	local hoja = parte(m, color, cf * CFrame.new(0, 3.5, 0), Vector3.new(4.7, 7, 0.2), Enum.Material.ForceField)
+	hoja.CanCollide = false
+	hoja.Transparency = 0.4
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = accion
+	prompt.ObjectText = objeto
+	prompt.KeyboardKeyCode = Enum.KeyCode.E
+	prompt.MaxActivationDistance = 8 * ESCALA
+	prompt.RequiresLineOfSight = false
+	prompt.Triggered:Connect(function(jugador)
+		local d = destino()
+		if d then
+			viajar(jugador, d)
+		end
+	end)
+	prompt.Parent = hoja
+	m.Parent = padre
+	return m
+end
+
+-- Marcador invisible: el lugar (y hacia dónde mira) en que aparece quien entra o sale.
+marcador = function(padre, nombre: string, cf: CFrame): Part
+	local p = parte(padre, "ffffff", cf, Vector3.new(1, 1, 1))
+	p.Name = nombre
+	p.Transparency, p.CanCollide, p.CanQuery, p.CanTouch = 1, false, false, false
+	return p
+end
+
+-- Sala cerrada de un interior: piso, cuatro paredes, techo, luces, muebles y la puerta de salida (pared +Z).
+local function construirInterior(padre, id: string, datos)
+	local m = Instance.new("Model")
+	m.Name = "Interior_" .. id
+	local c, r = datos.pos, datos.radio + 2
+	local alto = 16
+	local colorPared = Color3.fromHex(datos.pared)
+	texturar(parte(m, "ffffff", CFrame.new(c - Vector3.new(0, 0.5, 0)), Vector3.new(r * 2, 1, r * 2)), datos.piso)
+	parte(m, colorPared, CFrame.new(c + Vector3.new(0, alto + 0.5, 0)), Vector3.new(r * 2, 1, r * 2), datos.material)
+	for _, d in { Vector3.new(1, 0, 0), Vector3.new(-1, 0, 0), Vector3.new(0, 0, 1), Vector3.new(0, 0, -1) } do
+		local tam = if d.X ~= 0 then Vector3.new(1, alto, r * 2) else Vector3.new(r * 2, alto, 1)
+		parte(m, colorPared, CFrame.new(c + d * r + Vector3.new(0, alto / 2, 0)), tam, datos.material)
+		-- Zócalo de luz al pie de cada pared.
+		local zocalo = if d.X ~= 0 then Vector3.new(0.3, 0.3, r * 2) else Vector3.new(r * 2, 0.3, 0.3)
+		parte(m, datos.luz, CFrame.new(c + d * (r - 0.6) + Vector3.new(0, 0.2, 0)), zocalo, Enum.Material.Neon)
+	end
+	for _, esquina in { Vector3.new(1, 0, 1), Vector3.new(-1, 0, 1), Vector3.new(1, 0, -1), Vector3.new(-1, 0, -1), Vector3.new(0, 0, 0) } do
+		local foco = parte(m, datos.luz, CFrame.new(c + esquina * (r * 0.5) + Vector3.new(0, alto - 0.6, 0)), Vector3.new(2, 0.4, 2), Enum.Material.Neon)
+		local luz = Instance.new("PointLight")
+		luz.Color, luz.Range, luz.Brightness = Color3.fromHex(datos.luz), 30, 1.6
+		luz.Parent = foco
+	end
+	if datos.sello then
+		-- Ventana redonda del Sanctum con el sello de Strange, en la pared del fondo.
+		local ventana = parte(m, "ffd28a", CFrame.new(c + Vector3.new(0, alto * 0.62, -r + 0.6)) * CFrame.Angles(0, math.rad(90), 0), Vector3.new(0.2, 9, 9), Enum.Material.Neon)
+		ventana.Shape = Enum.PartType.Cylinder
+		local sello = Instance.new("Decal")
+		sello.Texture = "rbxassetid://" .. SELLO
+		sello.Face = Enum.NormalId.Right
+		sello.Parent = ventana
+	end
+	for _, mu in datos.muebles do
+		local plantillaMueble = plantilla(mu[1])
+		if plantillaMueble then
+			local x = clonar(plantillaMueble, "Y", mu[4])
+			x:PivotTo(CFrame.new(c + Vector3.new(mu[2], x:GetExtentsSize().Y / 2, mu[3])) * CFrame.Angles(0, math.rad(mu[5]), 0))
+			x.Parent = m
+		end
+	end
+	-- Entrada: se aparece de espaldas a la puerta de salida, mirando al fondo (la estación).
+	local salida = CFrame.lookAt(c + Vector3.new(0, 0, r - 0.6), c)
+	marcador(m, "Llegada", CFrame.lookAt(c + Vector3.new(0, 0, r - 6), c))
+	puerta(m, salida, Color3.fromHex(datos.luz), "Salir", datos.nombre, function()
+		return Hub.salidas[id]
+	end)
+	m.Parent = padre
+end
+
+Hub.llegadas, Hub.salidas = {}, {} -- [interior] = marcador adentro / afuera de la puerta del edificio
 
 function Hub.construir(alUsar: (Player, string) -> ())
 	local viejo = workspace:FindFirstChild("Hub")
@@ -605,7 +892,15 @@ function Hub.construir(alUsar: (Player, string) -> ())
 	for _, datos in ISLAS do
 		isla(hub, datos)
 	end
+	table.clear(ocupado)
 	local c = ISLAS.central
+	-- Salidas de los puentes y aparición: sin decorado encima.
+	for _, otra in { ISLAS.asgard, ISLAS.wakanda, ISLAS.nuevaYork, ISLAS.baxter } do
+		ocupar(borde(c, otra), 9)
+		ocupar(borde(otra, c), 9)
+	end
+	ocupar(borde(ISLAS.sanctum, c), 9)
+	ocupar(c.pos + Vector3.new(0, 0, 14), 8)
 	puente(hub, borde(c, ISLAS.asgard), borde(ISLAS.asgard, c), "bifrost")
 	puente(hub, borde(c, ISLAS.wakanda), borde(ISLAS.wakanda, c), "selva")
 	puente(hub, borde(c, ISLAS.nuevaYork), borde(ISLAS.nuevaYork, c), "telarana")
@@ -627,11 +922,14 @@ function Hub.construir(alUsar: (Player, string) -> ())
 	for _, h in HITOS do
 		hito(hub, h)
 	end
+	for id, datos in INTERIORES do
+		construirInterior(hub, id, datos)
+	end
 	for _, e in Hub.ESTACIONES do
 		estacion(hub, e, alUsar)
 	end
-	salas(hub, "baxter", "infinite", -52, alUsar)
-	salas(hub, "sanctum", "story", 232, alUsar)
+	salas(hub, "baxter_interior", "infinite", 270, alUsar)
+	salas(hub, "sanctum_interior", "story", 270, alUsar)
 
 	letrero(hub, ISLAS.asgard.pos + Vector3.new(0, 34 * ESCALA_EDIFICIOS / ESCALA, -10), "ASGARD", "Invocaciones", Color3.fromHex("ffcf72"), 14)
 	letrero(hub, ISLAS.wakanda.pos + Vector3.new(0, 22 * ESCALA_EDIFICIOS / ESCALA, 0), "WAKANDA", "Traits · Grades · Pets", Color3.fromHex("b865ff"), 14)
@@ -671,6 +969,24 @@ function Hub.construir(alUsar: (Player, string) -> ())
 		adorno(hub, if i % 2 == 0 then "roca" else "arbusto", enIsla(ISLAS.wakanda, a + 20, 22), if i % 2 == 0 then 1.8 else 2.6)
 	end
 
+	for id in ISLAS do
+		decorarIsla(hub, id)
+	end
+	cielo(hub)
+	-- Chispas mágicas naranjas flotando sobre la isla del Sanctum.
+	local s = ISLAS.sanctum
+	local nube = parte(hub, "ffffff", CFrame.new(s.pos + Vector3.new(0, 6, 0)), Vector3.new(s.radio * 1.6, 8, s.radio * 1.6))
+	nube.Transparency, nube.CanCollide, nube.CanQuery, nube.CanTouch = 1, false, false, false
+	local chispas = Instance.new("ParticleEmitter")
+	chispas.Color = ColorSequence.new(Color3.fromRGB(255, 170, 60), Color3.fromRGB(255, 90, 20))
+	chispas.LightEmission = 1
+	chispas.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 0) })
+	chispas.Lifetime = NumberRange.new(2, 4)
+	chispas.Rate = 18
+	chispas.Speed = NumberRange.new(0.5, 1.5)
+	chispas.SpreadAngle = Vector2.new(180, 180)
+	chispas.Parent = nube
+
 	-- Aparición al pie de la torre, mirando hacia afuera: las estaciones miran al centro, o sea al jugador.
 	local aparicion = Instance.new("SpawnLocation")
 	aparicion.Name = "AparicionHub"
@@ -687,9 +1003,17 @@ function Hub.construir(alUsar: (Player, string) -> ())
 	-- Agrandar todo y rellenar el pasto de terreno a la medida nueva (borrando el de antes).
 	hub.WorldPivot = CFrame.new(PIVOTE)
 	hub:ScaleTo(ESCALA)
-	workspace.Terrain:FillBlock(CFrame.new(0, PIVOTE.Y, 0), Vector3.new(560, 80, 560), Enum.Material.Air)
+	for id in INTERIORES do
+		local interior = hub:FindFirstChild("Interior_" .. id)
+		Hub.llegadas[id] = interior and interior:FindFirstChild("Llegada")
+		Hub.salidas[id] = hub:FindFirstChild("Afuera_" .. id, true)
+	end
 	for _, datos in ISLAS do
 		if TEXTURAS[datos.textura].base == Enum.Material.Grass then
+			-- Borrar el pasto de una construcción anterior sólo alrededor de esta isla (las arenas quedan lejos).
+			local c = PIVOTE + (datos.pos - PIVOTE) * ESCALA
+			local lado = datos.radio * ESCALA * 2 + 8
+			workspace.Terrain:FillBlock(CFrame.new(c.X, PIVOTE.Y, c.Z), Vector3.new(lado, 40, lado), Enum.Material.Air)
 			pastoDeTerreno(datos)
 		end
 	end
