@@ -9,6 +9,12 @@ local ServerStorage = game:GetService("ServerStorage")
 local Hub = {}
 
 local ALTO = 1 -- altura del piso de las islas
+-- Tamaño del lobby (decidido por el usuario el 15/11/2026): se arma como antes y al final todo se agranda ×ESCALA
+-- (islas, puentes, estaciones, árboles, adornos); los edificios (HITOS) crecen además hasta ×ESCALA_EDIFICIOS.
+local ESCALA, ESCALA_EDIFICIOS = 1.5, 2
+-- Centro del agrandado: justo debajo de la isla central, para que su piso (y el pasto de terreno) quede a la
+-- misma altura que antes.
+local PIVOTE = Vector3.new(0, ALTO - 2, 0)
 
 -- Texturas generadas con ForgeGUI (ids en forgegui-project.json): MaterialVariant por superficie.
 local TEXTURAS = {
@@ -136,9 +142,10 @@ end
 
 local function cartel(padre: BasePart, titulo: string, subtitulo: string?, color: Color3, ancho: number)
 	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.fromScale(ancho, ancho / 4)
+	-- El BillboardGui no crece con ScaleTo: se arma ya al tamaño final.
+	gui.Size = UDim2.fromScale(ancho * ESCALA, ancho * ESCALA / 4)
 	gui.LightInfluence = 0
-	gui.MaxDistance = 150
+	gui.MaxDistance = 150 * ESCALA
 	local t = Instance.new("TextLabel")
 	t.Size = UDim2.fromScale(1, if subtitulo then 0.65 else 1)
 	t.BackgroundTransparency = 1
@@ -180,14 +187,7 @@ local function isla(padre, datos)
 	local tapa = disco(m, datos.color, datos.pos - Vector3.new(0, if pasto then 2 else 0, 0), datos.radio * 2, 3)
 	texturar(tapa, datos.textura)
 	if pasto then
-		-- Franjas de 4 studs (un voxel): FillCylinder llena voxeles enteros y dejaría el pasto 3 studs más alto.
-		local r = datos.radio - 1
-		-- Franjas alineadas a la grilla del mundo: si no, los voxeles quedan a medias y el pasto se hunde.
-		local cx = datos.pos.X
-		for x = math.ceil((cx - r) / 4) * 4 + 2, cx + r - 2, 4 do
-			local cuerda = 2 * math.sqrt(math.max(0, r * r - (x - cx) ^ 2))
-			workspace.Terrain:FillBlock(CFrame.new(x, datos.pos.Y - 4, datos.pos.Z), Vector3.new(4, 4, cuerda), Enum.Material.Grass)
-		end
+		-- El pasto de terreno se llena después de agrandar el lobby (pastoDeTerreno).
 		local motas = Instance.new("ParticleEmitter")
 		motas.Color = ColorSequence.new(Color3.fromRGB(255, 236, 150))
 		motas.LightEmission = 0.8
@@ -203,6 +203,21 @@ local function isla(padre, datos)
 		texturar(disco(m, if i % 2 == 0 then "d9d2c8" else "ffffff", datos.pos - Vector3.new(0, 2 + i * 5, 0), datos.radio * 2 * f, 5.5), "roca")
 	end
 	m.Parent = padre
+end
+
+-- Pasto 3D de terreno sobre una isla de pasto, con su posición y radio ya agrandados: el relleno termina en la
+-- cara de arriba de la tapa y el pasto se ve 2 studs más arriba (que es donde camina el jugador).
+local function pastoDeTerreno(datos)
+	local centro = PIVOTE + (datos.pos - PIVOTE) * ESCALA
+	local tope = PIVOTE.Y + (datos.pos.Y - 2 - PIVOTE.Y) * ESCALA -- cara de arriba de la tapa agrandada
+	-- Franjas de 4 studs (un voxel): FillCylinder llena voxeles enteros y dejaría el pasto 3 studs más alto.
+	local r = datos.radio * ESCALA - 1
+	-- Franjas alineadas a la grilla del mundo: si no, los voxeles quedan a medias y el pasto se hunde.
+	local cx = centro.X
+	for x = math.ceil((cx - r) / 4) * 4 + 2, cx + r - 2, 4 do
+		local cuerda = 2 * math.sqrt(math.max(0, r * r - (x - cx) ^ 2))
+		workspace.Terrain:FillBlock(CFrame.new(x, tope - 2, centro.Z), Vector3.new(4, 4, cuerda), Enum.Material.Grass)
+	end
 end
 
 -- Modelo generado de ServerStorage.Plantillas.Hub (mira a −Z, pivote en el centro de su caja), o nil.
@@ -437,7 +452,7 @@ local function estacion(padre, e, alUsar)
 	prompt.ActionText = e.nombre
 	prompt.ObjectText = e.subtitulo
 	prompt.KeyboardKeyCode = Enum.KeyCode.E
-	prompt.MaxActivationDistance = 7
+	prompt.MaxActivationDistance = 7 * ESCALA
 	prompt.RequiresLineOfSight = false
 	prompt.Triggered:Connect(function(jugador)
 		alUsar(jugador, e.id)
@@ -460,7 +475,7 @@ local function salas(padre, islaId: string, modo: string, anguloCentro: number, 
 		prompt.ActionText = "Crear sala"
 		prompt.ObjectText = `Sala {i}`
 		prompt.KeyboardKeyCode = Enum.KeyCode.E
-		prompt.MaxActivationDistance = 5
+		prompt.MaxActivationDistance = 5 * ESCALA
 		prompt.RequiresLineOfSight = false
 		prompt.Triggered:Connect(function(jugador)
 			alUsar(jugador, "sala_" .. modo)
@@ -477,8 +492,9 @@ local function hito(padre, h)
 	local objetivo = if h.mirar then datos.pos + Vector3.new(h.mirar.x, 0, h.mirar.z) else datos.pos
 	local mira = CFrame.lookAt(base, Vector3.new(objetivo.X, base.Y, objetivo.Z))
 	local modelo = plantilla(h.id)
+	local extra = ESCALA_EDIFICIOS / ESCALA -- con el agrandado final quedan ×ESCALA_EDIFICIOS
 	if modelo then
-		local m = clonar(modelo, "Y", h.alto)
+		local m = clonar(modelo, "Y", h.alto * extra)
 		-- La plantilla mira a −Z con el pivote en el centro de la caja: apoyarla en el piso.
 		m:PivotTo(mira * CFrame.new(0, m:GetExtentsSize().Y / 2, 0))
 		m.Name = "Hito_" .. h.id
@@ -487,8 +503,8 @@ local function hito(padre, h)
 	end
 	local m = Instance.new("Model")
 	m.Name = "Hito_" .. h.id
-	parte(m, h.color, mira * CFrame.new(0, h.alto / 2, 0), Vector3.new(h.huella, h.alto, h.huella), Enum.Material.Concrete)
-	letrero(m, base + Vector3.new(0, h.alto + 2, 0), (h.id:upper():gsub("_", " ")), nil, Color3.fromHex(h.color), 10)
+	parte(m, h.color, mira * CFrame.new(0, h.alto * extra / 2, 0), Vector3.new(h.huella * extra, h.alto * extra, h.huella * extra), Enum.Material.Concrete)
+	letrero(m, base + Vector3.new(0, h.alto * extra + 2, 0), (h.id:upper():gsub("_", " ")), nil, Color3.fromHex(h.color), 10)
 	m.Parent = padre
 end
 
@@ -567,10 +583,10 @@ function Hub.construir(alUsar: (Player, string) -> ())
 	salas(hub, "baxter", "infinite", -52, alUsar)
 	salas(hub, "sanctum", "story", 232, alUsar)
 
-	letrero(hub, ISLAS.asgard.pos + Vector3.new(0, 34, -10), "ASGARD", "Invocaciones", Color3.fromHex("ffcf72"), 14)
-	letrero(hub, ISLAS.wakanda.pos + Vector3.new(0, 22, 0), "WAKANDA", "Traits · Grades · Pets", Color3.fromHex("b865ff"), 14)
-	letrero(hub, ISLAS.nuevaYork.pos + Vector3.new(0, 26, 0), "NUEVA YORK", "Raids · Tienda", Color3.fromHex("40c9ff"), 14)
-	letrero(hub, ISLAS.baxter.pos + Vector3.new(0, 36, 0), "TORRE BAXTER", "Modo infinito", Color3.fromHex("6fb5ff"), 14)
+	letrero(hub, ISLAS.asgard.pos + Vector3.new(0, 34 * ESCALA_EDIFICIOS / ESCALA, -10), "ASGARD", "Invocaciones", Color3.fromHex("ffcf72"), 14)
+	letrero(hub, ISLAS.wakanda.pos + Vector3.new(0, 22 * ESCALA_EDIFICIOS / ESCALA, 0), "WAKANDA", "Traits · Grades · Pets", Color3.fromHex("b865ff"), 14)
+	letrero(hub, ISLAS.nuevaYork.pos + Vector3.new(0, 26 * ESCALA_EDIFICIOS / ESCALA, 0), "NUEVA YORK", "Raids · Tienda", Color3.fromHex("40c9ff"), 14)
+	letrero(hub, ISLAS.baxter.pos + Vector3.new(0, 36 * ESCALA_EDIFICIOS / ESCALA, 0), "TORRE BAXTER", "Modo infinito", Color3.fromHex("6fb5ff"), 14)
 
 	-- Árboles: jardín de la isla central y selva de Wakanda.
 	for _, a in { -70, -20, 140, 200 } do
@@ -618,6 +634,16 @@ function Hub.construir(alUsar: (Player, string) -> ())
 	aparicion.Parent = hub
 	Hub.aparicion = aparicion
 
+	-- Agrandar todo y rellenar el pasto de terreno a la medida nueva (borrando el de antes).
+	hub.WorldPivot = CFrame.new(PIVOTE)
+	hub:ScaleTo(ESCALA)
+	workspace.Terrain:FillBlock(CFrame.new(0, PIVOTE.Y, 0), Vector3.new(560, 80, 560), Enum.Material.Air)
+	for _, datos in ISLAS do
+		if TEXTURAS[datos.textura].base == Enum.Material.Grass then
+			pastoDeTerreno(datos)
+		end
+	end
+
 	hub.Parent = workspace
 	Hub.orbes, Hub.bifrost = {}, {}
 	for _, d in hub:GetDescendants() do
@@ -639,9 +665,14 @@ function Hub.llegada(nombre: string): CFrame?
 	if nombre == "central" then
 		return Hub.aparicion.CFrame + Vector3.new(0, 3, 0)
 	end
-	local haciaCentral = (ISLAS.central.pos - datos.pos) * Vector3.new(1, 0, 1)
-	local p = datos.pos + haciaCentral.Unit * (datos.radio - 6) + Vector3.new(0, 3, 0)
-	return CFrame.lookAt(p, Vector3.new(datos.pos.X, p.Y, datos.pos.Z))
+	-- Posiciones de la tabla llevadas a la medida agrandada.
+	local function final(v: Vector3): Vector3
+		return PIVOTE + (v - PIVOTE) * ESCALA
+	end
+	local centro, central = final(datos.pos), final(ISLAS.central.pos)
+	local haciaCentral = (central - centro) * Vector3.new(1, 0, 1)
+	local p = centro + haciaCentral.Unit * (datos.radio * ESCALA - 6) + Vector3.new(0, 3, 0)
+	return CFrame.lookAt(p, Vector3.new(centro.X, p.Y, centro.Z))
 end
 
 -- Gira orbes y sellos, corre el arcoíris del Bifrost y devuelve a la aparición a quien cae (llamar en Heartbeat).
