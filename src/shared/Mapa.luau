@@ -10,7 +10,7 @@ local Mapa = {}
 Mapa.ESCALA = 1 / 4 -- studs por píxel del 2D: el mapa mide 200×150 studs y una baldosa de 32 px, 8 (docs/PARTIDA.md)
 Mapa.ORIGEN = Vector3.new(300, 0, -40) -- lejos del HUB, que está en el centro
 Mapa.ANCHO, Mapa.ALTO = 800, 600 -- tamaño lógico del 2D (combat-data.js)
-Mapa.JUGABLES = { "level_1", "level_2", "level_3", "level_4", "level_5", "level_6", "level_7", "level_8", "level_9" } -- PLAYABLE_MISSIONS del 3D
+Mapa.JUGABLES = { "level_1", "level_2", "level_3", "level_4", "level_5", "level_6", "level_7", "level_8", "level_9", "level_10" } -- PLAYABLE_MISSIONS del 3D
 
 -- Códigos de TerrainRules.js del 2D.
 local AGUA, PASTO, CAMINO, MONTANA, BOSQUE, BLOQUEADO, VEREDA, DETALLE = 0, 1, 2, 3, 4, 5, 11, 12
@@ -174,6 +174,24 @@ local TEMAS = {
 		sueltos = { { "cristal", 2, 110 } },
 		motas = Color3.fromRGB(255, 79, 163),
 	},
+	-- Savage Land: selva con helechos y árboles, sendero de tierra, templo en ruinas en el medio (altura), río
+	-- abajo (agua), grietas de lava sueltas y selva cerrada arriba (docs/MAPAS.md).
+	["savage-land"] = {
+		aspecto = {
+			[CAMINO] = { color = Color3.fromRGB(134, 98, 66), alto = 1, material = Enum.Material.Ground },
+			[PASTO] = { color = Color3.fromRGB(255, 255, 255), alto = 1.4, material = Enum.Material.Grass, terreno = true },
+			[BOSQUE] = { color = Color3.fromRGB(255, 255, 255), alto = 1.4, material = Enum.Material.Grass, terreno = true },
+			[BLOQUEADO] = { color = Color3.fromRGB(255, 255, 255), alto = 1.4, material = Enum.Material.Grass, terreno = true },
+			[DETALLE] = { color = Color3.fromRGB(255, 120, 40), alto = 1.4, material = Enum.Material.CrackedLava },
+			[MONTANA] = { color = Color3.fromRGB(128, 120, 98), alto = 7, material = Enum.Material.Rock, techo = "Hub_roca", techoMaterial = Enum.Material.Rock, techoColor = Color3.fromRGB(150, 140, 110) },
+		},
+		parapeto = false,
+		bancos = false,
+		banda = Color3.fromRGB(126, 224, 129),
+		sueltosEn = { BLOQUEADO, PASTO },
+		sueltos = { { "arbol", 9, 260 }, { "helecho", 2.2, 180 }, { "arbusto", 2.8, 150 }, { "hueso", 2.4, 25 } },
+		motas = Color3.fromRGB(230, 255, 140),
+	},
 }
 
 local function tema(nivel)
@@ -259,11 +277,11 @@ function Mapa.rutaPixeles(nivel): { { x: number, y: number } }
 	return extenderRuta(nivel, nivel.path)
 end
 
--- Todas las rutas del mapa: en Asgard (Bifrost) las de alternatePaths, que se turnan por oleada; en los demás,
--- sólo la principal (sus alternatePaths del 2D no se usan).
+-- Todas las rutas del mapa: en Asgard (bifrost) y Savage Land (jungle) las de alternatePaths, que se turnan
+-- (por oleada y cada tres oleadas); en los demás, sólo la principal (sus alternatePaths del 2D no se usan).
 function Mapa.rutasPixeles(nivel): { { { x: number, y: number } } }
 	local m = nivel.mission and nivel.mission.mechanic
-	if m and m.type == "bifrost" and nivel.alternatePaths then
+	if m and (m.type == "bifrost" or m.type == "jungle") and nivel.alternatePaths then
 		local r = {}
 		for _, puntos in nivel.alternatePaths do
 			table.insert(r, extenderRuta(nivel, puntos))
@@ -377,6 +395,20 @@ local TERRENOS = {
 			return BLOQUEADO
 		end
 		return if ruido < 0.12 then DETALLE else PASTO
+	end,
+	-- Savage Land: dos senderos (A: filas 4 y 10, columnas 5 y 14; B: filas 11 y 3, columnas 7 y 16) que se turnan
+	-- cada tres oleadas. Templo en ruinas entre los dos (altura), río abajo (agua), selva cerrada arriba.
+	level_10 = function(x, y, ruido)
+		if x >= 9 and x <= 12 and y >= 5 and y <= 7 then
+			return MONTANA
+		end
+		if y >= 13 then
+			return AGUA
+		end
+		if y <= 1 then
+			return BLOQUEADO
+		end
+		return if ruido < 0.05 then DETALLE elseif ruido < 0.2 then BOSQUE else PASTO
 	end,
 }
 

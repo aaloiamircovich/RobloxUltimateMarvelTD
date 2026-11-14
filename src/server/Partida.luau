@@ -258,6 +258,7 @@ function Partida.nueva(op)
 	local jefeBarra = nil -- el jefe que se ve en la barra de arriba (cualquier modo)
 	local balizasUsadas = {} -- [índice de zona] = true: balizas del Instituto Xavier ya usadas en esta oleada
 	local invertida, cicloInversion = false, 6 -- Dimensión Oscura: estado de la paradoja y segundos al próximo cambio
+	local vegetacion, frenados = 0, {} -- Savage Land: masas de vegetación que quedan en la oleada y enemigos ya frenados
 	local danoJefe = {} -- [Player] = daño hecho al jefe
 	local function nombreActo(): string
 		return if infinito then "Infinito" elseif esEvento then "Evento" elseif esRaid then "Raid" else tostring(op.acto)
@@ -1017,6 +1018,26 @@ function Partida.nueva(op)
 				end
 			end
 		end
+		if mecanica and mecanica.type == "jungle" and vegetacion > 0 then
+			-- Vegetación (updateJungle del 2D): cada zona frena 3 s (−62 %) a un enemigo nuevo hasta gastar las de la oleada.
+			for _, zona in mecanica.landmarks or {} do
+				if vegetacion <= 0 then
+					break
+				end
+				for _, c in enPixeles do
+					local e = c.e
+					if vivo(e) and not frenados[e] and math.sqrt((c.x - zona.x) ^ 2 + (c.y - zona.y) ^ 2) <= (zona.radius or 54) then
+						frenados[e] = true
+						Combate.aplicarEstado(e, { type = "slow", duration = 3, power = 0.62 })
+						vegetacion -= 1
+						if vegetacion == 0 then
+							fijar("Mensaje", "La vegetación fue destruida: el sendero queda libre")
+						end
+						break
+					end
+				end
+			end
+		end
 		if mecanica and mecanica.type == "inversion" then
 			-- Ciclo de inversión (updateInversion del 2D): cada `cycle` s las runas pasan de frenar (−42 %) a
 			-- acelerar (+24 %) a los enemigos en su radio. Las zonas del piso se ponen rojas mientras está invertida.
@@ -1230,12 +1251,19 @@ function Partida.nueva(op)
 			n += 1
 			fijar("Oleada", n)
 			table.clear(balizasUsadas)
-			-- Bifrost (switchReactiveRoute del 2D): cada oleada sale por la ruta (n − 1) mod cantidad + 1.
-			rutaActual = (n - 1) % #rutas + 1
 			invertida = false
 			cicloInversion = (NIVEL.mission and NIVEL.mission.mechanic and NIVEL.mission.mechanic.cycle) or 6
-			if #rutas > 1 then
-				aviso(`Ancla {if n % 2 == 0 then "Vanaheim" else "Asgard"} conectada al Bifrost`)
+			-- Rutas alternas: el Bifrost cambia cada oleada (switchReactiveRoute del 2D); la selva cada tres (jungle).
+			local tipoMecanica = NIVEL.mission and NIVEL.mission.mechanic and NIVEL.mission.mechanic.type
+			if tipoMecanica == "jungle" then
+				rutaActual = math.floor((n - 1) / 3) % #rutas + 1
+				vegetacion, frenados = NIVEL.mission.mechanic.vegetation or 5, {}
+				aviso(if n % 3 == 1 then "La selva reveló un sendero oculto" else "La vegetación contiene el avance")
+			else
+				rutaActual = (n - 1) % #rutas + 1
+				if #rutas > 1 then
+					aviso(`Ancla {if n % 2 == 0 then "Vanaheim" else "Asgard"} conectada al Bifrost`)
+				end
 			end
 			fijar("Fase", "combate")
 			for j, d in p.jugadores do

@@ -84,5 +84,10 @@ return function()
 	local oscura = niveles[9]
 	assert(Despliegue.terreno(oscura, 340, 200) == 3 and Despliegue.terreno(oscura, 620, 200) == 0, "plataforma y charco de la Dimensión Oscura")
 	assert(Despliegue.reservada(oscura, 300, 300), "runa NEXO reservada")
+	-- Savage Land: dos senderos (selva) pintados como camino; templo (altura) y río (agua) al alcance.
+	local selva = niveles[10]
+	assert(#Mapa.rutasPixeles(selva) == 2, "senderos de Savage Land")
+	assert(Despliegue.terreno(selva, 20, 470) == 2 and Despliegue.terreno(selva, 20, 190) == 2, "las dos entradas de la selva son camino")
+	assert(Despliegue.terreno(selva, 420, 260) == 3 and Despliegue.terreno(selva, 300, 540) == 0, "templo y río de Savage Land")
 	return "OK: 4 mapas idénticos al 3D y los nuevos con su ruta"
 end
