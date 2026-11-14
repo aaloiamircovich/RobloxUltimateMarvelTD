@@ -179,7 +179,8 @@ end
 -- Escuadrón de un jugador para la partida: { uid, heroId, nivel, limite }.
 local function escuadronDe(perfil)
 	local r, texto = {}, {}
-	for _, uid in perfil.squad do
+	-- Sin perfil (todavía no cargó o se fue a mitad de la carga): entra sin escuadrón en vez de romper la partida.
+	for _, uid in (perfil and perfil.squad) or {} do
 		local u = Unidades.buscar(perfil, uid)
 		if u then
 			local e = { uid = uid, heroId = u.heroId, nivel = u.level, limite = Unidades.LIMITE_COLOCACION[heroes[u.heroId].rarity] or 1, rasgo = u.rasgo, grados = u.grados }
