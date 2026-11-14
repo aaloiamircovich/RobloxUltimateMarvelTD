@@ -50,20 +50,22 @@ Los encargados no giran ni hablan: sólo su reposo. Se definen con `personaje` y
   de atrás de la sala («Salir»). `Hub.llegadas` y `Hub.salidas` son los marcadores; antes de llevar al jugador se
   pide que cargue esa zona (`RequestStreamAroundAsync`).
 - Las salas (`INTERIORES` en `Hub.luau`) son cajas cerradas lejos y arriba de las islas (no se ven desde el
-  lobby), de 72 × 72 studs y 24 de alto antes de agrandar: piso, paredes con columnas cada 12 studs, techo,
+  lobby), de 52 × 52 studs y 24 de alto antes de agrandar (achicadas el 15/11/2026 a pedido del usuario para que
+  no queden huecos; las 8 salas de cada modo van en dos filas de 4 contra las paredes de los costados): piso, paredes con columnas cada 12 studs, techo,
   zócalos de luz, focos (cálido al centro y del color de acento en las esquinas) y polvo flotando. Para las
   estaciones funcionan como una isla más (`lugar()`). Los muebles son modelos generados (`Plantillas.Hub/int_*`).
 - **Sanctum Sanctorum** (rehecho el 15/11/2026 a partir de tres fotos de referencia que pasó el usuario;
   `extrasSanctum` en `Hub.luau`): paredes de **madera oscura** con molduras doradas y apliques de luz cálida en
   las columnas; **piso lustrado** (refleja) con incrustaciones de bronce (dos anillos y ocho rayos alrededor del
   círculo mágico); **techo artesonado** (vigas cruzadas cada 8 studs con filete dorado); el **ventanal redondo**
-  de 22 studs en la pared del fondo, sobre una **tarima** con dos escalones y barandas de bronce, con los
-  **parantes curvos** dibujados con arcos de bronce oscuro, luz que entra (`SurfaceLight`) y polvo flotando en el
-  haz; **vitrinas** de vidrio con reliquias a los costados, un **cofre** tallado, un **escritorio** antiguo con
+  de 18 studs en la pared del fondo, sobre una **tarima** con dos escalones y barandas de bronce, armado con piezas
+  según una cuarta foto: vidrio claro y frío, **emplomado** fino (24 rayos desde una roseta central y anillos),
+  cuatro **bandas** gruesas oscuras que se cruzan (arcos de círculos corridos, recortados dentro del vidrio) y un
+  **marco** grueso en dos escalones; luz fría que entra (`SurfaceLight`) y polvo flotando en el haz; **vitrinas** de vidrio con reliquias a los costados, un **cofre** tallado, un **escritorio** antiguo con
   lámpara, una **estatua** dorada, estanterías, el atril con el Libro de los Vishanti, la alfombra, el candelabro,
   el Ojo de Agamotto y la Capa de Levitación sobre la tarima, libros flotando y Doctor Strange. Balcones con
   **barandas de bronce** en las paredes de los costados (en el fondo no, para no tapar el ventanal) y la escalera.
-  El neón del ventanal es de un color medio a propósito: más claro encandila y tapa los parantes.
+  El neón del ventanal es de un color medio a propósito: más claro, el resplandor tapa las bandas y el emplomado.
 - **Laboratorio de la Torre Baxter** (mejorado el 15/11/2026): Sue y Johnny Storm junto a Mister Fantastic;
   **portal a la Zona Negativa** en la pared +X (marco generado y remolino violeta con partículas y luz);
   **ventanal** de vidrio en la pared −X con rascacielos afuera (da al cielo vacío: del otro lado, +X, está el
