@@ -24,6 +24,7 @@ local Actos = require(Shared.Actos)
 local Temporada = require(Shared.Temporada)
 local Recompensas = require(Shared.Recompensas)
 local Reposo = require(Shared.Reposo)
+local Analitica = require(script.Parent.Analitica)
 local Evento = require(Shared.Evento)
 local Raid = require(Shared.Raid)
 local Rasgos = require(Shared.Rasgos)
@@ -573,6 +574,7 @@ function Partida.nueva(op)
 		modelo.Parent = carpetaUnidades
 		table.insert(unidades, u)
 		evento(j, "colocar", 1)
+		Analitica.unidad(j, "colocada", e.heroId, config.rarity)
 		return nil
 	end
 
@@ -630,6 +632,7 @@ function Partida.nueva(op)
 		u.modelo:SetAttribute("Invertido", u.invertido)
 		j:SetAttribute("Dinero", dinero - siguiente.costo)
 		evento(j, "mejorar", 1)
+		Analitica.unidad(j, `mejorada a {u.mejora}`, u.config.id, u.config.rarity)
 		return nil
 	end
 
@@ -933,6 +936,9 @@ function Partida.nueva(op)
 		terminada = true
 		local gano = string.sub(mensaje, 1, 7) ~= "Derrota"
 		fijar("Resultado", if gano then "victoria" else "derrota")
+		for j in p.jugadores do
+			Analitica.partidaTermina(j, NIVEL.id, op.acto, gano, estado:GetAttribute("Oleada") or 0)
+		end
 		if esRaid then
 			for j in p.jugadores do
 				local perfil = Perfiles.de(j)
@@ -944,6 +950,7 @@ function Partida.nueva(op)
 					Perfiles.marcar(j)
 					j:SetAttribute("Gemas", perfil.gems)
 					j:SetAttribute("Nucleos", perfil.cores)
+					Analitica.saldo(j, perfil, "raid")
 					local partes = { `Daño al jefe: {math.floor(danoJefe[j] or 0)}` }
 					if premio.gemas > 0 then
 						table.insert(partes, `+{premio.gemas} gemas · +{premio.nucleos} núcleos`)
@@ -1025,6 +1032,7 @@ function Partida.nueva(op)
 				j:SetAttribute("XP", perfil.xp)
 				j:SetAttribute("Gemas", perfil.gems)
 				j:SetAttribute("Nucleos", perfil.cores)
+				Analitica.saldo(j, perfil, "infinito")
 				if #premios > 0 then
 					aviso(table.concat(premios, " · "), j)
 				end
@@ -1033,6 +1041,9 @@ function Partida.nueva(op)
 	end
 
 	local function bucle()
+		for j in p.jugadores do
+			Analitica.partidaEmpieza(j, NIVEL.id, op.acto) -- también al repetir o pasar de acto en el mismo mapa
+		end
 		-- Primera oleada: cuando todos aprietan «Listo» o a los 60 s.
 		fijar("Fase", "listo")
 		fijar("FinTemporizador", ahora() + Partida.ESPERA)
@@ -1156,6 +1167,7 @@ function Partida.nueva(op)
 				Perfiles.marcar(j)
 				j:SetAttribute("Gemas", perfil.gems)
 				j:SetAttribute("Nucleos", perfil.cores)
+				Analitica.saldo(j, perfil, "acto")
 				j:SetAttribute("Nivel", perfil.level)
 				j:SetAttribute("XP", perfil.xp)
 				j:SetAttribute("PremioActo", `+{premio.gemas} gemas` .. (if premio.nucleos > 0 then ` · +{premio.nucleos} núcleo` else "") .. (if premio.primera then " (primera vez)" else "") .. ` · +{Cuenta.XP_MAPA} XP`)
@@ -1246,6 +1258,10 @@ function Partida.nueva(op)
 	function p.salir(j: Player): boolean
 		if not p.jugadores[j] then
 			return next(p.jugadores) == nil
+		end
+		if not terminada then
+			-- Abandono (botón o salir del juego): cuenta como derrota marcada aparte.
+			Analitica.partidaTermina(j, NIVEL.id, op.acto, false, estado:GetAttribute("Oleada") or 0, true)
 		end
 		for i = #unidades, 1, -1 do
 			if unidades[i].dueno == j then

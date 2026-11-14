@@ -22,6 +22,7 @@ local Estilo = require(Shared.Estilo)
 local Preferencias = require(Shared.Preferencias)
 local Recompensas = require(Shared.Recompensas)
 local Intercambio = require(Shared.Intercambio)
+local Analitica = require(script.Parent.Analitica)
 local Banners = require(Shared.Banners)
 local Hub = require(script.Parent.Hub)
 local Perfiles = require(script.Parent.Perfiles)
@@ -65,7 +66,24 @@ do
 	local heroes = game:GetService("ServerStorage"):FindFirstChild("Plantillas")
 	heroes = heroes and heroes:FindFirstChild("Heroes")
 	if heroes then
+		-- Restos de auto_setup_avatar que no usa ni la partida ni el retrato (~315 de ~490 piezas por modelo,
+		-- y los 212 se copian a cada cliente): poses del armado, AnimateScript con sus 27 animaciones, etc.
+		for _, d in heroes:GetDescendants() do
+			if
+				(d:IsA("Folder") and d.Name == "InitialPoses")
+				or (d:IsA("LocalScript") and d.Name == "AnimateScript")
+				or d:IsA("FaceControls")
+			then
+				d:Destroy()
+			end
+		end
 		local retratos = heroes:Clone()
+		-- En el retrato no hay física: las restricciones de choque entre piezas sobran.
+		for _, d in retratos:GetDescendants() do
+			if d:IsA("NoCollisionConstraint") then
+				d:Destroy()
+			end
+		end
 		retratos.Name = "Retratos"
 		retratos.Parent = ReplicatedStorage
 	end
@@ -583,12 +601,14 @@ end)
 --------------------------------------------------------------------------------
 -- Perfiles: carga al entrar, guardado al salir, al cerrar y cada minuto
 --------------------------------------------------------------------------------
-local function publicarSaldo(jugador: Player, perfil)
+-- motivo: para la analítica de economía (de dónde salió o en qué se gastó). Sin motivo = saldo de referencia.
+local function publicarSaldo(jugador: Player, perfil, motivo: string?)
 	jugador:SetAttribute("Nivel", perfil.level)
 	jugador:SetAttribute("XP", perfil.xp)
 	jugador:SetAttribute("Creditos", perfil.credits)
 	jugador:SetAttribute("Gemas", perfil.gems)
 	jugador:SetAttribute("Nucleos", perfil.cores)
+	Analitica.saldo(jugador, perfil, motivo)
 end
 
 -- Servidor de partida: junta a los que llegan con el viaje y arranca cuando están todos (o a los 20 s).
@@ -688,6 +708,7 @@ Players.PlayerRemoving:Connect(function(jugador)
 	salirDeSala(jugador)
 	salirDePartida(jugador)
 	Perfiles.soltar(jugador)
+	Analitica.soltar(jugador)
 end)
 game:BindToClose(function()
 	Perfiles.guardarTodos()
@@ -721,7 +742,7 @@ bannersRemoto.OnServerInvoke = function(jugador, nombre, cantidad)
 		if not err then
 			Temporada.registrar(perfil, "invocar", cantidad, ahora)
 			Perfiles.marcar(jugador)
-			publicarSaldo(jugador, perfil)
+			publicarSaldo(jugador, perfil, "banner2")
 		end
 	elseif nombre ~= "estado" then
 		err = "Acción desconocida"
@@ -809,7 +830,7 @@ estiloRemoto.OnServerInvoke = function(jugador, nombre, a)
 	end
 	if nombre ~= "estado" and not err then
 		Perfiles.marcar(jugador)
-		publicarSaldo(jugador, perfil)
+		publicarSaldo(jugador, perfil, "estilo")
 		jugador:SetAttribute("Rueda", table.concat(perfil.estilo.rueda, ","))
 	end
 	return { error = err, estilo = perfil.estilo, gemas = perfil.gems, monturas = Estilo.MONTURAS, bailes = Estilo.BAILES, rueda = Estilo.RUEDA }
@@ -843,7 +864,7 @@ recompensasRemoto.OnServerInvoke = function(jugador, nombre, a)
 	end
 	if premio then
 		Perfiles.marcar(jugador)
-		publicarSaldo(jugador, perfil)
+		publicarSaldo(jugador, perfil, "recompensas")
 		res.premio = Recompensas.texto(premio)
 	end
 	res.error = err
@@ -1050,15 +1071,21 @@ preferenciasRemoto.OnServerInvoke = function(jugador, nombre, a)
 	elseif nombre == "paso" and type(a) == "number" and a == a then
 		local t = perfil.tutorial
 		if not t.terminado then
-			t.paso = math.clamp(math.floor(a), 0, Preferencias.PASOS)
+			local nuevo = math.clamp(math.floor(a), 0, Preferencias.PASOS)
+			if nuevo > t.paso or (nuevo == 0 and t.paso == 0) then
+				Analitica.pasoTutorial(jugador, nuevo) -- sólo cuando avanza (el embudo no cuenta repeticiones)
+			end
+			t.paso = nuevo
 			Perfiles.marcar(jugador)
 		end
 	elseif nombre == "terminar" or nombre == "saltar" then
 		if nombre == "saltar" then
 			perfil.tutorial.terminado = true
+			Analitica.evento(jugador, "Tutorial salteado", `paso {perfil.tutorial.paso}`)
 		else
 			res.premio = Preferencias.terminar(perfil)
-			publicarSaldo(jugador, perfil)
+			publicarSaldo(jugador, perfil, "tutorial")
+			Analitica.pasoTutorial(jugador, Preferencias.PASOS)
 		end
 		Perfiles.marcar(jugador)
 	elseif nombre ~= "estado" then
@@ -1107,7 +1134,7 @@ mascotasRemoto.OnServerInvoke = function(jugador, nombre, a)
 		end
 		if not err then
 			Perfiles.marcar(jugador)
-			publicarSaldo(jugador, perfil)
+			publicarSaldo(jugador, perfil, "mascotas")
 			jugador:SetAttribute("Mascotas", Mascotas.texto(perfil))
 		end
 	end
@@ -1144,6 +1171,7 @@ rasgosRemoto.OnServerInvoke = function(jugador, nombre, uid, bloqueos)
 		end
 		if not err then
 			Perfiles.marcar(jugador)
+			Analitica.saldo(jugador, perfil, "rasgos_" .. nombre)
 		end
 	end
 	local unidades = {}
@@ -1174,7 +1202,7 @@ raidRemoto.OnServerInvoke = function(jugador, nombre, a)
 		err = Raid.reclamar(perfil, a, os.time())
 		if not err then
 			Perfiles.marcar(jugador)
-			publicarSaldo(jugador, perfil)
+			publicarSaldo(jugador, perfil, "raid")
 		end
 	elseif nombre ~= "estado" then
 		err = "Acción desconocida"
@@ -1219,7 +1247,7 @@ eventoRemoto.OnServerInvoke = function(jugador, nombre, a)
 		err = Evento.comprar(perfil, a, os.time())
 		if not err then
 			Perfiles.marcar(jugador)
-			publicarSaldo(jugador, perfil)
+			publicarSaldo(jugador, perfil, "evento")
 		end
 	elseif nombre ~= "estado" then
 		err = "Acción desconocida"
@@ -1358,7 +1386,7 @@ temporada.OnServerInvoke = function(jugador, nombre, a, b)
 	end
 	if nombre ~= "estado" and not err then
 		Perfiles.marcar(jugador)
-		publicarSaldo(jugador, perfil)
+		publicarSaldo(jugador, perfil, "pase")
 	end
 	local res = Temporada.resumen(perfil, ahora)
 	res.error = err
@@ -1445,7 +1473,7 @@ coleccion.OnServerInvoke = function(jugador, nombre, arg)
 	end
 	if nombre ~= "estado" and not res.error then
 		Perfiles.marcar(jugador)
-		publicarSaldo(jugador, perfil)
+		publicarSaldo(jugador, perfil, nombre) -- invocar, evolucionar, vender, comprar… (acción ya validada)
 	end
 	res.estado = resumen(perfil)
 	return res
