@@ -197,21 +197,32 @@ end
 -- muebles: { plantilla de Plantillas.Hub, x, z, alto, giro en grados } relativos al centro del piso.
 local INTERIORES = {
 	sanctum_interior = {
-		pos = Vector3.new(70, 170, 420), radio = 26, edificio = "sanctum", nombre = "Sanctum Sanctorum",
-		piso = "madera", pared = "6b2a22", material = Enum.Material.Brick, luz = "ffb46a", sello = true,
+		pos = Vector3.new(70, 170, 420), radio = 34, alto = 24, edificio = "sanctum", nombre = "Sanctum Sanctorum",
+		piso = "madera", pared = "6b2a22", columna = "3e1712", material = Enum.Material.Brick,
+		luz = "ffb46a", acento = "b77cff", sello = true, balcon = true, circulo = true,
+		personajes = { { "doctor_strange", 10, -28, 0 } },
 		muebles = {
-			{ "int_estanteria", -20, -10, 9, 90 }, { "int_estanteria", -20, 8, 9, 90 },
-			{ "int_estanteria", 20, -10, 9, -90 }, { "int_estanteria", 20, 8, 9, -90 },
-			{ "int_artefacto", -12, 18, 5, 180 }, { "int_capa", 12, 18, 6, 180 },
+			{ "int_estanteria", -34, -18, 9, 90 }, { "int_estanteria", -34, 0, 9, 90 }, { "int_estanteria", -34, 18, 9, 90 },
+			{ "int_estanteria", 34, -18, 9, -90 },
+			{ "int_artefacto", -16, -24, 5, 0 }, { "int_capa", 20, -26, 6, 0 },
+			{ "int_atril", -16, 14, 4.5, 135 }, { "int_alfombra", 0, 26, 0.4, 0 },
 		},
+		-- Libros flotando (alto sobre el piso).
+		flotantes = { { "int_libro", -26, -8, 7 }, { "int_libro", -24, 10, 9 }, { "int_libro", 26, -12, 8 }, { "int_libro", -12, -30, 10 }, { "int_libro", 14, 20, 6 } },
+		colgantes = { { "int_candelabro", 0, 0, 6 } },
 	},
 	baxter_interior = {
-		pos = Vector3.new(-70, 170, 420), radio = 26, edificio = "torre_baxter", nombre = "Laboratorio de la Torre Baxter",
-		piso = "metal", pared = "dfe6ee", material = Enum.Material.SmoothPlastic, luz = "b6dcff",
+		pos = Vector3.new(-70, 170, 420), radio = 34, alto = 24, edificio = "torre_baxter", nombre = "Laboratorio de la Torre Baxter",
+		piso = "metal", pared = "dfe6ee", columna = "9fb3c8", material = Enum.Material.SmoothPlastic,
+		luz = "b6dcff", acento = "4fa3ff", ventanal = true, zonaNegativa = true, logo = true,
+		personajes = { { "invisible_woman", -14, -25, 0 }, { "human_torch", 14, -25, 0 } },
 		muebles = {
-			{ "int_consola", -21, -8, 6, 90 }, { "int_consola", 21, -8, 6, -90 },
-			{ "int_fantasticar", -14, 14, 3.5, 135 }, { "int_tubo", 16, 14, 6, 180 }, { "int_tubo", 21, 4, 6, -90 },
+			{ "int_consola", -22, -34, 6, 0 }, { "int_consola", 22, -34, 6, 0 },
+			{ "int_fantasticar", -22, 22, 3.5, 45 }, { "int_tubo", 34, -16, 6, -90 }, { "int_tubo", 34, 16, 6, -90 },
+			{ "int_mesa", -16, 8, 3.5, 90 }, { "int_mesa", 16, 4, 3.5, -90 },
 		},
+		flotantes = { { "int_herbie", -6, -27, 6 } },
+		colgantes = {},
 	},
 }
 
@@ -824,49 +835,227 @@ marcador = function(padre, nombre: string, cf: CFrame): Part
 	return p
 end
 
--- Sala cerrada de un interior: piso, cuatro paredes, techo, luces, muebles y la puerta de salida (pared +Z).
+-- Sala cerrada de un interior: piso, paredes con columnas, techo, luces, polvo flotando, muebles, personajes y la
+-- puerta de salida (pared +Z); después, los extras de cada lugar (balcón, círculo, ventanal, portal, logo).
 local function construirInterior(padre, id: string, datos)
 	local m = Instance.new("Model")
 	m.Name = "Interior_" .. id
-	local c, r = datos.pos, datos.radio + 2
-	local alto = 16
-	local colorPared = Color3.fromHex(datos.pared)
+	local c, r, alto = datos.pos, datos.radio + 2, datos.alto
+	local colorPared, luz, acento = Color3.fromHex(datos.pared), Color3.fromHex(datos.luz), Color3.fromHex(datos.acento)
 	texturar(parte(m, "ffffff", CFrame.new(c - Vector3.new(0, 0.5, 0)), Vector3.new(r * 2, 1, r * 2)), datos.piso)
 	parte(m, colorPared, CFrame.new(c + Vector3.new(0, alto + 0.5, 0)), Vector3.new(r * 2, 1, r * 2), datos.material)
 	for _, d in { Vector3.new(1, 0, 0), Vector3.new(-1, 0, 0), Vector3.new(0, 0, 1), Vector3.new(0, 0, -1) } do
 		local tam = if d.X ~= 0 then Vector3.new(1, alto, r * 2) else Vector3.new(r * 2, alto, 1)
-		parte(m, colorPared, CFrame.new(c + d * r + Vector3.new(0, alto / 2, 0)), tam, datos.material)
-		-- Zócalo de luz al pie de cada pared.
-		local zocalo = if d.X ~= 0 then Vector3.new(0.3, 0.3, r * 2) else Vector3.new(r * 2, 0.3, 0.3)
-		parte(m, datos.luz, CFrame.new(c + d * (r - 0.6) + Vector3.new(0, 0.2, 0)), zocalo, Enum.Material.Neon)
+		local pared = parte(m, colorPared, CFrame.new(c + d * r + Vector3.new(0, alto / 2, 0)), tam, datos.material)
+		if datos.ventanal and d.X < 0 then
+			-- Ventanal a la ciudad en la pared −X (del otro lado no hay nada: el otro interior queda hacia +X).
+			pared.Material, pared.Color, pared.Transparency = Enum.Material.Glass, Color3.fromRGB(170, 210, 240), 0.55
+		end
+		local tangente = Vector3.new(math.abs(d.Z), 0, math.abs(d.X))
+		-- Zócalo de luz al pie y columnas cada 12 studs.
+		parte(m, luz, CFrame.new(c + d * (r - 0.6) + Vector3.new(0, 0.2, 0)), if d.X ~= 0 then Vector3.new(0.3, 0.3, r * 2) else Vector3.new(r * 2, 0.3, 0.3), Enum.Material.Neon)
+		for k = -r + 6, r - 6, 12 do
+			parte(m, datos.columna, CFrame.new(c + d * (r - 0.9) + tangente * k + Vector3.new(0, alto / 2, 0)), Vector3.new(1.6, alto, 1.6), datos.material)
+		end
 	end
-	for _, esquina in { Vector3.new(1, 0, 1), Vector3.new(-1, 0, 1), Vector3.new(1, 0, -1), Vector3.new(-1, 0, -1), Vector3.new(0, 0, 0) } do
-		local foco = parte(m, datos.luz, CFrame.new(c + esquina * (r * 0.5) + Vector3.new(0, alto - 0.6, 0)), Vector3.new(2, 0.4, 2), Enum.Material.Neon)
-		local luz = Instance.new("PointLight")
-		luz.Color, luz.Range, luz.Brightness = Color3.fromHex(datos.luz), 30, 1.6
-		luz.Parent = foco
+	-- Focos: cálidos en el centro, del color de acento en las esquinas.
+	for i, esquina in { Vector3.new(0, 0, 0), Vector3.new(1, 0, 1), Vector3.new(-1, 0, 1), Vector3.new(1, 0, -1), Vector3.new(-1, 0, -1) } do
+		local color = if i == 1 then luz else acento
+		local foco = parte(m, color, CFrame.new(c + esquina * (r * 0.55) + Vector3.new(0, alto - 0.6, 0)), Vector3.new(2.4, 0.4, 2.4), Enum.Material.Neon)
+		local l = Instance.new("PointLight")
+		l.Color, l.Range, l.Brightness = color, 36, if i == 1 then 2 else 1.4
+		l.Parent = foco
 	end
+	-- Polvo flotando en todo el salón.
+	local aire = parte(m, "ffffff", CFrame.new(c + Vector3.new(0, alto / 2, 0)), Vector3.new(r * 1.8, alto * 0.8, r * 1.8))
+	aire.Transparency, aire.CanCollide, aire.CanQuery, aire.CanTouch = 1, false, false, false
+	local polvo = Instance.new("ParticleEmitter")
+	polvo.Color = ColorSequence.new(luz)
+	polvo.LightEmission = 0.6
+	polvo.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.4), NumberSequenceKeypoint.new(1, 1) })
+	polvo.Size = NumberSequence.new(0.12)
+	polvo.Lifetime = NumberRange.new(6, 10)
+	polvo.Rate = 25
+	polvo.Speed = NumberRange.new(0.2, 0.6)
+	polvo.SpreadAngle = Vector2.new(180, 180)
+	polvo.Parent = aire
+
+	local function poner(nombre: string, x: number, z: number, altoModelo: number, giro: number, y: number?): Model?
+		local pl = plantilla(nombre)
+		if not pl then
+			return nil
+		end
+		local mod = clonar(pl, "Y", altoModelo)
+		mod:PivotTo(CFrame.new(c + Vector3.new(x, (y or 0) + mod:GetExtentsSize().Y / 2, z)) * CFrame.Angles(0, math.rad(giro), 0))
+		mod.Parent = m
+		return mod
+	end
+	for _, mu in datos.muebles do
+		-- Los que van contra una pared se apoyan en ella (x o z = ±radio).
+		local x = if math.abs(mu[2]) >= datos.radio then math.sign(mu[2]) * (r - 1.6) else mu[2]
+		local z = if math.abs(mu[3]) >= datos.radio then math.sign(mu[3]) * (r - 1.6) else mu[3]
+		poner(mu[1], x, z, mu[4], mu[5])
+	end
+	for _, f in datos.flotantes do
+		local libro = poner(f[1], f[2], f[3], 1.2, (f[2] * 37) % 360, f[4])
+		local raiz = libro and libro:FindFirstChildWhichIsA("BasePart", true)
+		if raiz then
+			local brillo = Instance.new("ParticleEmitter")
+			brillo.Color = ColorSequence.new(luz)
+			brillo.LightEmission = 1
+			brillo.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 0) })
+			brillo.Lifetime = NumberRange.new(1, 2)
+			brillo.Rate = 6
+			brillo.Speed = NumberRange.new(0.3, 0.8)
+			brillo.Parent = raiz
+		end
+	end
+	for _, g in datos.colgantes do
+		local lampara = poner(g[1], g[2], g[3], g[4], 0, alto - g[4] - 0.5)
+		local raiz = lampara and lampara:FindFirstChildWhichIsA("BasePart", true)
+		if raiz then
+			local l = Instance.new("PointLight")
+			l.Color, l.Range, l.Brightness = luz, 40, 2.2
+			l.Parent = raiz
+		end
+	end
+	for _, p in datos.personajes do
+		-- De frente a la entrada (+Z).
+		encargado(m, p[1], CFrame.lookAt(c + Vector3.new(p[2], 0, p[3]), c + Vector3.new(p[2], 0, p[3] + 10)))
+	end
+
 	if datos.sello then
-		-- Ventana redonda del Sanctum con el sello de Strange, en la pared del fondo.
-		local ventana = parte(m, "ffd28a", CFrame.new(c + Vector3.new(0, alto * 0.62, -r + 0.6)) * CFrame.Angles(0, math.rad(90), 0), Vector3.new(0.2, 9, 9), Enum.Material.Neon)
+		-- Ventana redonda del Sanctum con el sello de Strange, en la pared del fondo, sobre el balcón.
+		local ventana = parte(m, "ffd28a", CFrame.new(c + Vector3.new(0, alto * 0.7, -r + 0.6)) * CFrame.Angles(0, math.rad(90), 0), Vector3.new(0.2, 12, 12), Enum.Material.Neon)
 		ventana.Shape = Enum.PartType.Cylinder
 		local sello = Instance.new("Decal")
 		sello.Texture = "rbxassetid://" .. SELLO
 		sello.Face = Enum.NormalId.Right
 		sello.Parent = ventana
 	end
-	for _, mu in datos.muebles do
-		local plantillaMueble = plantilla(mu[1])
-		if plantillaMueble then
-			local x = clonar(plantillaMueble, "Y", mu[4])
-			x:PivotTo(CFrame.new(c + Vector3.new(mu[2], x:GetExtentsSize().Y / 2, mu[3])) * CFrame.Angles(0, math.rad(mu[5]), 0))
+	if datos.circulo then
+		-- Círculo mágico girando en el piso (lo gira Hub.animar como el sello del portal) con chispas.
+		local disco0 = parte(m, "ffffff", CFrame.new(c + Vector3.new(0, 0.06, 6)), Vector3.new(16, 0.1, 16))
+		disco0.Transparency, disco0.CanCollide, disco0.CanQuery, disco0.CanTouch = 1, false, false, false
+		local gui = Instance.new("SurfaceGui")
+		gui.Face = Enum.NormalId.Top
+		gui.LightInfluence = 0
+		gui.Brightness = 2
+		gui.PixelsPerStud = 30
+		local img = Instance.new("ImageLabel")
+		img.BackgroundTransparency = 1
+		img.Size = UDim2.fromScale(1, 1)
+		img.Image = "rbxassetid://" .. SELLO
+		img.ImageColor3 = Color3.fromHex("ff9a2e")
+		img.Parent = gui
+		gui.Parent = disco0
+		table.insert(Hub.sellos, img)
+		local chispas = Instance.new("ParticleEmitter")
+		chispas.Color = ColorSequence.new(Color3.fromRGB(255, 170, 60))
+		chispas.LightEmission = 1
+		chispas.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 0) })
+		chispas.Lifetime = NumberRange.new(1, 2)
+		chispas.Rate = 30
+		chispas.Speed = NumberRange.new(1, 3)
+		chispas.EmissionDirection = Enum.NormalId.Top
+		chispas.SpreadAngle = Vector2.new(25, 25)
+		chispas.Parent = disco0
+	end
+	if datos.balcon then
+		-- Balcón de madera a 12 studs por las paredes −X, +X y −Z, con barandas, y escalera por la pared +X.
+		local y0, ancho = 12, 6
+		local madera = Color3.fromRGB(92, 58, 34)
+		for _, tramo in {
+			{ Vector3.new(-r + ancho / 2, 0, 0), Vector3.new(ancho, 0.8, r * 2), Vector3.new(-r + ancho, 0, 0), Vector3.new(0.4, 3, r * 2 - ancho * 2) },
+			{ Vector3.new(r - ancho / 2, 0, -r / 2), Vector3.new(ancho, 0.8, r), Vector3.new(r - ancho, 0, -r / 2 - 3), Vector3.new(0.4, 3, r - ancho - 6) },
+			{ Vector3.new(0, 0, -r + ancho / 2), Vector3.new(r * 2, 0.8, ancho), Vector3.new(0, 0, -r + ancho), Vector3.new(r * 2 - ancho * 2, 3, 0.4) },
+		} do
+			texturar(parte(m, madera, CFrame.new(c + tramo[1] + Vector3.new(0, y0, 0)), tramo[2]), "madera")
+			parte(m, "3e2414", CFrame.new(c + tramo[3] + Vector3.new(0, y0 + 1.9, 0)), tramo[4], Enum.Material.Wood)
+		end
+		-- Escalera contra la pared +X: sube de z = +24 a z = 0 (12 escalones de 1 stud).
+		for k = 1, 12 do
+			local z = 24 - (k - 0.5) * 2
+			texturar(parte(m, madera, CFrame.new(c + Vector3.new(r - 3, k - 0.5, z)), Vector3.new(5, 1, 2)), "madera")
+		end
+	end
+	if datos.ventanal then
+		-- Rascacielos del otro lado del vidrio (pared −X), bajando hacia la ciudad.
+		local horizonte = plantilla("int_horizonte")
+		if horizonte then
+			-- El modelo es largo en X: a lo largo del ventanal (eje Z) y bajado para ver los pisos altos.
+			local h = clonar(horizonte, "X", r * 3)
+			h:PivotTo(CFrame.new(c + Vector3.new(-r - 40, -20, 0)) * CFrame.Angles(0, math.rad(90), 0))
+			h.Parent = m
+		end
+	end
+	if datos.zonaNegativa then
+		-- Portal a la Zona Negativa en la pared +X: marco generado y remolino oscuro con partículas hacia el salón.
+		local marco = plantilla("int_portal")
+		local cf = CFrame.new(c + Vector3.new(r - 1.6, 8, 0)) * CFrame.Angles(0, math.rad(-90), 0)
+		if marco then
+			local x = clonar(marco, "Y", 14)
+			x:PivotTo(cf)
 			x.Parent = m
+		end
+		local remolino = parte(m, "2a0f4a", cf * CFrame.Angles(0, math.rad(90), 0), Vector3.new(0.3, 10, 10), Enum.Material.Neon)
+		remolino.Shape = Enum.PartType.Cylinder
+		remolino.CanCollide = false
+		local vacio = Instance.new("ParticleEmitter")
+		vacio.Color = ColorSequence.new(Color3.fromRGB(150, 70, 255), Color3.fromRGB(20, 0, 40))
+		vacio.LightEmission = 0.8
+		vacio.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.2), NumberSequenceKeypoint.new(1, 0) })
+		vacio.Lifetime = NumberRange.new(1, 2)
+		vacio.Rate = 40
+		vacio.Speed = NumberRange.new(2, 4)
+		vacio.RotSpeed = NumberRange.new(-180, 180)
+		vacio.EmissionDirection = Enum.NormalId.Left -- el eje del disco apunta a la pared; Left es hacia el salón
+		vacio.Parent = remolino
+		local l = Instance.new("PointLight")
+		l.Color, l.Range, l.Brightness = Color3.fromRGB(150, 70, 255), 24, 2
+		l.Parent = remolino
+	end
+	if datos.logo then
+		-- El «4» de los Cuatro Fantásticos en el piso, en el centro del laboratorio: círculo azul con el 4 blanco.
+		local placa = parte(m, "ffffff", CFrame.new(c + Vector3.new(0, 0.03, 8)) * CFrame.Angles(0, math.rad(-90), 0), Vector3.new(10, 0.05, 10)) -- derecho visto desde la entrada
+		placa.Transparency, placa.CanCollide, placa.CanQuery, placa.CanTouch = 1, false, false, false
+		local gui = Instance.new("SurfaceGui")
+		gui.Face = Enum.NormalId.Top
+		gui.LightInfluence = 0
+		-- Lienzo de ~100 px después de agrandar el lobby (ScaleTo divide PixelsPerStud): TextScaled no pasa de 100 px
+		-- y el 4 tiene que llenar el círculo.
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		gui.PixelsPerStud = 10
+		local circulo = Instance.new("Frame")
+		circulo.Size = UDim2.fromScale(1, 1)
+		circulo.BackgroundColor3 = Color3.fromRGB(28, 79, 156)
+		local esquina = Instance.new("UICorner")
+		esquina.CornerRadius = UDim.new(0.5, 0)
+		esquina.Parent = circulo
+		local borde = Instance.new("UIStroke")
+		borde.Color, borde.Thickness = Color3.new(1, 1, 1), 3
+		borde.Parent = circulo
+		circulo.Parent = gui
+		local t = Instance.new("TextLabel")
+		t.BackgroundTransparency = 1
+		t.Size = UDim2.fromScale(0.8, 0.8)
+		t.Position = UDim2.fromScale(0.1, 0.1)
+		t.Font = Enum.Font.GothamBlack
+		t.TextScaled = true
+		t.TextColor3 = Color3.new(1, 1, 1)
+		t.Text = "4"
+		t.Parent = circulo
+		gui.Parent = placa
+		-- Pantallas gigantes en la pared del fondo.
+		for _, x in { -14, 14 } do
+			local pantalla = parte(m, "4fa3ff", CFrame.new(c + Vector3.new(x, 14, -r + 0.7)), Vector3.new(14, 7, 0.2), Enum.Material.Neon)
+			pantalla.Transparency = 0.15
 		end
 	end
 	-- Entrada: se aparece de espaldas a la puerta de salida, mirando al fondo (la estación).
 	local salida = CFrame.lookAt(c + Vector3.new(0, 0, r - 0.6), c)
 	marcador(m, "Llegada", CFrame.lookAt(c + Vector3.new(0, 0, r - 6), c))
-	puerta(m, salida, Color3.fromHex(datos.luz), "Salir", datos.nombre, function()
+	puerta(m, salida, luz, "Salir", datos.nombre, function()
 		return Hub.salidas[id]
 	end)
 	m.Parent = padre

@@ -50,10 +50,19 @@ Los encargados no giran ni hablan: sólo su reposo. Se definen con `personaje` y
   de atrás de la sala («Salir»). `Hub.llegadas` y `Hub.salidas` son los marcadores; antes de llevar al jugador se
   pide que cargue esa zona (`RequestStreamAroundAsync`).
 - Las salas (`INTERIORES` en `Hub.luau`) son cajas cerradas lejos y arriba de las islas (no se ven desde el
-  lobby): piso, paredes, techo, zócalos y focos de luz, y muebles generados (`Plantillas.Hub/int_*`): estanterías
-  de libros, el Ojo de Agamotto en un pedestal, la Capa de Levitación y la ventana con el sello de Strange en el
-  Sanctum; consolas, el Fantasticar y tubos de laboratorio en la Torre Baxter. Para las estaciones funcionan como
-  una isla más (`lugar()`).
+  lobby), de 72 × 72 studs y 24 de alto antes de agrandar: piso, paredes con columnas cada 12 studs, techo,
+  zócalos de luz, focos (cálido al centro y del color de acento en las esquinas) y polvo flotando. Para las
+  estaciones funcionan como una isla más (`lugar()`). Los muebles son modelos generados (`Plantillas.Hub/int_*`).
+- **Sanctum Sanctorum** (mejorado el 15/11/2026): Doctor Strange junto a la ventana del sello; círculo mágico
+  que gira en el piso (lo gira `Hub.animar` como el sello del portal) con chispas; estanterías de libros, el Ojo
+  de Agamotto, la Capa de Levitación, un atril con el Libro de los Vishanti, una alfombra, un candelabro colgante
+  y libros flotando con brillo; un **balcón** de madera por tres paredes a 12 studs, con barandas, y una
+  **escalera** de 12 escalones contra la pared +X.
+- **Laboratorio de la Torre Baxter** (mejorado el 15/11/2026): Sue y Johnny Storm junto a Mister Fantastic;
+  **portal a la Zona Negativa** en la pared +X (marco generado y remolino violeta con partículas y luz);
+  **ventanal** de vidrio en la pared −X con rascacielos afuera (da al cielo vacío: del otro lado, +X, está el
+  salón del Sanctum); consolas, mesas de trabajo, tubos, el Fantasticar, H.E.R.B.I.E. flotando, dos pantallas
+  gigantes y el «4» en el piso (`SurfaceGui` por studs: `ScaleTo` divide su `PixelsPerStud`).
 
 ## Decorado y cielo (decidido por el usuario el 15/11/2026: el lobby se veía vacío)
 - **Decorado por isla** (`DECORADO`): reusa los kits de los mapas de partida del mismo tema más piezas propias.
