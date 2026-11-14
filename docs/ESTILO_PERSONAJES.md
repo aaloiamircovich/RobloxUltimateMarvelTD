@@ -70,8 +70,10 @@ personaje base (servidor y retratos). Hechas (15): `thor_evolution`, `hulk_evolu
 `profesor_x_evolution`, `iron_man_extremis`, `iron_spider`, `capitan_america_evolution`, `black_panther_evolution`,
 `doctor_strange_evolution`, `wolverine_evolution`; y las 14 de los Legendarios nuevos (12/11/2026, `<id>_evolution`:
 Binary, Vision blanco, Storm diosa, Ghost Rider rey del infierno, Nova cósmico, Namor rey, Omega Iceman, Black Bolt,
-Hela, Emma diamante, Invisible Woman, Loki con libro de historias, The Maker, Beta Ray Bill con armadura). Tamaño
-medido de pies a cabeza: base = Hawkeye, evolución ×1,1; Hulk y Devil Dinosaur ×1,25 y la evolución de Hulk ×1,35;
+Hela, Emma diamante, Invisible Woman, Loki con libro de historias, The Maker, Beta Ray Bill con armadura); y las 76
+restantes de Épicos, Raros y Comunes (13/11/2026). Ya tienen modelo propio las 105 evoluciones (212 plantillas en
+total con bases y exclusivos). Cada evolución toma el `Efecto` de su base. Tamaño
+medido de pies a cabeza: base = Hawkeye, evolución = su base ×1,1; Hulk y Devil Dinosaur ×1,25 y la evolución de Hulk ×1,35;
 Groot ×1,15; Jeff, Cosmo, Rocket y Howard ×0,8; Korg más grande a propósito. El 12/11 se volvieron a medir y corregir todas las plantillas con el método de arriba.
 
 `auto_setup_avatar` suele devolver *timeout* aunque el armado siga en Studio: esperar ~3 min y revisar si apareció
