@@ -96,8 +96,16 @@ local function cartel(padre: BasePart, texto: string, alto: number): Frame
 	return barra
 end
 
+-- Caminata de los enemigos con esqueleto (docs/ESTILO_PERSONAJES.md): una por tipo, sirve para cualquier R15.
+local ANIMACION_ENEMIGO = {
+	caminar = "rbxassetid://71471396479960",
+	volar = "rbxassetid://130493722861886",
+	pesado = "rbxassetid://110981144680844",
+}
+
 -- Modelo de ServerStorage.Plantillas.Enemigos/<id> que acompaña al bloque raíz invisible.
-local function vestir(cuerpo: Part, config): (number, Model?)
+-- Devuelve la altura, el modelo y, si tiene esqueleto, su raíz y el desfase de la raíz respecto del centro.
+local function vestir(cuerpo: Part, config): (number, Model?, BasePart?, CFrame?)
 	local plantillas = ServerStorage:FindFirstChild("Plantillas")
 	local carpeta = plantillas and plantillas:FindFirstChild("Enemigos")
 	local plantilla = carpeta and carpeta:FindFirstChild((config.id:gsub("_elite$", "")))
@@ -109,16 +117,39 @@ local function vestir(cuerpo: Part, config): (number, Model?)
 	local tam = m:GetExtentsSize()
 	cuerpo.Size = tam
 	cuerpo.Transparency = 1
+	local humanoide = m:FindFirstChildOfClass("Humanoid")
+	local raiz = humanoide and m:FindFirstChild("HumanoidRootPart") :: BasePart?
 	for _, p in m:GetDescendants() do
 		if p:IsA("BasePart") then
-			p.Anchored, p.CanCollide, p.CanQuery = true, false, false
+			-- Con esqueleto sólo se ancla la raíz: el resto lo mueve la animación.
+			p.Anchored, p.CanCollide, p.CanQuery = raiz == nil or p == raiz, false, false
 			if config.stealth then
 				p.Transparency = math.max(p.Transparency, 0.6)
 			end
 		end
 	end
+	local desfase
+	if raiz and humanoide then
+		local centro = m:GetBoundingBox()
+		desfase = (CFrame.new(centro.Position) * raiz.CFrame.Rotation):ToObjectSpace(raiz.CFrame)
+		humanoide.EvaluateStateMachine = false -- nadie lo controla: ahorra física por enemigo
+		humanoide.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	end
 	m.Parent = cuerpo
-	return tam.Y, m
+	if raiz and humanoide then
+		local animator = humanoide:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoide)
+		local tipo = m:GetAttribute("AnimacionCaminar")
+			or (if config.flying then "volar" elseif config.isBoss or config.archetype == "tank" then "pesado" else "caminar")
+		local anim = Instance.new("Animation")
+		anim.AnimationId = ANIMACION_ENEMIGO[tipo] or tipo
+		local ok, pista = pcall(animator.LoadAnimation, animator, anim)
+		if ok then
+			pista.Looped = true
+			pista:Play()
+			pista:AdjustSpeed(math.clamp((config.speed or 50) / 50, 0.6, 1.8)) -- los rápidos mueven más las piernas
+		end
+	end
+	return tam.Y, m, raiz, desfase
 end
 
 local function modeloProvisional(config): Model
@@ -222,7 +253,9 @@ function Partida.nueva(op)
 	-- Raid (docs/RAIDS.md): 5 oleadas de esbirros y el jefe de la semana con fases.
 	local esRaid = op.acto == "raid"
 	local jefeRaid = Raid.jefe(Raid.semana(os.time()))
-	local jefeVivo = nil -- el enemigo jefe mientras está en el mapa
+	local jefeVivo = nil -- el jefe de raid mientras está en el mapa (fases y daño por jugador)
+	-- shortcut: la barra muestra un solo jefe; si salen dos juntos, el segundo no aparece en la barra. Mejorar si hay oleadas con varios jefes.
+	local jefeBarra = nil -- el jefe que se ve en la barra de arriba (cualquier modo)
 	local danoJefe = {} -- [Player] = daño hecho al jefe
 	local function nombreActo(): string
 		return if infinito then "Infinito" elseif esEvento then "Evento" elseif esRaid then "Raid" else tostring(op.acto)
@@ -339,7 +372,9 @@ function Partida.nueva(op)
 	local enemigos = {}
 	local function moverEnemigo(e, cf: CFrame)
 		e.cuerpo.CFrame = cf
-		if e.modelo then
+		if e.raiz then
+			e.raiz.CFrame = cf * e.desfase
+		elseif e.modelo then
 			e.modelo:PivotTo(cf)
 		end
 	end
@@ -362,10 +397,10 @@ function Partida.nueva(op)
 		cuerpo.Size = Vector3.new(tam, tam, tam)
 		cuerpo.Color = COLORES[config.category] or Color3.new(0.5, 0.5, 0.5)
 		cuerpo.Material = if config.stealth then Enum.Material.ForceField else Enum.Material.SmoothPlastic
-		local modelo
-		tam, modelo = vestir(cuerpo, config)
+		local modelo, raiz, desfase
+		tam, modelo, raiz, desfase = vestir(cuerpo, config)
 		local e = Combate.nuevoEnemigo(config)
-		e.modelo = modelo
+		e.modelo, e.raiz, e.desfase = modelo, raiz, desfase
 		e.avance = avanceInicial or 0
 		Conductas.preparar(e)
 		e.altura = if config.flying then 4 else tam / 2
@@ -373,6 +408,30 @@ function Partida.nueva(op)
 		e.barra = cartel(cuerpo, config.name, tam / 2 + 1)
 		cuerpo:SetAttribute("Vida", math.ceil(e.vida)) -- el cliente dibuja los números de daño
 		moverEnemigo(e, CFrame.new(puntoEnRuta(e.avance) + Vector3.new(0, e.altura, 0)))
+		if config.isBoss then
+			-- Aura del color de su categoría para distinguirlo de lejos.
+			local color = COLORES[config.category] or Color3.fromRGB(200, 40, 40)
+			local luz = Instance.new("PointLight")
+			luz.Color, luz.Range, luz.Brightness = color, tam * 2.5, 2
+			luz.Parent = cuerpo
+			local aura = Instance.new("ParticleEmitter")
+			aura.Name = "AuraJefe"
+			aura.Color = ColorSequence.new(color, Color3.new(1, 1, 1))
+			aura.LightEmission = 0.8
+			aura.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, tam * 0.15), NumberSequenceKeypoint.new(1, 0) })
+			aura.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1) })
+			aura.Lifetime = NumberRange.new(0.8, 1.4)
+			aura.Rate = 25
+			aura.Speed = NumberRange.new(1, 3)
+			aura.SpreadAngle = Vector2.new(180, 180)
+			aura.Parent = cuerpo
+			if not jefeBarra then
+				jefeBarra = e
+				fijar("NombreJefe", config.name)
+				fijar("JefeVidaMax", e.vidaMax)
+				fijar("JefeVida", e.vidaMax)
+			end
+		end
 		cuerpo.Parent = carpetaEnemigos
 		table.insert(enemigos, e)
 		return e
@@ -382,6 +441,12 @@ function Partida.nueva(op)
 		local i = table.find(enemigos, e)
 		if i then
 			table.remove(enemigos, i)
+		end
+		if e == jefeBarra then
+			jefeBarra = nil
+			for _, a in { "JefeVida", "JefeVidaMax", "NombreJefe" } do
+				fijar(a, nil)
+			end
 		end
 		e.cuerpo:Destroy()
 	end
@@ -393,6 +458,9 @@ function Partida.nueva(op)
 		end
 		e.barra.Size = UDim2.fromScale(math.max(0, e.vida / e.vidaMax), 1)
 		e.cuerpo:SetAttribute("Vida", math.max(0, math.ceil(e.vida)))
+		if e == jefeBarra then
+			fijar("JefeVida", math.max(0, math.ceil(e.vida)))
+		end
 		if e == jefeVivo then
 			-- Daño por jugador (misiones de raid) y fases: refuerzos y furia al 66 % y 33 %.
 			local antes = e.vidaVista or e.vidaMax
@@ -1231,7 +1299,7 @@ function Partida.nueva(op)
 		end
 		op.acto, pesadilla = acto, conPesadilla and not sinFin
 		superadas, derrotados = 0, 0
-		jefeVivo, danoJefe = nil, {}
+		jefeVivo, jefeBarra, danoJefe = nil, nil, {}
 		for _, a in { "JefeVida", "JefeVidaMax", "NombreJefe" } do
 			fijar(a, nil)
 		end

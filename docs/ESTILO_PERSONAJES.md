@@ -22,11 +22,29 @@ Ejemplo (arquero): `<PELO>` = `spiky blond anime hair`; `<TRAJE>` = `black tacti
 
 ## Enemigos
 
-Plantillas en `ServerStorage.Plantillas.Enemigos/<id del enemigo>` (se guardan en el lugar, no en Git). Proceso: `generate_mesh` con "blocky Roblox-style …" describiendo el aspecto sin nombres de Marvel, escalar a su altura (normales ~3.5 studs, voladores ~2, tanques ~5.5) y comprobar que el frente mire a −Z. Si una malla sale sin textura (gris), regenerarla. El juego mueve el modelo con `PivotTo`; no hace falta esqueleto.
+Plantillas en `ServerStorage.Plantillas.Enemigos/<id del enemigo>` (se guardan en el lugar, no en Git). Están los
+**49** de `enemies.json` (15/11/2026), todos con esqueleto R15 menos `ultron_drone` (dron sin piernas: se desliza).
+Los mapas sin hacer ya tienen sus enemigos y jefes.
 
-Hechos (facción Base Avengers): `ultron_drone`, `doombot`, `aim_scientist`, `chitauri_warrior`, `skrull_infiltrator`, `sentinel`.
-Manhattan, Wakanda y Sanctum: `hydra_soldier`, `chitauri_skimmer`, `chitauri_phaser`, `outrider`, `mercenary_raider`, `sakaaran_soldier`, `symbiote_spawn`, `hellfire_guard`, `dark_elf`, `hand_ninja`, `frost_giant_scout`.
-Jefes de los 4 mapas: `ultron_prime`, `magneto`, `loki`, `killmonger`, `dormammu`. Plantilla de ~3,6 studs: el servidor los agranda ×1,8 en partida. La IA a veces los genera mirando a +Z; se corrige girando el `WorldPivot` 180° y se comprueba con una copia en `PivotTo(CFrame.new(...))`.
+**Proceso:** `generate_mesh` con "blocky Roblox-style character with a chunky body, thick arms and legs and a big
+square head: <aspecto sin nombres de Marvel>" (sin `segmentation`: la IA lo separa en torso, cabeza, brazos y piernas)
+→ `ContentProvider:PreloadAsync` de sus MeshPart (si no, el armado falla con "Failed to retrieve asset") →
+`auto_setup_avatar` (Development, `align_front_angle`). Si se cuelga ("Worker process crashed") o sale sin Humanoid,
+repetir con `classifications` marcando cada pieza (`torso`, `head`, `left arm`… o `body` en las mallas viejas) como
+`Body`. Más de ~6 generaciones a la vez dan "Rate limit exceeded" y fallan todas.
+
+**Alturas** (medidas en una copia en el workspace tras unos `Heartbeat`): normales ~3,5 studs, voladores ~2–3,
+tanques ~5,5 (`mindless_one`, `savage_brute`, `frost_giant_scout`, `sentinel`), jefes ~3,6 (Thanos 4,2, Galactus 4,6);
+el servidor agranda ×1,8 a los jefes y ×1,3 a los élite.
+**Jefes que también son héroes** (`hela`, `loki`, `magneto`): usan la plantilla del héroe (decidido por el usuario).
+
+**En partida** (`vestir` en `Partida.luau`): sólo la `HumanoidRootPart` va anclada y se mueve con el desfase al
+centro de la caja; `EvaluateStateMachine = false` para que el Humanoid no gaste física. Caminata por tipo
+(`ANIMACION_ENEMIGO`): voladores `volar` (levita derecho), jefes y arquetipo `tank` `pesado`, el resto `caminar`,
+a velocidad `speed / 50` (entre 0,6 y 1,8). El atributo `AnimacionCaminar` en la plantilla fuerza otra.
+**Jefes:** luz y partículas del color de su categoría y barra de vida arriba del HUD (antes sólo en raids; las fases
+de furia siguen siendo sólo de raid). Si salen dos jefes juntos, la barra muestra el primero.
+Las versiones sin esqueleto quedaron en `ServerStorage.EnemigosEstaticos` por si hace falta volver atrás.
 Moderación: palabras como "jaw", "teeth" o "beast" pueden bloquear la generación; describir con tono de caricatura.
 
 ## Héroes en el juego

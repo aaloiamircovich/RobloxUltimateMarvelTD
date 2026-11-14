@@ -34,7 +34,7 @@ sentirse precario. Referencias: Anime Galaxy, All Star Tower Defense y los TD de
 ### Contenido incompleto
 6. **Mapas: 4 de 11.** El 2D tiene 11 (Instituto Xavier, Knowhere, Latveria, Asgard, Dimensión Oscura, Savage Land,
    The Raft sin hacer). El juego se termina en pocas horas.
-7. **Enemigos: 22 de 49 con modelo** (30 normales + 19 jefes en `enemies.json`). Los que no tienen modelo salen
+7. ✅ (15/11) **Enemigos: 22 de 49 con modelo** (30 normales + 19 jefes en `enemies.json`). Los que no tienen modelo salen
    como bloque.
 8. **Habilidades sin efectos visuales propios.** Hay 3 efectos genéricos (flecha, rayo, impacto) hechos con piezas.
    Las habilidades de los kits (Gungnir, Rey del Vacío, sobrecarga ARC…) no se ven distintas. En los TD de

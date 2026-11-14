@@ -86,7 +86,7 @@ mensaje.BackgroundTransparency = 0.3
 mensaje.BackgroundColor3 = Comic.FONDO
 crear("UICorner", { CornerRadius = UDim.new(0, 6) }, mensaje)
 
--- Barra del jefe de raid (atributos JefeVida/JefeVidaMax de la partida).
+-- Barra del jefe (atributos JefeVida/JefeVidaMax de la partida).
 local barraJefe = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 96), Size = UDim2.fromOffset(600, 34), BackgroundColor3 = Comic.FONDO, Visible = false }, arriba)
 Comic.borde(barraJefe, 4)
 local rellenoJefe = crear("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(150, 30, 90), BorderSizePixel = 0 }, barraJefe)
