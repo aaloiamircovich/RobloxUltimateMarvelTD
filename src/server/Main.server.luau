@@ -21,6 +21,7 @@ local Mascotas = require(Shared.Mascotas)
 local Estilo = require(Shared.Estilo)
 local Preferencias = require(Shared.Preferencias)
 local Recompensas = require(Shared.Recompensas)
+local Intercambio = require(Shared.Intercambio)
 local Banners = require(Shared.Banners)
 local Hub = require(script.Parent.Hub)
 local Perfiles = require(script.Parent.Perfiles)
@@ -53,6 +54,8 @@ local estiloRemoto = remoto("RemoteFunction", "Estilo")
 local bannersRemoto = remoto("RemoteFunction", "Banners")
 local preferenciasRemoto = remoto("RemoteFunction", "Preferencias")
 local recompensasRemoto = remoto("RemoteFunction", "Recompensas")
+local intercambioRemoto = remoto("RemoteFunction", "Intercambio")
+local intercambioAviso = remoto("RemoteEvent", "IntercambioAviso") -- el servidor avisa pedidos y cambios de la sesión
 
 --------------------------------------------------------------------------------
 -- Partidas: cada una en su arena, lejos del HUB
@@ -852,6 +855,180 @@ recompensasRemoto.OnServerInvoke = function(jugador, nombre, a)
 end
 Players.PlayerRemoving:Connect(function(j)
 	ultimoCanje[j] = nil
+end)
+
+--------------------------------------------------------------------------------
+-- Intercambio (docs/INTERCAMBIO.md): pedido → aceptar → ofertas → los dos confirman → se aplica en el servidor.
+-- Cualquier cambio de oferta saca la confirmación de los dos (así nadie confirma algo que cambió a último momento).
+--------------------------------------------------------------------------------
+local pedidosIntercambio = {} -- [destino] = quien pide
+local sesionesIntercambio = {} -- [Player] = sesión { a, b, oferta = { [Player] = oferta }, listo = { [Player] = bool } }
+local itemsDatos = require(Shared.Data.items)
+
+local function detalleOferta(perfil, oferta)
+	local unidades, objetos = {}, {}
+	for _, uid in oferta.unidades do
+		local u = Unidades.buscar(perfil, uid)
+		if u then
+			table.insert(unidades, { uid = uid, heroId = u.heroId, nivel = u.level, rasgo = u.rasgo })
+		end
+	end
+	for _, id in oferta.objetos do
+		table.insert(objetos, { id = id, nombre = itemsDatos[id] and itemsDatos[id].name or id })
+	end
+	return { unidades = unidades, objetos = objetos }
+end
+
+local function avisarSesion(s, extra: string?)
+	for _, j in { s.a, s.b } do
+		local otro = if j == s.a then s.b else s.a
+		local pj, po = Perfiles.de(j), Perfiles.de(otro)
+		if pj and po then
+			intercambioAviso:FireClient(j, "sesion", {
+				conQuien = otro.DisplayName,
+				mia = detalleOferta(pj, s.oferta[j]),
+				suya = detalleOferta(po, s.oferta[otro]),
+				listoYo = s.listo[j],
+				listoOtro = s.listo[otro],
+				mensaje = extra,
+			})
+		end
+	end
+end
+
+local function cerrarIntercambio(j: Player, motivo: string?)
+	pedidosIntercambio[j] = nil
+	for destino, origen in pedidosIntercambio do
+		if origen == j then
+			pedidosIntercambio[destino] = nil
+		end
+	end
+	local s = sesionesIntercambio[j]
+	if not s then
+		return
+	end
+	for _, x in { s.a, s.b } do
+		sesionesIntercambio[x] = nil
+		if x.Parent then
+			intercambioAviso:FireClient(x, "fin", { mensaje = motivo })
+		end
+	end
+end
+
+intercambioRemoto.OnServerInvoke = function(jugador, nombre, a)
+	local perfil = Perfiles.de(jugador)
+	if not perfil then
+		return { error = "Tu perfil todavía no cargó" }
+	end
+	if nombre == "estado" then
+		local unidades, objetos = Intercambio.ofrecibles(perfil)
+		local lista = {}
+		for _, u in unidades do
+			table.insert(lista, { uid = u.uid, heroId = u.heroId, nivel = u.level, rasgo = u.rasgo })
+		end
+		local objs = {}
+		for _, id in objetos do
+			table.insert(objs, { id = id, nombre = itemsDatos[id] and itemsDatos[id].name or id })
+		end
+		local jugadores = {}
+		for _, otro in Players:GetPlayers() do
+			if otro ~= jugador then
+				local po = Perfiles.de(otro)
+				table.insert(jugadores, { id = otro.UserId, nombre = otro.DisplayName, puede = po ~= nil and Intercambio.puede(po) == nil and not partidaDe[otro] })
+			end
+		end
+		local pide = pedidosIntercambio[jugador]
+		return {
+			problema = Intercambio.puede(perfil),
+			unidades = lista,
+			objetos = objs,
+			jugadores = jugadores,
+			pedidoDe = pide and pide.Parent and pide.DisplayName or nil,
+			enSesion = sesionesIntercambio[jugador] ~= nil,
+			nivelMinimo = Intercambio.NIVEL_MINIMO,
+		}
+	end
+	local problema = Intercambio.puede(perfil) or (if partidaDe[jugador] then "No podés intercambiar en una partida" else nil)
+	if problema then
+		return { error = problema }
+	end
+	if nombre == "pedir" then
+		local otro = type(a) == "number" and Players:GetPlayerByUserId(a)
+		local po = otro and Perfiles.de(otro)
+		if not otro or otro == jugador or not po then
+			return { error = "Ese jugador no está" }
+		elseif Intercambio.puede(po) or partidaDe[otro] then
+			return { error = `{otro.DisplayName} no puede intercambiar ahora` }
+		elseif sesionesIntercambio[jugador] or sesionesIntercambio[otro] then
+			return { error = "Alguno de los dos ya está intercambiando" }
+		end
+		pedidosIntercambio[otro] = jugador
+		intercambioAviso:FireClient(otro, "pedido", { de = jugador.DisplayName })
+		return { mensaje = `Pedido enviado a {otro.DisplayName}` }
+	elseif nombre == "responder" then
+		local origen = pedidosIntercambio[jugador]
+		pedidosIntercambio[jugador] = nil
+		if not origen or not origen.Parent or not Perfiles.de(origen) then
+			return { error = "El pedido ya no está" }
+		end
+		if a ~= true then
+			intercambioAviso:FireClient(origen, "fin", { mensaje = `{jugador.DisplayName} rechazó el intercambio` })
+			return {}
+		end
+		if sesionesIntercambio[jugador] or sesionesIntercambio[origen] or partidaDe[origen] then
+			return { error = "Ya no se puede empezar ese intercambio" }
+		end
+		local s = { a = origen, b = jugador, oferta = { [origen] = Intercambio.ofertaVacia(), [jugador] = Intercambio.ofertaVacia() }, listo = { [origen] = false, [jugador] = false } }
+		sesionesIntercambio[origen], sesionesIntercambio[jugador] = s, s
+		avisarSesion(s)
+		return {}
+	end
+	local s = sesionesIntercambio[jugador]
+	if not s then
+		return { error = "No estás intercambiando" }
+	end
+	local otro = if jugador == s.a then s.b else s.a
+	if nombre == "oferta" then
+		local limpia, err = Intercambio.validarOferta(perfil, a)
+		if not limpia then
+			return { error = err }
+		end
+		s.oferta[jugador] = limpia
+		s.listo[s.a], s.listo[s.b] = false, false
+		avisarSesion(s)
+		return {}
+	elseif nombre == "confirmar" then
+		s.listo[jugador] = true
+		if not (s.listo[s.a] and s.listo[s.b]) then
+			avisarSesion(s)
+			return {}
+		end
+		local pa, pb = Perfiles.de(s.a), Perfiles.de(s.b)
+		local err
+		if pa and pb then
+			err = Intercambio.aplicar(pa, s.oferta[s.a], pb, s.oferta[s.b])
+		else
+			err = "Un perfil no está cargado"
+		end
+		if err then
+			s.listo[s.a], s.listo[s.b] = false, false
+			avisarSesion(s, err)
+			return { error = err }
+		end
+		for _, x in { s.a, s.b } do
+			Perfiles.marcar(x)
+			Perfiles.guardar(x)
+		end
+		cerrarIntercambio(jugador, "¡Intercambio hecho!")
+		return {}
+	elseif nombre == "cancelar" then
+		cerrarIntercambio(jugador, `{jugador.DisplayName} canceló el intercambio`)
+		return {}
+	end
+	return { error = "Acción desconocida" }
+end
+Players.PlayerRemoving:Connect(function(j)
+	cerrarIntercambio(j, `{j.DisplayName} se fue del servidor`)
 end)
 
 --------------------------------------------------------------------------------

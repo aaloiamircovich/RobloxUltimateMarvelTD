@@ -911,7 +911,7 @@ escalar(jugar, function(s)
 	jugar.Position = UDim2.new(1, -16, 1, if choca then -(16 + (92 + 12) * s) else -16)
 end)
 
-local derecha = Comic.crear("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, -40), Size = UDim2.fromOffset(LADO, 6 * LADO + 5 * 8), BackgroundTransparency = 1 }, gui)
+local derecha = Comic.crear("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, -20), Size = UDim2.fromOffset(LADO, 7 * LADO + 6 * 8), BackgroundTransparency = 1 }, gui)
 Comic.crear("UIListLayout", { Padding = UDim.new(0, 8) }, derecha)
 escalar(derecha)
 for _, b in {
@@ -992,7 +992,7 @@ do
 	paneles.premios = p
 	local pestana = "diario"
 	local ultimo
-	local mensaje = Comic.texto({ Font = Comic.TEXTO, TextSize = 18, TextColor3 = Comic.AMARILLO, AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, 0), Size = UDim2.new(1, 0, 0, 24) }, cuerpo)
+	local mensaje = Comic.texto({ Text = "", Font = Comic.TEXTO, TextSize = 18, TextColor3 = Comic.AMARILLO, AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, 0), Size = UDim2.new(1, 0, 0, 24) }, cuerpo)
 	local area = Comic.crear("Frame", { Position = UDim2.fromOffset(0, 52), Size = UDim2.new(1, 0, 1, -82), BackgroundTransparency = 1 }, cuerpo)
 	local armar
 	local function pedir(nombre: string, a)
@@ -1089,6 +1089,191 @@ local function globo()
 end
 jugador:GetAttributeChangedSignal("DiarioDisponible"):Connect(globo)
 globo()
+
+--------------------------------------------------------------------------------
+-- Intercambio (docs/INTERCAMBIO.md): pedido a otro jugador del servidor y dos ofertas que confirman los dos.
+--------------------------------------------------------------------------------
+local abrirIntercambio
+do
+	local remotoI = ReplicatedStorage:WaitForChild("Intercambio")
+	local avisoI = ReplicatedStorage:WaitForChild("IntercambioAviso")
+	local p, cuerpo = Comic.panel(gui, "INTERCAMBIO", UDim2.fromOffset(860, 480))
+	paneles.intercambio = p
+	local estado, sesion
+	local mensaje = Comic.texto({ Text = "", Font = Comic.TEXTO, TextSize = 18, TextColor3 = Comic.AMARILLO, AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, 0), Size = UDim2.new(1, 0, 0, 24) }, cuerpo)
+	local area = Comic.crear("Frame", { Size = UDim2.new(1, 0, 1, -30), BackgroundTransparency = 1 }, cuerpo)
+	local armar
+
+	local function nombreHeroe(id: string): string
+		local h = Personajes.de(id)
+		return h and h.name or id
+	end
+	local function colorHeroe(id: string): Color3
+		local h = Personajes.de(id)
+		return h and COLOR_RAREZA[h.rarity] or Comic.CREMA
+	end
+	local function pedir(nombre: string, a)
+		local res = remotoI:InvokeServer(nombre, a)
+		if res and (res.error or res.mensaje) then
+			mensaje.Text = res.error or res.mensaje
+		end
+		return res
+	end
+	local function refrescar()
+		estado = remotoI:InvokeServer("estado")
+		armar()
+	end
+
+	-- Columna con título y lista desplazable.
+	local function columna(x: number, ancho: number, titulo: string)
+		Comic.texto({ Text = titulo, TextSize = 22, TextColor3 = Comic.AMARILLO, Position = UDim2.fromOffset(x, 0), Size = UDim2.fromOffset(ancho, 28), TextXAlignment = Enum.TextXAlignment.Left }, area)
+		local lista = Comic.crear("ScrollingFrame", { Position = UDim2.fromOffset(x, 32), Size = UDim2.new(0, ancho, 1, -100), BackgroundColor3 = Comic.FONDO, ScrollBarThickness = 6, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new() }, area)
+		Comic.borde(lista, 2)
+		Comic.crear("UIListLayout", { Padding = UDim.new(0, 4) }, lista)
+		Comic.crear("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 4), PaddingRight = UDim.new(0, 10) }, lista)
+		return lista
+	end
+	local function fila(lista, texto: string, color: Color3, elegido: boolean, alClic)
+		local b = Comic.boton(texto, { Size = UDim2.new(1, 0, 0, 34), TextSize = 16, BackgroundColor3 = if elegido then Comic.VERDE else Comic.ROJO_OSCURO, TextColor3 = color, TextXAlignment = Enum.TextXAlignment.Left }, lista, alClic or function() end)
+		Comic.crear("UIPadding", { PaddingLeft = UDim.new(0, 8) }, b)
+		return b
+	end
+	local function textoUnidad(u): string
+		return `{nombreHeroe(u.heroId)} · Nv {u.nivel}{if u.rasgo then " · " .. u.rasgo else ""}`
+	end
+
+	function armar()
+		area:ClearAllChildren()
+		if not estado then
+			return
+		end
+		if estado.problema then
+			Comic.texto({ Text = estado.problema, Font = Comic.TEXTO, TextSize = 22, TextWrapped = true, Size = UDim2.fromScale(1, 1) }, area)
+			return
+		end
+		if not sesion then
+			-- Pedido entrante.
+			local y = 0
+			if estado.pedidoDe then
+				local f = Comic.crear("Frame", { Size = UDim2.new(1, 0, 0, 60), BackgroundColor3 = Comic.ROJO }, area)
+				Comic.borde(f, 3)
+				Comic.texto({ Text = `¡{estado.pedidoDe} quiere intercambiar con vos!`, TextSize = 24, Position = UDim2.fromOffset(12, 0), Size = UDim2.new(1, -330, 1, 0), TextXAlignment = Enum.TextXAlignment.Left }, f)
+				Comic.boton("ACEPTAR", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -170, 0.5, 0), Size = UDim2.fromOffset(150, 42), TextSize = 22, BackgroundColor3 = Comic.VERDE }, f, function()
+					pedir("responder", true)
+					refrescar()
+				end)
+				Comic.boton("RECHAZAR", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(150, 42), TextSize = 22, BackgroundColor3 = Comic.GRIS }, f, function()
+					pedir("responder", false)
+					refrescar()
+				end)
+				y = 72
+			end
+			Comic.texto({ Text = `JUGADORES EN ESTE SERVIDOR · hace falta nivel {estado.nivelMinimo}`, TextSize = 22, TextColor3 = Comic.AMARILLO, Position = UDim2.fromOffset(0, y), Size = UDim2.new(1, 0, 0, 28), TextXAlignment = Enum.TextXAlignment.Left }, area)
+			local lista = Comic.crear("ScrollingFrame", { Position = UDim2.fromOffset(0, y + 34), Size = UDim2.new(1, 0, 1, -(y + 34)), BackgroundTransparency = 1, ScrollBarThickness = 6, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new() }, area)
+			Comic.crear("UIListLayout", { Padding = UDim.new(0, 6) }, lista)
+			if #estado.jugadores == 0 then
+				Comic.texto({ Text = "No hay otros jugadores en este servidor.", Font = Comic.TEXTO, TextSize = 18, Size = UDim2.new(1, 0, 0, 30) }, lista)
+			end
+			for _, j in estado.jugadores do
+				local f = Comic.crear("Frame", { Size = UDim2.new(1, -12, 0, 48), BackgroundColor3 = Comic.ROJO_OSCURO }, lista)
+				Comic.borde(f, 2)
+				Comic.texto({ Text = j.nombre, Font = Comic.TEXTO, TextSize = 20, Position = UDim2.fromOffset(12, 0), Size = UDim2.new(1, -200, 1, 0), TextXAlignment = Enum.TextXAlignment.Left }, f)
+				Comic.boton(if j.puede then "PEDIR" else "NO DISPONIBLE", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0), Size = UDim2.fromOffset(170, 36), TextSize = 18, AutoButtonColor = j.puede, BackgroundColor3 = if j.puede then Comic.VERDE else Comic.GRIS }, f, function()
+					if j.puede then
+						pedir("pedir", j.id)
+					end
+				end)
+			end
+			return
+		end
+		-- Sesión: inventario propio (tocar agrega o saca de la oferta), mi oferta y la del otro.
+		local mia = { unidades = {}, objetos = {} }
+		for _, u in sesion.mia.unidades do
+			table.insert(mia.unidades, u.uid)
+		end
+		for _, o in sesion.mia.objetos do
+			table.insert(mia.objetos, o.id)
+		end
+		local function enviar()
+			pedir("oferta", mia)
+		end
+		local inventario = columna(0, 300, "TU INVENTARIO (tocá para ofrecer)")
+		for _, u in estado.unidades do
+			local elegido = table.find(mia.unidades, u.uid) ~= nil
+			fila(inventario, textoUnidad(u), colorHeroe(u.heroId), elegido, function()
+				local i = table.find(mia.unidades, u.uid)
+				if i then
+					table.remove(mia.unidades, i)
+				else
+					table.insert(mia.unidades, u.uid)
+				end
+				enviar()
+			end)
+		end
+		for _, o in estado.objetos do
+			local elegido = table.find(mia.objetos, o.id) ~= nil
+			fila(inventario, `🎒 {o.nombre}`, Comic.CREMA, elegido, function()
+				local i = table.find(mia.objetos, o.id)
+				if i then
+					table.remove(mia.objetos, i)
+				else
+					table.insert(mia.objetos, o.id)
+				end
+				enviar()
+			end)
+		end
+		local function mostrarOferta(lista, oferta)
+			for _, u in oferta.unidades do
+				fila(lista, textoUnidad(u), colorHeroe(u.heroId), false)
+			end
+			for _, o in oferta.objetos do
+				fila(lista, `🎒 {o.nombre}`, Comic.CREMA, false)
+			end
+		end
+		mostrarOferta(columna(316, 260, (if sesion.listoYo then "✔ " else "") .. "TU OFERTA"), sesion.mia)
+		mostrarOferta(columna(592, 230, (if sesion.listoOtro then "✔ " else "") .. `OFERTA DE {string.upper(sesion.conQuien)}`), sesion.suya)
+		Comic.boton(if sesion.listoYo then "ESPERANDO AL OTRO…" else "✔ CONFIRMAR", { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -180, 1, 0), Size = UDim2.fromOffset(260, 52), TextSize = 24, AutoButtonColor = not sesion.listoYo, BackgroundColor3 = if sesion.listoYo then Comic.GRIS else Comic.VERDE }, area, function()
+			if not sesion.listoYo then
+				pedir("confirmar")
+			end
+		end)
+		Comic.boton("CANCELAR", { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, 0, 1, 0), Size = UDim2.fromOffset(170, 52), TextSize = 22, BackgroundColor3 = Comic.GRIS }, area, function()
+			pedir("cancelar")
+		end)
+		Comic.texto({ Text = "Si alguien cambia su oferta, las confirmaciones se borran.", Font = Comic.TEXTO, TextSize = 15, AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, -16), Size = UDim2.new(1, -460, 0, 22), TextXAlignment = Enum.TextXAlignment.Left }, area)
+	end
+
+	avisoI.OnClientEvent:Connect(function(tipo, datos)
+		if tipo == "pedido" then
+			mensaje.Text = `{datos.de} quiere intercambiar con vos`
+			if not p.Visible then
+				abrir("intercambio")
+			end
+			refrescar()
+		elseif tipo == "sesion" then
+			sesion = datos
+			mensaje.Text = datos.mensaje or ""
+			if not p.Visible then
+				abrir("intercambio")
+			end
+			refrescar()
+		elseif tipo == "fin" then
+			sesion = nil
+			mensaje.Text = datos and datos.mensaje or ""
+			refrescar()
+		end
+	end)
+	function abrirIntercambio()
+		if not p.Visible then
+			abrir("intercambio")
+		end
+		refrescar()
+	end
+end
+local botonIntercambio = Comic.botonIcono("CAMBIAR", "", { Size = UDim2.fromOffset(LADO, LADO), BackgroundColor3 = Color3.fromRGB(40, 110, 170) }, derecha, function()
+	abrirIntercambio()
+end)
+Comic.texto({ Text = "🔁", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 4), Size = UDim2.new(1, -8, 0.68, 0) }, botonIntercambio)
 
 local botonAjustes = Comic.botonIcono("AJUSTES", "", { Size = UDim2.fromOffset(LADO, LADO), BackgroundColor3 = Comic.GRIS }, derecha, function()
 	abrir("ajustes")
