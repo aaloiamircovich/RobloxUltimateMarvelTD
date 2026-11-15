@@ -15,7 +15,7 @@ animaciones) ahora; ForgeGUI (audio, íconos, imágenes de UI) cuando vuelvan lo
    que vuelan al dinero (sin onomatopeyas: el usuario no las quiere).
 4. **Entrada de jefe**: viñeta de cómic con su nombre y frase, cámara que lo muestra 2 s y temblor al pisar.
 
-## Etapa 2 · Mapas con ambiente
+## Etapa 2 · Mapas con ambiente — ✅ 14/11/2026, `docs/AMBIENTE.md`
 1. **Iluminación por mapa**: hora del día, niebla (`Atmosphere`), brillo (`Bloom`), corrección de color y cielo
    propio. Hoy todos comparten la luz del lobby: Dimensión Oscura violeta, The Raft de noche con tormenta, Asgard
    dorado al atardecer, Knowhere en el espacio.
