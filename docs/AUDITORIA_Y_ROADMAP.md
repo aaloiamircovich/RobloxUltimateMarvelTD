@@ -3,6 +3,23 @@
 Revisión del estado del juego (código, Studio y una mirada en Play) y lista de lo que falta para que deje de
 sentirse precario. Referencias: Anime Galaxy, All Star Tower Defense y los TD de Roblox con más jugadores.
 
+## 0. Estado al 14/11/2026 (cierre de este roadmap)
+Hecho: interfaz escalable con vista previa al colocar (Fase 1.2–1.3), tutorial y ajustes (1.4–1.5), reposo y
+efectos de aparición/mejora/venta (1.7), arreglo de `escuadronDe` (1.8), ProfileStore con bloqueo de sesión (2.1),
+servidores de partida reservados (2.2), analítica y retratos más livianos (2.3–2.4), los 11 mapas (3.1), los 49
+enemigos con jefes con aura y barra (3.2), premio diario, códigos y logros (4.1–4.2), intercambio (4.3) y lobby
+agrandado con encargados, interiores y cielo.
+
+Queda abierto:
+- **Audio**: el reproductor está listo y sin pistas; espera créditos de ForgeGUI (~diciembre 2026).
+- **VFX de habilidades por personaje** (3.3): siguen los 3 efectos genéricos. Pasa al roadmap estético.
+- **Banner 3** y `Mejoras.AJUSTES` (3.4), **pasada de balance** con datos (3.5).
+- **Prueba de los 212 modelos en partida** (1.6), limpieza de ServerStorage y respaldo `.rbxm` (1.8).
+- **Invitar amigos / servidores privados** y modos rotativos (4.4–4.5), **idiomas** y toda la Fase 5.
+- Decisiones de la Fase 0 sobre universo y monetización (hoy: privado, sin monetizar).
+
+Lo siguiente es estético: `docs/ROADMAP_ESTETICA.md`.
+
 ## 1. Qué hay hoy
 
 | Área | Estado |
