@@ -48,6 +48,7 @@ local function remoto(clase: string, nombre: string)
 end
 local accion = remoto("RemoteFunction", "Accion")
 local aviso = remoto("RemoteEvent", "Aviso")
+remoto("UnreliableRemoteEvent", "Ataques") -- Partida avisa cada ataque; los clientes lo dibujan (Ataques.client.luau)
 local abrirPanel = remoto("RemoteEvent", "AbrirPanel")
 local usarHud = remoto("RemoteEvent", "UsarHud")
 local teletransportar = remoto("RemoteEvent", "Teletransportar")

@@ -6,7 +6,7 @@ Preferencias.MAPA_TUTORIAL = "level_1"
 Preferencias.PASOS = 9 -- último paso del tutorial (Tutorial.client.luau)
 
 function Preferencias.ajustesPorDefecto()
-	return { musica = 0.6, efectos = 0.8, calidadBaja = false, numerosDano = true, autoSaltar = false }
+	return { musica = 0.6, efectos = 0.8, calidadBaja = false, numerosDano = true, autoSaltar = false, sacudida = true }
 end
 
 local function volumen(v, defecto: number): number
@@ -25,7 +25,7 @@ function Preferencias.normalizarAjustes(crudo)
 	end
 	d.musica = volumen(crudo.musica, d.musica)
 	d.efectos = volumen(crudo.efectos, d.efectos)
-	for _, k in { "calidadBaja", "numerosDano", "autoSaltar" } do
+	for _, k in { "calidadBaja", "numerosDano", "autoSaltar", "sacudida" } do
 		if type(crudo[k]) == "boolean" then
 			d[k] = crudo[k]
 		end

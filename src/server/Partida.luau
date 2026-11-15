@@ -4,7 +4,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
-local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage.Shared
 local Data = Shared.Data
@@ -63,12 +62,6 @@ local COLORES = {
 	["Cósmico"] = Color3.fromRGB(70, 60, 160),
 	["Urbano"] = Color3.fromRGB(170, 60, 60),
 }
-local COLOR_MUNICION = {
-	explosive = Color3.fromHex("ff9d3d"),
-	cryo = Color3.fromHex("7ce7ff"),
-	piercing = Color3.fromHex("d8f0ff"),
-}
-
 local function cartel(padre: BasePart, texto: string, alto: number): Frame
 	local gui = Instance.new("BillboardGui")
 	gui.Size = UDim2.fromOffset(80, 22)
@@ -201,25 +194,6 @@ end
 
 local function ponerRaiz(u, cf: CFrame)
 	u.modelo:PivotTo(cf * u.raiz.CFrame:ToObjectSpace(u.modelo:GetPivot()))
-end
-
-local function pieza(padre: Instance, tam: Vector3, color: Color3, cf: CFrame): Part
-	local f = Instance.new("Part")
-	f.Anchored, f.CanCollide, f.CanQuery = true, false, false
-	f.Size = tam
-	f.Color = color
-	f.Material = Enum.Material.Neon
-	f.CFrame = cf
-	f.Parent = padre
-	return f
-end
-
-local function animarYBorrar(f: Part, segundos: number, meta)
-	local t = TweenService:Create(f, TweenInfo.new(segundos, Enum.EasingStyle.Quad), meta)
-	t.Completed:Once(function()
-		f:Destroy()
-	end)
-	t:Play()
 end
 
 -- Escuadrón de un jugador para la partida: { uid, heroId, nivel, limite }.
@@ -457,6 +431,7 @@ function Partida.nueva(op)
 		cuerpo:SetAttribute("Vida", math.ceil(e.vida)) -- el cliente dibuja los números de daño
 		moverEnemigo(e, CFrame.new(puntoEnRuta(e.avance, e.ruta) + Vector3.new(0, e.altura, 0)))
 		if config.isBoss then
+			cuerpo:SetAttribute("Jefe", config.name) -- los clientes le hacen la entrada (Ataques.client.luau)
 			-- Aura del color de su categoría para distinguirlo de lejos.
 			local color = COLORES[config.category] or Color3.fromRGB(200, 40, 40)
 			local luz = Instance.new("PointLight")
@@ -496,7 +471,12 @@ function Partida.nueva(op)
 				fijar(a, nil)
 			end
 		end
-		e.cuerpo:Destroy()
+		if e.cuerpo:GetAttribute("Muerto") then
+			-- Un instante más para que los clientes lo copien y lo disuelvan (Ataques.client.luau).
+			task.delay(0.25, e.cuerpo.Destroy, e.cuerpo)
+		else
+			e.cuerpo:Destroy()
+		end
 	end
 
 	-- Refleja la vida; si murió, paga la recompensa a quien le dio el último golpe y lo saca.
@@ -536,7 +516,13 @@ function Partida.nueva(op)
 		if e.vida <= 0 then
 			-- Rasgo Mercenario: más dinero si el último golpe fue de esa unidad.
 			local extra = if e.ultimaUnidad then Rasgos.dinero(e.ultimaUnidad) else 0
-			dar(e.ultimoAtacante, math.floor((e.config.reward or 0) * (1 + extra) + 0.5))
+			local premio = math.floor((e.config.reward or 0) * (1 + extra) + 0.5)
+			dar(e.ultimoAtacante, premio)
+			-- Para los efectos del cliente: monedas que vuelan a quien cobró y el enemigo que se disuelve.
+			if e.ultimoAtacante and premio > 0 then
+				e.cuerpo:SetAttribute("Asesino", e.ultimoAtacante.UserId)
+			end
+			e.cuerpo:SetAttribute("Muerto", true)
 			evento(e.ultimoAtacante, "derrota", 1)
 			if e.config.isBoss then
 				evento(e.ultimoAtacante, "jefe", 1)
@@ -679,6 +665,7 @@ function Partida.nueva(op)
 			ataque = ataque,
 			velocidadAtaque = velocidadAtaque,
 			kit = Kits.nuevo(base),
+			estilo = base, -- efecto de ataque del cliente (Ataques.client.luau)
 		}
 		u.stats = statsUnidad(u)
 		siguienteUid += 1
@@ -824,25 +811,14 @@ function Partida.nueva(op)
 	------------------------------------------------------------------------------
 	-- Ataque de las unidades
 	------------------------------------------------------------------------------
-	local EFECTOS = {
-		flecha = function(desde: Vector3, hasta: Vector3, color: Color3?)
-			local f = pieza(mundo, Vector3.new(0.15, 0.15, 1.6), color or Color3.fromRGB(150, 80, 230), CFrame.lookAt(desde, hasta))
-			animarYBorrar(f, 0.12, { CFrame = CFrame.lookAt(hasta, hasta + (hasta - desde)) })
-		end,
-		rayo = function(desde: Vector3, hasta: Vector3)
-			local largo = (hasta - desde).Magnitude
-			local f = pieza(mundo, Vector3.new(0.2, 0.2, largo), Color3.fromRGB(90, 190, 255), CFrame.lookAt(desde, hasta) * CFrame.new(0, 0, -largo / 2))
-			animarYBorrar(f, 0.15, { Transparency = 1, Size = Vector3.new(0.05, 0.05, largo) })
-		end,
-		impacto = function(_desde: Vector3, hasta: Vector3, color: Color3?, radio: number?)
-			local d = (radio or 2) * 2
-			local f = pieza(mundo, Vector3.new(1, 1, 1), color or Color3.fromRGB(190, 130, 80), CFrame.new(hasta))
-			f.Shape = Enum.PartType.Ball
-			f.Material = Enum.Material.Slate
-			f.Transparency = 0.3
-			animarYBorrar(f, 0.25, { Transparency = 1, Size = Vector3.new(d, d, d) })
-		end,
-	}
+	-- Los ataques los dibuja cada cliente (src/client/Ataques.client.luau, docs/COMBATE_VISUAL.md): el servidor sólo
+	-- dice quién atacó, desde dónde y a dónde. Por un remoto no confiable: si se pierde uno, sólo falta un destello.
+	local remotoAtaques = ReplicatedStorage:WaitForChild("Ataques") :: UnreliableRemoteEvent
+	local function efecto(estilo: string, desde: Vector3, hasta: Vector3, critico: boolean?, extra: any?)
+		for j in p.jugadores do
+			remotoAtaques:FireClient(j, estilo, desde, hasta, critico == true, extra)
+		end
+	end
 
 	-- Elige el blanco según la prioridad de la unidad.
 	local function mejorBlanco(u, a, b): boolean
@@ -872,7 +848,7 @@ function Partida.nueva(op)
 				end
 				revisar(g.enemigo)
 			end
-			EFECTOS.impacto(nil, u.raiz.Position - Vector3.new(0, 2, 0), Color3.fromHex("a3a3a3"), 65 * Mapa.ESCALA)
+			efecto("pisoton", u.raiz.Position, u.raiz.Position - Vector3.new(0, 2, 0), true, 65 * Mapa.ESCALA)
 		end
 
 		u.espera -= dt
@@ -900,8 +876,7 @@ function Partida.nueva(op)
 		local critico = math.random() * 100 < u.stats.critChance
 		local distancia = math.sqrt((objetivo.x - u.x) ^ 2 + (objetivo.y - u.y) ^ 2)
 		local golpe = Kits.golpe(u.kit, u.config, objetivo.e, if critico then u.stats.damage * u.stats.critDamage else u.stats.damage, u.stats, u.objeto, distancia)
-		local efecto = EFECTOS[u.modelo:GetAttribute("Efecto")] or EFECTOS.flecha
-		efecto(pos + Vector3.new(0, 1, 0), destino, COLOR_MUNICION[u.kit.modo])
+		efecto(u.estilo, pos + Vector3.new(0, 1, 0), destino, critico, u.kit.modo or u.modelo:GetAttribute("Efecto"))
 
 		local todos, posiciones = {}, {}
 		for _, c in enPixeles do
@@ -914,14 +889,14 @@ function Partida.nueva(op)
 			return posiciones[e].x, posiciones[e].y
 		end)
 		for _, salto in saltos do
-			EFECTOS.rayo(salto.desde.cuerpo.Position, salto.hasta.cuerpo.Position)
+			efecto("cadena", salto.desde.cuerpo.Position, salto.hasta.cuerpo.Position)
 		end
 		local pct = u.objeto and u.objeto.effects.onHitCreditPct
 		if pct and (objetivo.e.config.reward or 0) > 0 then
 			dar(u.dueno, math.max(1, math.ceil(objetivo.e.config.reward * pct)))
 		end
 		if (golpe.radioSplash or 0) > 0 then
-			EFECTOS.impacto(nil, destino, COLOR_MUNICION[u.kit.modo], golpe.radioSplash * Mapa.ESCALA)
+			efecto("area", destino, destino, critico, golpe.radioSplash * Mapa.ESCALA)
 		end
 		for i, g in Kits.alAtacar(u.kit, u.config, u.stats, u.nivel, objetivo.e, heroe, enPixeles) do
 			Combate.danar(g.enemigo, g.golpe, 1, tablaTipos)
@@ -933,7 +908,7 @@ function Partida.nueva(op)
 			end
 			table.insert(tocados, g.enemigo)
 			if i > 1 then
-				EFECTOS.rayo(destino, g.enemigo.cuerpo.Position)
+				efecto("cadena", destino, g.enemigo.cuerpo.Position)
 			end
 		end
 		for _, e in tocados do

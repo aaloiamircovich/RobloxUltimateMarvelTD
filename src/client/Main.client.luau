@@ -412,8 +412,6 @@ end)
 --------------------------------------------------------------------------------
 -- Efectos de cómic: cartel de oleada, victoria/derrota, números de daño y dinero que salta
 --------------------------------------------------------------------------------
-local ONOMATOPEYAS = { "¡BAM!", "¡KRAK!", "¡POW!", "¡WHAM!", "¡ZAP!", "¡BOOM!" }
-
 -- Cartel grande al empezar cada oleada (o «¡JEFE!» en la última de un acto).
 local function cartelOleada(n: number, jefe: boolean)
 	local c = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.38), Size = UDim2.fromOffset(520, 150), BackgroundTransparency = 1, ZIndex = 8 }, gui)
@@ -421,11 +419,6 @@ local function cartelOleada(n: number, jefe: boolean)
 	local estallido = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(420, 120), BackgroundColor3 = if jefe then Comic.ROJO_OSCURO else Comic.ROJO, Rotation = -4, ZIndex = 8 }, c)
 	Comic.borde(estallido, 6)
 	texto({ Text = if jefe then "¡JEFE!" else `¡OLEADA {n}!`, Size = UDim2.fromScale(1, 1), TextColor3 = Comic.AMARILLO, ZIndex = 9, Rotation = -4 }, c)
-	local ono = texto({ Text = ONOMATOPEYAS[math.random(#ONOMATOPEYAS)], AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1, -20, 0, 6), Size = UDim2.fromOffset(150, 56), TextColor3 = Comic.ROJO_OSCURO, Rotation = 12, ZIndex = 10 }, c)
-	ono.TextStrokeTransparency = 1
-	ono.BackgroundTransparency = 0
-	ono.BackgroundColor3 = Comic.AMARILLO
-	Comic.borde(ono, 4)
 	animar(escala, 0.35, { Scale = escalaGlobal }, Enum.EasingStyle.Back)
 	task.delay(1.8, function()
 		animar(escala, 0.25, { Scale = 0 }, Enum.EasingStyle.Quad)
@@ -512,10 +505,42 @@ local function numeroDano(cuerpo: BasePart, cantidad: number)
 	end)
 end
 
+-- Monedas que vuelan desde el enemigo que derrotaste hasta tu contador de dinero.
+local monedasActivas = 0
+local function monedas(desde: Vector3)
+	local camara = workspace.CurrentCamera
+	local punto, visible = camara:WorldToScreenPoint(desde)
+	if not visible or monedasActivas > 30 then
+		return
+	end
+	local destino = dinero.AbsolutePosition + dinero.AbsoluteSize / 2
+	for i = 1, 4 do
+		monedasActivas += 1
+		local m = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(18, 18), Position = UDim2.fromOffset(punto.X, punto.Y), BackgroundColor3 = Comic.AMARILLO, ZIndex = 15 }, gui)
+		crear("UICorner", { CornerRadius = UDim.new(1, 0) }, m)
+		crear("UIStroke", { Color = Color3.fromRGB(150, 90, 0), Thickness = 2 }, m)
+		-- Primero saltan hacia los costados y después vuelan al contador.
+		local salto = UDim2.fromOffset(punto.X + math.random(-40, 40), punto.Y - math.random(20, 50))
+		task.delay((i - 1) * 0.05, function()
+			animar(m, 0.18, { Position = salto }, Enum.EasingStyle.Quad)
+			task.wait(0.2)
+			animar(m, 0.45, { Position = UDim2.fromOffset(destino.X, destino.Y), Size = UDim2.fromOffset(10, 10) }, Enum.EasingStyle.Quad)
+			task.wait(0.45)
+			m:Destroy()
+			monedasActivas -= 1
+		end)
+	end
+end
+
 local function seguirEnemigo(cuerpo: Instance)
 	if not cuerpo:IsA("BasePart") then
 		return
 	end
+	cuerpo:GetAttributeChangedSignal("Muerto"):Once(function()
+		if cuerpo:GetAttribute("Asesino") == jugador.UserId then
+			monedas(cuerpo.Position)
+		end
+	end)
 	local antes = cuerpo:GetAttribute("Vida")
 	cuerpo:GetAttributeChangedSignal("Vida"):Connect(function()
 		local ahora = cuerpo:GetAttribute("Vida")

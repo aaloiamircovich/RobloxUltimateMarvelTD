@@ -5,6 +5,7 @@ return function()
 	local a = Preferencias.normalizarAjustes({ musica = 3, efectos = -1, calidadBaja = true, numerosDano = "no", autoSaltar = 1, extra = 5 })
 	assert(a.musica == 1 and a.efectos == 0, "volúmenes entre 0 y 1")
 	assert(a.calidadBaja == true and a.numerosDano == true and a.autoSaltar == false, "sólo booleanos; lo demás queda por defecto")
+	assert(a.sacudida == true and Preferencias.normalizarAjustes({ sacudida = false }).sacudida == false, "sacudida de cámara")
 	assert(a.extra == nil, "no se guardan claves desconocidas")
 	assert(Preferencias.normalizarAjustes({ musica = 0 / 0 }).musica == 0.6, "NaN vuelve al valor por defecto")
 

@@ -932,11 +932,11 @@ for _, b in {
 end
 
 --------------------------------------------------------------------------------
--- Ajustes (docs/TUTORIAL.md): volumen, calidad baja, números de daño y auto-saltar; se guardan en el perfil.
+-- Ajustes (docs/TUTORIAL.md): volumen, calidad baja, números de daño, auto-saltar y sacudida de cámara; se guardan en el perfil.
 --------------------------------------------------------------------------------
 do
 	local Ajustes = require(script.Parent:WaitForChild("Ajustes"))
-	local p, cuerpo = Comic.panel(gui, "AJUSTES", UDim2.fromOffset(460, 330))
+	local p, cuerpo = Comic.panel(gui, "AJUSTES", UDim2.fromOffset(460, 384))
 	paneles.ajustes = p
 	Comic.crear("UIListLayout", { Padding = UDim.new(0, 10) }, cuerpo)
 	local filas = {}
@@ -974,6 +974,7 @@ do
 	interruptor("calidadBaja", "🖥 Calidad baja (más FPS)")
 	interruptor("numerosDano", "💥 Números de daño")
 	interruptor("autoSaltar", "⏩ Juego automático al empezar")
+	interruptor("sacudida", "📳 Sacudida de cámara")
 	local function pintar(v)
 		for _, f in filas do
 			f(v)

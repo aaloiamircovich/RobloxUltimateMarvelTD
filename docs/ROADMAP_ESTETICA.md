@@ -5,14 +5,14 @@ se sienta** como Anime Galaxy o ASTD: el espectáculo está en los ataques, las 
 Cada etapa se decide con el usuario antes de empezar. Herramientas: IA de Roblox (mallas, texturas, materiales,
 animaciones) ahora; ForgeGUI (audio, íconos, imágenes de UI) cuando vuelvan los créditos (~diciembre 2026).
 
-## Etapa 1 · Combate que impresione (lo que más se mira)
+## Etapa 1 · Combate que impresione (lo que más se mira) — ✅ 14/11/2026, `docs/COMBATE_VISUAL.md`
 1. **Habilidades con efecto propio**, empezando por Míticos y Legendarios: Mjolnir con rayos, Gungnir, escudo
    del Capitán que rebota, garras, telarañas, portales de Strange, chasquido… Partículas, rayos (`Beam`), ondas y
    sacudida de cámara cortita.
 2. **Ataques básicos por personaje**: hoy hay 3 genéricos (flecha, rayo, impacto). Proyectil, estela e impacto con
    el color y la forma de cada héroe.
 3. **Golpes y muertes**: destello blanco al recibir daño, enemigo que se desarma o se disuelve al morir, monedas
-   que vuelan al dinero, números de daño con onomatopeyas de cómic («¡POW!», «¡CRÍTICO!»).
+   que vuelan al dinero (sin onomatopeyas: el usuario no las quiere).
 4. **Entrada de jefe**: viñeta de cómic con su nombre y frase, cámara que lo muestra 2 s y temblor al pisar.
 
 ## Etapa 2 · Mapas con ambiente
