@@ -429,15 +429,85 @@ end
 
 -- Pantalla de victoria/derrota.
 resultado = crear("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Comic.NEGRO, BackgroundTransparency = 0.45, Visible = false, ZIndex = 20 }, gui)
-local panelFin = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(560, 340), BackgroundColor3 = Comic.FONDO, ZIndex = 20 }, resultado)
+local panelFin = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(680, 500), BackgroundColor3 = Comic.FONDO, ZIndex = 20 }, resultado)
 Comic.borde(panelFin, 6)
 local escalaFin = crear("UIScale", {}, panelFin)
 table.insert(escalas, escalaFin)
 local tituloFin = texto({ AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 0), Size = UDim2.fromOffset(460, 110), TextColor3 = Comic.AMARILLO, Rotation = -4, ZIndex = 22 }, panelFin)
 tituloFin.BackgroundTransparency = 0
 Comic.borde(tituloFin, 6)
-local detalleFin = texto({ Position = UDim2.fromOffset(24, 80), Size = UDim2.new(1, -48, 0, 70), TextSize = 22, Font = Comic.TEXTO, TextWrapped = true, ZIndex = 21 }, panelFin)
-local premioFin = texto({ Position = UDim2.fromOffset(24, 156), Size = UDim2.new(1, -48, 0, 70), TextSize = 30, TextColor3 = Comic.AMARILLO, TextWrapped = true, ZIndex = 21 }, panelFin)
+local detalleFin = texto({ Position = UDim2.fromOffset(24, 66), Size = UDim2.new(1, -48, 0, 44), TextSize = 19, Font = Comic.TEXTO, TextWrapped = true, ZIndex = 21 }, panelFin)
+-- Escuadrón en 3D (posando o abatido), premios que caen de a uno y subidas de nivel (docs/PANTALLAS.md).
+local escuadronFin = crear("Frame", { Position = UDim2.fromOffset(20, 112), Size = UDim2.new(1, -40, 0, 160), BackgroundTransparency = 1, ZIndex = 21 }, panelFin)
+crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 6) }, escuadronFin)
+local premiosFin = crear("Frame", { Position = UDim2.fromOffset(20, 278), Size = UDim2.new(1, -40, 0, 44), BackgroundTransparency = 1, ZIndex = 21 }, panelFin)
+crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 8) }, premiosFin)
+local subidasFin = crear("Frame", { Position = UDim2.fromOffset(20, 328), Size = UDim2.new(1, -40, 0, 44), BackgroundTransparency = 1, ZIndex = 21 }, panelFin)
+local Cinematica = require(script.Parent:WaitForChild("Cinematica"))
+local CONSEJOS = {
+	"Consejo: mejorá tus unidades durante la partida, no sólo al colocarlas.",
+	"Consejo: cada unidad pide un terreno (pasto, agua, montaña); mirá el motivo al colocar.",
+	"Consejo: cambiá la prioridad de ataque a «fuerte» para los jefes.",
+	"Consejo: los rasgos y grados de Wakanda hacen más fuertes a tus unidades.",
+	"Consejo: equipá objetos de la tienda para potenciar a tus héroes.",
+}
+
+local function vaciar(f: Instance)
+	for _, x in f:GetChildren() do
+		if x:IsA("GuiObject") then
+			x:Destroy()
+		end
+	end
+end
+
+-- Premios del acto como fichas que caen de a una («+50 gemas · +1 núcleo · +30 XP»).
+local function armarPremios(premio: string?, gano: boolean)
+	vaciar(premiosFin)
+	local partes = if premio and premio ~= "" then string.split(premio, " · ") else { if gano then "" else CONSEJOS[math.random(#CONSEJOS)] }
+	for i, parte in partes do
+		if parte == "" then
+			continue
+		end
+		local ficha = texto({ Text = parte, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 40), TextSize = if gano then 24 else 17, Font = if gano then Comic.TITULO else Comic.TEXTO, TextColor3 = if gano then Comic.AMARILLO else Comic.CREMA, LayoutOrder = i, ZIndex = 22 }, premiosFin)
+		ficha.BackgroundTransparency = if gano then 0 else 1
+		ficha.BackgroundColor3 = Comic.ROJO_OSCURO
+		if gano then
+			Comic.borde(ficha, 3)
+			crear("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) }, ficha)
+		end
+		local esc = crear("UIScale", { Scale = 0 }, ficha)
+		task.delay(0.4 + i * 0.25, function()
+			animar(esc, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
+		end)
+	end
+end
+
+local function armarEscuadronFin(gano: boolean)
+	vaciar(escuadronFin)
+	for i, parte in string.split(jugador:GetAttribute("Escuadron") or "", ",") do
+		local heroeId = string.split(parte, ":")[2]
+		if heroeId and Personajes.todos[heroeId] then
+			local caja = crear("Frame", { Size = UDim2.fromOffset(104, 160), BackgroundTransparency = 1, LayoutOrder = i, ZIndex = 22 }, escuadronFin)
+			local vista = Cinematica.modelo3D(caja, heroeId, false)
+			if vista:IsA("ViewportFrame") then
+				vista.ZIndex = 22
+				if gano then
+					-- Saltito de festejo de a uno.
+					vista.Position = UDim2.fromOffset(0, 30)
+					task.delay(0.2 + i * 0.12, function()
+						animar(vista, 0.3, { Position = UDim2.fromOffset(0, -10) }, Enum.EasingStyle.Quad)
+						task.wait(0.3)
+						animar(vista, 0.3, { Position = UDim2.fromOffset(0, 0) }, Enum.EasingStyle.Bounce)
+					end)
+				else
+					vista.ImageColor3 = Color3.fromRGB(110, 110, 120)
+					vista.Rotation = if i % 2 == 0 then 8 else -8
+					vista.Position = UDim2.fromOffset(0, 18)
+				end
+			end
+		end
+	end
+end
 local botonesFin = crear("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -22), Size = UDim2.new(1, -40, 0, 60), BackgroundTransparency = 1, ZIndex = 21 }, panelFin)
 crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder }, botonesFin)
 local votosFin = texto({ AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -88), Size = UDim2.new(1, -48, 0, 22), TextSize = 17, Font = Comic.TEXTO, ZIndex = 21 }, panelFin)
@@ -477,7 +547,10 @@ local function mostrarResultado()
 	tituloFin.Text = if gano then "¡VICTORIA!" else "DERROTA"
 	tituloFin.BackgroundColor3 = if gano then Comic.ROJO else Comic.GRIS
 	detalleFin.Text = estado:GetAttribute("Mensaje")
-	premioFin.Text = jugador:GetAttribute("PremioActo") or (if gano then "" else "¡Los héroes volverán más fuertes!")
+	armarPremios(jugador:GetAttribute("PremioActo"), gano)
+	armarEscuadronFin(gano)
+	vaciar(subidasFin)
+	Cinematica.subidas(subidasFin, jugador:GetAttribute("Subidas"))
 	armarBotonesFin()
 	resultado.Visible = true
 	modo = nil
@@ -626,7 +699,7 @@ for _, a in { "Dinero", "Listo", "Auto", "Escuadron", "PremioActo", "Voto" } do
 		elseif a == "Dinero" then
 			dineroSalta()
 		elseif a == "PremioActo" and resultado.Visible then
-			premioFin.Text = jugador:GetAttribute("PremioActo") or ""
+			armarPremios(jugador:GetAttribute("PremioActo"), estado and estado:GetAttribute("Resultado") == "victoria")
 		elseif a == "Voto" and resultado.Visible then
 			armarBotonesFin()
 		end

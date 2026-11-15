@@ -2,6 +2,9 @@
   "name": "UltimateMarvelTD_Roblox",
   "tree": {
     "$className": "DataModel",
+    "ReplicatedFirst": {
+      "Carga": { "$path": "src/first/Carga.client.luau" }
+    },
     "ReplicatedStorage": {
       "Shared": { "$path": "src/shared" }
     },

@@ -1130,6 +1130,14 @@ function Partida.nueva(op)
 	local function terminar(mensaje: string)
 		terminada = true
 		local gano = string.sub(mensaje, 1, 7) ~= "Derrota"
+		for j, d in p.jugadores do
+			local texto = {}
+			for _, x in d.subidas or {} do
+				table.insert(texto, `{x.heroe}:{x.desde}:{x.hasta}`)
+			end
+			j:SetAttribute("Subidas", if #texto > 0 then table.concat(texto, ",") else nil)
+			d.subidas = nil
+		end
 		fijar("Resultado", if gano then "victoria" else "derrota")
 		for j in p.jugadores do
 			Analitica.partidaTermina(j, NIVEL.id, op.acto, gano, estado:GetAttribute("Oleada") or 0)
@@ -1202,7 +1210,13 @@ function Partida.nueva(op)
 				for _, e in d.escuadron do
 					local u = Unidades.buscar(perfil, e.uid)
 					if u then
-						Unidades.ganarXP(u, xp)
+						local antes = u.level
+						if Unidades.ganarXP(u, xp) > 0 then
+							-- Para la pantalla final: «Nv 7 → 8» (Main.client.luau).
+							d.subidas = d.subidas or {}
+							d.subidas[e.uid] = d.subidas[e.uid] or { heroe = u.heroId, desde = antes }
+							d.subidas[e.uid].hasta = u.level
+						end
 					end
 				end
 				if Cuenta.ganarXP(perfil, math.floor((if infinito then Cuenta.XP_OLEADA_INFINITO else Cuenta.XP_OLEADA) * (1 + d.bonos.xp))) > 0 then
@@ -1456,6 +1470,7 @@ function Partida.nueva(op)
 		end
 		for j in p.jugadores do
 			j:SetAttribute("PremioActo", nil)
+			j:SetAttribute("Subidas", nil)
 			j:SetAttribute("Voto", nil)
 			agregar(j)
 		end
@@ -1482,7 +1497,7 @@ function Partida.nueva(op)
 			end
 		end
 		p.jugadores[j] = nil
-		for _, a in { "Partida", "Dinero", "Escuadron", "Listo", "Auto", "PremioActo", "Voto" } do
+		for _, a in { "Partida", "Dinero", "Escuadron", "Listo", "Auto", "PremioActo", "Subidas", "Voto" } do
 			j:SetAttribute(a, nil)
 		end
 		task.spawn(Perfiles.guardar, j)

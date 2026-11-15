@@ -24,7 +24,7 @@ animaciones) ahora; ForgeGUI (audio, íconos, imágenes de UI) cuando vuelvan lo
 3. **Detalle vivo**: agua que se mueve, banderas, humo de chimeneas, luces que parpadean, pájaros o naves pasando.
 4. **Cámara de partida**: ángulo y zoom elegidos por mapa, y paneo al iniciar mostrando el recorrido.
 
-## Etapa 3 · Invocaciones y pantallas (los momentos que se recuerdan)
+## Etapa 3 · Invocaciones y pantallas (los momentos que se recuerdan) — ✅ 14/11/2026, `docs/PANTALLAS.md`
 1. **Invocación cinemática**: portal o cápsula, color por rareza que se insinúa antes de revelar, el personaje
    aparece en 3D con pose y destellos; Mítico con efecto especial y pantalla dorada.
 2. **Victoria y derrota**: escuadrón posando, premios que caen uno por uno, estrellas del acto.

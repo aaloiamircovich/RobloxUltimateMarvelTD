@@ -679,7 +679,11 @@ do
 	cuerpoBanners = cuerpo
 end
 local function pedirBanner(nombre: string, cantidad: number?)
-	armarBanners(bannersRemoto:InvokeServer(nombre, cantidad))
+	local res = bannersRemoto:InvokeServer(nombre, cantidad)
+	armarBanners(res)
+	if res.nuevas and nombre == "limitado" then
+		require(script.Parent:WaitForChild("Cinematica")).invocar(res.nuevas)
+	end
 end
 
 function armarBanners(res)

@@ -209,6 +209,7 @@ local function pantallaBanner()
 			local res = pedir("invocar", n)
 			if res.nuevas then
 				require(script.Parent:WaitForChild("Sonido")).efecto("invocar")
+				require(script.Parent:WaitForChild("Cinematica")).invocar(res.nuevas)
 			end
 			ultimas = res.nuevas
 			mostrar()
@@ -311,6 +312,7 @@ local function pantallaUnidades()
 		boton("Evolucionar", { Position = UDim2.new(0, 12, 1, -50), Size = UDim2.new(1, -24, 0, 40), BackgroundColor3 = if listo then Color3.fromRGB(150, 70, 200) else Color3.fromRGB(60, 60, 66) }, der, function()
 			local res = pedir("evolucionar", copias)
 			if res.nueva then
+				require(script.Parent:WaitForChild("Cinematica")).evolucion(u.heroId, destino)
 				elegida = res.nueva.uid
 				mensaje.Text = `¡{d.name} se unió a tus unidades!`
 			end
