@@ -7,7 +7,6 @@
 -- Edificios: ServerStorage.Plantillas.Hub/<hito> si existe (modelos generados); si no, un bloque provisorio.
 local Players = game:GetService("Players")
 local ServerStorage = game:GetService("ServerStorage")
-local Reposo = require(game:GetService("ReplicatedStorage").Shared.Reposo)
 
 local Hub = {}
 
@@ -468,6 +467,11 @@ local function portal(padre, pos: Vector3, mira: Vector3, destino: CFrame)
 	luz.Range = 14
 	luz.Brightness = 2
 	luz.Parent = centro
+	-- El destino es una parte invisible del lobby: así crece con el agrandado final (un CFrame fijo quedaba en la
+	-- medida vieja y el portal mandaba a cualquier lado).
+	local llegada = parte(m, "ffffff", destino, Vector3.new(1, 1, 1))
+	llegada.Name = "LlegadaPortal"
+	llegada.Transparency, llegada.CanCollide, llegada.CanQuery, llegada.CanTouch = 1, false, false, false
 	local recien = {}
 	centro.Touched:Connect(function(otro)
 		local personaje = otro.Parent
@@ -476,7 +480,8 @@ local function portal(padre, pos: Vector3, mira: Vector3, destino: CFrame)
 			return
 		end
 		recien[jugador] = os.clock()
-		personaje:PivotTo(destino)
+		pcall(jugador.RequestStreamAroundAsync, jugador, llegada.Position, 3)
+		personaje:PivotTo(llegada.CFrame)
 	end)
 	m.Parent = padre
 end
@@ -485,6 +490,29 @@ end
 -- Encargado de una estación: el héroe con sólo la raíz anclada (para que lo mueva la animación) y los pies en
 -- `cf`, mirando a su −Z. La animación de reposo arranca cuando el lobby ya está en el workspace (Hub.construir).
 local encargados = {}
+local REPOSO_LOBBY = "rbxassetid://131664289365409" -- generado con la IA de Roblox: de pie, brazos sueltos, 4 s
+
+-- Con la raíz anclada, la animación mueve el cuerpo respecto de ella: la caja del modelo quieto no dice dónde quedan
+-- los pies. Ya animado, se baja o sube al encargado hasta que el pie más bajo toque lo que tiene abajo.
+local function apoyarPies(m: Model)
+	local raiz = m:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not (raiz and m.Parent) then
+		return
+	end
+	local filtro = RaycastParams.new()
+	filtro.FilterDescendantsInstances = { m }
+	local golpe = workspace:Raycast(raiz.Position, Vector3.new(0, -60, 0), filtro)
+	local bajo = math.huge
+	for _, d in m:GetDescendants() do
+		if d:IsA("BasePart") and d ~= raiz and d.Name:find("Foot") then
+			bajo = math.min(bajo, d.Position.Y - d.Size.Y / 2)
+		end
+	end
+	if golpe and bajo < math.huge then
+		raiz.CFrame += Vector3.new(0, golpe.Position.Y - bajo, 0)
+	end
+end
+
 local function encargado(padre, id: string, cf: CFrame)
 	local p = ServerStorage:FindFirstChild("Plantillas")
 	local heroes = p and p:FindFirstChild("Heroes")
@@ -1441,17 +1469,20 @@ function Hub.construir(alUsar: (Player, string) -> ())
 	end
 
 	hub.Parent = workspace
-	-- Reposo de los encargados (Shared/Reposo.luau), ya en el workspace para que la animación se replique.
+	-- Reposo de los encargados, ya en el workspace para que la animación se replique. No usan el reposo de combate
+	-- (Shared/Reposo.luau): agachado y con el arma baja, la espada de Valkyrie atravesaba la pierna, las manos de
+	-- Nick Fury se metían en el cuerpo y Ghost Rider quedaba flotando. Éste es de pie y con los brazos sueltos.
 	for _, x in encargados do
 		local hum = x.modelo:FindFirstChildOfClass("Humanoid")
 		local animator = hum and (hum:FindFirstChildOfClass("Animator") or Instance.new("Animator", hum))
 		if animator then
 			local anim = Instance.new("Animation")
-			anim.AnimationId = Reposo.para(x.id, x.modelo:GetAttribute("Efecto"))
+			anim.AnimationId = REPOSO_LOBBY
 			local ok, pista = pcall(animator.LoadAnimation, animator, anim)
 			if ok then
 				pista.Looped = true
 				pista:Play()
+				task.delay(1, apoyarPies, x.modelo)
 			end
 		end
 	end

@@ -25,6 +25,12 @@ Cada estación tiene un **encargado** del lore (el héroe de `Plantillas.Heroes`
 la raíz anclada) y un **puesto** temático generado con la IA de Roblox (`Plantillas.Hub/puesto_*`, se guarda en
 el lugar). Las **invocaciones** de Asgard y la **Historia** siguen siendo portales, porque encajan con el lore.
 Los encargados no giran ni hablan: sólo su reposo. Se definen con `personaje` y `puesto` en `Hub.ESTACIONES`.
+- **Reposo propio del lobby** (`REPOSO_LOBBY`, generado con la IA de Roblox: de pie y con los brazos sueltos), no
+  el de combate de `Shared/Reposo.luau`: con aquél la espada de Valkyrie atravesaba la pierna, las manos de Nick
+  Fury se metían en el cuerpo y Ghost Rider flotaba. Un segundo después de arrancar la animación, `apoyarPies`
+  sube o baja a cada encargado hasta que su pie más bajo toque el piso.
+- El **portal** entre la isla central y el Sanctum guarda su destino como una parte invisible (`LlegadaPortal`)
+  dentro del lobby, así crece con el agrandado final (antes era un CFrame fijo con la medida vieja y no llevaba).
 
 | Estación | Isla | Encargado | Puesto |
 | --- | --- | --- | --- |
