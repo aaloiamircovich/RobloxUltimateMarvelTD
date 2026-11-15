@@ -203,6 +203,7 @@ local INTERIORES = {
 		pos = Vector3.new(70, 170, 420), radio = 24, alto = 24, edificio = "sanctum", nombre = "Sanctum Sanctorum",
 		piso = "madera", pared = "2b1d15", columna = "180f0a", material = Enum.Material.Wood,
 		luz = "ffd49a", acento = "ffb46a", brillo = 0.7, estilo = "sanctum", balcon = true, circulo = true,
+		puertaModelo = "int_puerta",
 		personajes = { { "doctor_strange", -10, -13, 0 } },
 		muebles = {
 			{ "int_vitrina", -24, -14, 8, 90 }, { "int_estanteria", -24, 0, 9, 90 }, { "int_estanteria", -24, 13, 9, 90 },
@@ -212,7 +213,7 @@ local INTERIORES = {
 			{ "int_escritorio", -16, 21, 4, 90 }, { "int_estatua", 15, 21, 6, 200 },
 		},
 		-- Libros flotando (alto sobre el piso).
-		flotantes = { { "int_libro", -20, -6, 8 }, { "int_libro", 20, 6, 9 }, { "int_libro", -6, 16, 7 } },
+		flotantes = { { "int_libro", -20, -6, 8 }, { "int_libro", 20, 6, 9 }, { "int_libro", -12, -2, 9 } },
 		colgantes = { { "int_candelabro", 0, 2, 5 } },
 	},
 	baxter_interior = {
@@ -807,16 +808,24 @@ local function viajar(jugador: Player, destino: BasePart)
 end
 
 -- Puerta con «tecla E» (marco de luz y una parte invisible con el ProximityPrompt) que lleva a `destino`.
-puerta = function(padre, cf: CFrame, color: Color3, accion: string, objeto: string, destino: () -> BasePart?)
+-- `modelo` (opcional, de Plantillas.Hub): una puerta de verdad en vez del marco de luz; la hoja queda invisible.
+puerta = function(padre, cf: CFrame, color: Color3, accion: string, objeto: string, destino: () -> BasePart?, modelo: string?)
 	local m = Instance.new("Model")
 	m.Name = "Puerta"
-	for _, lado in { -1, 1 } do
-		parte(m, color, cf * CFrame.new(lado * 2.6, 3.6, 0), Vector3.new(0.5, 7.2, 0.5), Enum.Material.Neon)
+	local pl = modelo and plantilla(modelo)
+	if pl then
+		local d = clonar(pl, "Y", 10)
+		d:PivotTo(cf * CFrame.new(0, d:GetExtentsSize().Y / 2, 0.1))
+		d.Parent = m
+	else
+		for _, lado in { -1, 1 } do
+			parte(m, color, cf * CFrame.new(lado * 2.6, 3.6, 0), Vector3.new(0.5, 7.2, 0.5), Enum.Material.Neon)
+		end
+		parte(m, color, cf * CFrame.new(0, 7.2, 0), Vector3.new(5.7, 0.5, 0.5), Enum.Material.Neon)
 	end
-	parte(m, color, cf * CFrame.new(0, 7.2, 0), Vector3.new(5.7, 0.5, 0.5), Enum.Material.Neon)
-	local hoja = parte(m, color, cf * CFrame.new(0, 3.5, 0), Vector3.new(4.7, 7, 0.2), Enum.Material.ForceField)
+	local hoja = parte(m, color, cf * CFrame.new(0, 3.5, -0.3), Vector3.new(4.7, 7, 0.2), Enum.Material.ForceField)
 	hoja.CanCollide = false
-	hoja.Transparency = 0.4
+	hoja.Transparency = if pl then 1 else 0.4
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.ActionText = accion
 	prompt.ObjectText = objeto
@@ -958,6 +967,76 @@ local function extrasSanctum(m, c: Vector3, r: number, alto: number, datos)
 	-- Marco grueso y oscuro en dos escalones.
 	arco(0, 0, RV + 0.6, 1.3, 0.9, 0.5, MARCO)
 	arco(0, 0, RV + 1.9, 1.5, 0.5, 0.3, MARCO)
+	-- Pared del frente (la de la puerta, a la espalda al entrar): friso de madera con paneles, dos ventanales altos
+	-- con arco a los costados de la puerta, ventana redonda con el sello encima, apliques y cuadros.
+	local zf = r - 0.6 -- cara interior de la pared del frente
+	parte(m, madera, CFrame.new(c + Vector3.new(0, 1.5, zf - 0.2)), Vector3.new(r * 2, 3, 0.4), Enum.Material.Wood)
+	for x = -r + 3, r - 3, 4 do
+		if math.abs(x) > 4.5 then
+			parte(m, "3a2619", CFrame.new(c + Vector3.new(x, 1.5, zf - 0.45)), Vector3.new(3, 2, 0.15), Enum.Material.Wood)
+		end
+	end
+	local function ventanaArco(x: number)
+		local ancho, base, alto0 = 5, 4, 10 -- rectángulo de 4 a 14 y medio círculo arriba
+		local cfW = CFrame.new(c + Vector3.new(x, 0, zf - 0.05))
+		local vidrio = parte(m, "9a8c70", cfW * CFrame.new(0, base + alto0 / 2, 0), Vector3.new(ancho, alto0, 0.15), Enum.Material.Neon)
+		local arcoV = parte(m, "9a8c70", cfW * CFrame.new(0, base + alto0, 0) * CFrame.Angles(0, math.rad(90), 0), Vector3.new(0.15, ancho, ancho), Enum.Material.Neon)
+		arcoV.Shape = Enum.PartType.Cylinder
+		local luzV = Instance.new("SurfaceLight")
+		luzV.Face = Enum.NormalId.Front -- hacia el salón (−Z)
+		luzV.Color, luzV.Range, luzV.Brightness, luzV.Angle = Color3.fromRGB(255, 225, 180), 22, 0.9, 80
+		luzV.Parent = vidrio
+		-- Marco de madera oscura, parante central y travesaños de bronce, alféizar.
+		for _, lado in { -1, 1 } do
+			parte(m, madera, cfW * CFrame.new(lado * (ancho / 2 + 0.3), base + alto0 / 2, -0.25), Vector3.new(0.6, alto0, 0.5), Enum.Material.Wood)
+		end
+		parte(m, BRONCE, cfW * CFrame.new(0, base + (alto0 + ancho / 2) / 2, -0.15), Vector3.new(0.18, alto0 + ancho / 2, 0.15), Enum.Material.Metal)
+		for y = base + 2.5, base + alto0, 2.5 do
+			parte(m, BRONCE, cfW * CFrame.new(0, y, -0.15), Vector3.new(ancho, 0.15, 0.15), Enum.Material.Metal)
+		end
+		parte(m, madera, cfW * CFrame.new(0, base - 0.25, -0.5), Vector3.new(ancho + 1.6, 0.5, 1.1), Enum.Material.Wood)
+		-- Arco del marco: tramos sobre el medio círculo.
+		for i = 0, 11 do
+			local a1, a2 = i / 12 * math.pi, (i + 1) / 12 * math.pi
+			local p1 = (cfW * CFrame.new(math.cos(a1) * (ancho / 2 + 0.3), base + alto0 + math.sin(a1) * (ancho / 2 + 0.3), -0.25)).Position
+			local p2 = (cfW * CFrame.new(math.cos(a2) * (ancho / 2 + 0.3), base + alto0 + math.sin(a2) * (ancho / 2 + 0.3), -0.25)).Position
+			parte(m, madera, CFrame.lookAt((p1 + p2) / 2, p2), Vector3.new(0.6, 0.5, (p2 - p1).Magnitude + 0.2), Enum.Material.Wood)
+		end
+	end
+	ventanaArco(-9.5)
+	ventanaArco(9.5)
+	-- Ventana redonda con el sello sobre la puerta.
+	local oculo = parte(m, "c8a46a", CFrame.new(c + Vector3.new(0, 15.5, zf - 0.05)) * CFrame.Angles(0, math.rad(90), 0), Vector3.new(0.15, 4.4, 4.4), Enum.Material.Neon)
+	oculo.Shape = Enum.PartType.Cylinder
+	local selloO = Instance.new("Decal")
+	selloO.Texture = "rbxassetid://" .. SELLO
+	selloO.Color3 = Color3.fromRGB(90, 50, 20)
+	selloO.Face = Enum.NormalId.Right
+	selloO.Parent = oculo
+	for i = 0, 23 do
+		local a1, a2 = i / 24 * math.pi * 2, (i + 1) / 24 * math.pi * 2
+		local p1 = c + Vector3.new(math.cos(a1) * 2.5, 15.5 + math.sin(a1) * 2.5, zf - 0.3)
+		local p2 = c + Vector3.new(math.cos(a2) * 2.5, 15.5 + math.sin(a2) * 2.5, zf - 0.3)
+		parte(m, BRONCE, CFrame.lookAt((p1 + p2) / 2, p2), Vector3.new(0.45, 0.45, (p2 - p1).Magnitude + 0.1), Enum.Material.Metal)
+	end
+	-- Apliques a los lados de la puerta y cuadros en las esquinas.
+	for _, x in { -4.8, 4.8 } do
+		local base = c + Vector3.new(x, 7.5, zf - 0.5)
+		parte(m, BRONCE, CFrame.new(base), Vector3.new(0.6, 1.2, 0.6), Enum.Material.Metal)
+		local foco = parte(m, "ffd49a", CFrame.new(base + Vector3.new(0, 1, 0)), Vector3.new(0.8, 0.8, 0.8), Enum.Material.Neon)
+		foco.Shape = Enum.PartType.Ball
+		local l = Instance.new("PointLight")
+		l.Color, l.Range, l.Brightness = Color3.fromRGB(255, 200, 140), 14, 1
+		l.Parent = foco
+	end
+	local cuadro = plantilla("int_cuadro")
+	if cuadro then
+		for _, x in { -17.5, 17.5 } do
+			local q = clonar(cuadro, "Y", 5)
+			q:PivotTo(CFrame.new(c + Vector3.new(x, 9, zf - 0.3)) * CFrame.Angles(0, math.pi, 0))
+			q.Parent = m
+		end
+	end
 	local haz = parte(m, "ffffff", cfV * CFrame.new(0, -4, 9), Vector3.new(16, 14, 16))
 	haz.Transparency, haz.CanCollide, haz.CanQuery, haz.CanTouch = 1, false, false, false
 	local motas = Instance.new("ParticleEmitter")
@@ -1211,7 +1290,7 @@ local function construirInterior(padre, id: string, datos)
 	marcador(m, "Llegada", CFrame.lookAt(c + Vector3.new(0, 0, r - 6), c))
 	puerta(m, salida, luz, "Salir", datos.nombre, function()
 		return Hub.salidas[id]
-	end)
+	end, datos.puertaModelo)
 	m.Parent = padre
 end
 

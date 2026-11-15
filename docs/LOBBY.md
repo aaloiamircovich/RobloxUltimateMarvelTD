@@ -66,6 +66,11 @@ Los encargados no giran ni hablan: sólo su reposo. Se definen con `personaje` y
   el Ojo de Agamotto y la Capa de Levitación sobre la tarima, libros flotando y Doctor Strange. Balcones con
   **barandas de bronce** en las paredes de los costados (en el fondo no, para no tapar el ventanal) y la escalera.
   El neón del ventanal es de un color medio a propósito: más claro, el resplandor tapa las bandas y el emplomado.
+  **Pared del frente** (la de la puerta, a la espalda al entrar): doble puerta de madera tallada con bronce
+  (`int_puerta`; `puerta()` acepta un modelo y deja la hoja con la tecla E invisible), dos **ventanales altos con
+  arco** a los costados (vidrio de luz cálida, marco de madera oscura, parante y travesaños de bronce, alféizar), una
+  **ventana redonda** con el sello sobre la puerta, friso de madera con paneles en relieve, apliques junto a la
+  puerta y dos **cuadros** antiguos (`int_cuadro`) en las esquinas.
 - **Laboratorio de la Torre Baxter** (mejorado el 15/11/2026): Sue y Johnny Storm junto a Mister Fantastic;
   **portal a la Zona Negativa** en la pared +X (marco generado y remolino violeta con partículas y luz);
   **ventanal** de vidrio en la pared −X con rascacielos afuera (da al cielo vacío: del otro lado, +X, está el
