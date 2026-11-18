@@ -104,3 +104,17 @@ se vuelve al lobby; sin errores en la consola.
 ## Sin probar
 - Usar cada estación y sala con el personaje (la distancia para activarlas creció ×1,5).
 - Celulares: las caminatas entre islas son un 50 % más largas.
+
+## Salas físicas (fase D, 18/11/2026)
+Decidido por el usuario: **pararse y cuenta regresiva**. Las 8 plataformas del Sanctum (Historia) y de la Torre Baxter
+(Infinito) están en `Hub.plataformas`. Al pararte en una vacía se abre el panel de Historia; «CREAR SALA» la ata a esa
+plataforma. El anillo se pone verde y el cartel muestra mapa, acto, jugadores y «empieza en N s». Los demás se suman
+con sólo pararse (respeta «Sólo amigos»); bajarse más de 1 s es salir (si es el anfitrión, la sala se cierra). A los
+20 s arranca sola (al sumarse alguien, quedan al menos 8 s); el anfitrión puede empezar antes. Lógica en
+`Main.server.luau` (bucle cada 0,25 s). Verificado en Play: el panel se abre al pararse, el cartel cuenta y la
+partida empieza sola. Sin probar: sumarse con un segundo jugador y bajarse de la plataforma.
+
+## Pendiente de la fase D
+- Escuadrón que te sigue: el servidor ya publica el atributo `Seguidores` ("heroId:shiny,…", las 3 primeras); falta
+  el script del cliente que las dibuja a media escala.
+- Salón de héroes, encargados que hablan, eventos del lobby, día y noche, puentes y caminos.

@@ -35,6 +35,7 @@ local TEXTURAS = {
 }
 local SELLO = "132807365750031" -- imagen del sello del portal (ForgeGUI)
 Hub.sellos = {}
+Hub.plataformas = {} -- salas físicas: { base, anillo, modo, numero, titulo, sub } (las arma salas())
 local CIELO = { Bk = "100762723591606", Dn = "83631052228499", Ft = "97687357399973", Lf = "119663534279596", Rt = "131553877257439", Up = "102386796755504" }
 
 local ISLAS = {
@@ -183,12 +184,13 @@ local function cartel(padre: BasePart, titulo: string, subtitulo: string?, color
 		s.Parent = gui
 	end
 	gui.Parent = padre
+	return gui
 end
 
 local function letrero(padre, pos: Vector3, titulo, subtitulo, color: Color3, ancho)
 	local ancla = parte(padre, color, CFrame.new(pos), Vector3.new(0.1, 0.1, 0.1))
 	ancla.Transparency, ancla.CanCollide, ancla.CanQuery = 1, false, false
-	cartel(ancla, titulo, subtitulo, color, ancho)
+	return cartel(ancla, titulo, subtitulo, color, ancho)
 end
 
 -- Interiores (decidido por el usuario el 15/11/2026): salas cerradas lejos y arriba de las islas, a las que se
@@ -609,20 +611,19 @@ local function salas(padre, islaId: string, modo: string, anguloCentro: number, 
 		local pos = if INTERIORES[islaId]
 			then datos.pos + Vector3.new(if i <= 4 then -17 else 17, 0, -12 + ((i - 1) % 4) * 8)
 			else enIsla(datos, angulo, 19)
+		-- Plataforma física (docs/LOBBY.md, fase D): te parás encima para crear o sumarte a la sala; el servidor
+		-- (Main.server.luau) actualiza el cartel con el mapa, los jugadores y la cuenta regresiva.
 		local base = disco(padre, "1d2633", pos + Vector3.new(0, 0.3, 0), 4.4, 0.3)
 		base.Name = `Sala_{modo}_{i}`
-		disco(padre, if modo == "infinite" then "3a7bd5" else "c2571a", pos + Vector3.new(0, 0.33, 0), 4, 0.03)
-		letrero(padre, pos + Vector3.new(0, 3, 0), `SALA {i}`, "0/4", Color3.new(1, 1, 1), 4)
-		local prompt = Instance.new("ProximityPrompt")
-		prompt.ActionText = "Crear sala"
-		prompt.ObjectText = `Sala {i}`
-		prompt.KeyboardKeyCode = Enum.KeyCode.E
-		prompt.MaxActivationDistance = 5 * ESCALA
-		prompt.RequiresLineOfSight = false
-		prompt.Triggered:Connect(function(jugador)
-			alUsar(jugador, "sala_" .. modo)
-		end)
-		prompt.Parent = base
+		local anillo = disco(padre, if modo == "infinite" then "3a7bd5" else "c2571a", pos + Vector3.new(0, 0.33, 0), 4, 0.03)
+		anillo.Material = Enum.Material.Neon
+		anillo.Name = "Anillo"
+		anillo.Parent = base
+		local gui = letrero(padre, pos + Vector3.new(0, 4.5, 0), `SALA {i}`, "Parate acá para jugar", Color3.new(1, 1, 1), 3)
+		-- Las salas están juntas: el cartel se ve sólo de cerca para que no se pisen.
+		gui.MaxDistance = 26 * ESCALA
+		local textos = gui:GetChildren()
+		table.insert(Hub.plataformas, { base = base, anillo = anillo, modo = modo, numero = i, titulo = textos[1], sub = textos[2] })
 	end
 end
 
@@ -1337,6 +1338,7 @@ function Hub.construir(alUsar: (Player, string) -> ())
 	local hub = Instance.new("Model")
 	hub.Name = "Hub"
 	Hub.sellos = {}
+	Hub.plataformas = {}
 	ambientar()
 
 	for _, datos in ISLAS do

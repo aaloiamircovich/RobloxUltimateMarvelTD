@@ -510,6 +510,7 @@ end
 -- Historia y salas (docs/PARTIDA.md): mapas a la izquierda, actos en el centro, sala a la derecha.
 local salaRemota = ReplicatedStorage:WaitForChild("Sala")
 local sel = { mapa = nil, acto = 1, pesadilla = false, soloAmigos = false }
+local plataforma = nil -- plataforma física donde se abrió el panel (docs/LOBBY.md)
 local enHistoria = false
 local ultimaHistoria = nil
 
@@ -587,7 +588,7 @@ function pantallaHistoria()
 	local sala = res.sala
 	if sala then
 		texto({ Position = UDim2.fromOffset(10, 6), Size = UDim2.new(1, -20, 0, 26), Font = Comic.TITULO, TextSize = 24, TextColor3 = ACENTO, TextXAlignment = Enum.TextXAlignment.Left, Text = `Sala · {#sala.miembros}/4` }, der)
-		linea(34, `{sala.nombreMapa} · {if sala.acto == "infinito" then "Infinito" elseif sala.acto == "raid" then "Raid" else "Acto " .. sala.acto}{if sala.pesadilla then " · Pesadilla" else ""}`, ACENTO)
+		linea(34, `{sala.nombreMapa} · {if sala.acto == "infinito" then "Infinito" elseif sala.acto == "raid" then "Raid" else "Acto " .. sala.acto}{if sala.pesadilla then " · Pesadilla" else ""}{if sala.cuenta then ` · empieza en {sala.cuenta} s` else ""}`, ACENTO)
 		for i, m in sala.miembros do
 			linea(58 + (i - 1) * 22, (if m.anfitrion then "👑 " else "• ") .. m.nombre)
 		end
@@ -637,7 +638,7 @@ function pantallaHistoria()
 			pantallaHistoria()
 		end)
 	end
-	local datos = { mapa = sel.mapa, acto = sel.acto, pesadilla = sel.pesadilla and pesadillaPosible, soloAmigos = sel.soloAmigos }
+	local datos = { mapa = sel.mapa, acto = sel.acto, pesadilla = sel.pesadilla and pesadillaPosible, soloAmigos = sel.soloAmigos, plataforma = plataforma }
 	boton("SOLO", { Name = "Solo", Position = UDim2.new(0, 10, 1, -50), Size = UDim2.new(0.5, -15, 0, 42), BackgroundColor3 = Color3.fromRGB(110, 60, 200) }, der, function()
 		datos.solo = true
 		local r = pedirSala("crear", datos)
@@ -683,6 +684,7 @@ end)
 abrirPanel.OnClientEvent:Connect(function(panel, datos)
 	if panel == "historia" then
 		enHistoria = true
+		plataforma = datos and datos.plataforma
 		if datos and datos.infinito then
 			sel.acto = "infinito"
 		end

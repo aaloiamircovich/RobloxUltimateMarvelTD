@@ -429,6 +429,27 @@ local salas = {} -- [id] = { id, anfitrion, miembros, mapa, acto, pesadilla, sol
 local salaDe = {} -- [Player] = sala
 local siguienteSala = 0
 
+-- Salas físicas (docs/LOBBY.md, fase D): las plataformas de Hub.plataformas. Te parás en una vacía y elegís mapa;
+-- los demás se suman parándose; arranca sola a los 20 s (el anfitrión puede empezar antes); bajarse es salir.
+local CUENTA_SALA = 20
+local function plataformaPorNombre(nombre)
+	for _, pl in Hub.plataformas do
+		if pl.base.Name == nombre then
+			return pl
+		end
+	end
+	return nil
+end
+local function parado(j: Player, pl): boolean
+	local raiz = j.Character and j.Character:FindFirstChild("HumanoidRootPart")
+	if not raiz then
+		return false
+	end
+	local d = raiz.Position - pl.base.Position
+	-- El disco es un cilindro acostado: su diámetro está en Y/Z del tamaño.
+	return Vector2.new(d.X, d.Z).Magnitude <= pl.base.Size.Y / 2 + 1 and d.Y > -2 and d.Y < 14
+end
+
 local function infoSala(s)
 	if not s then
 		return nil
@@ -447,6 +468,7 @@ local function infoSala(s)
 		acto = s.acto,
 		pesadilla = s.pesadilla,
 		soloAmigos = s.soloAmigos,
+		cuenta = if s.fin then math.max(0, math.ceil(s.fin - os.clock())) else nil,
 	}
 end
 
@@ -456,6 +478,9 @@ local function salirDeSala(j: Player)
 		return
 	end
 	salaDe[j] = nil
+	if s.anfitrion == j and s.plataforma then
+		s.plataforma.sala = nil
+	end
 	if s.anfitrion == j then
 		-- Si se va el anfitrión, la sala se disuelve.
 		for _, otro in s.miembros do
@@ -538,6 +563,11 @@ salaRemota.OnServerInvoke = function(jugador, nombre, datos)
 				local s = { id = "S" .. siguienteSala, anfitrion = jugador, miembros = { jugador }, mapa = mapa, acto = acto, pesadilla = datos.pesadilla == true, soloAmigos = datos.soloAmigos == true }
 				salas[s.id] = s
 				salaDe[jugador] = s
+				-- Sala física: queda atada a la plataforma si está libre y el jugador está parado encima.
+				local pl = type(datos.plataforma) == "string" and plataformaPorNombre(datos.plataforma)
+				if pl and not pl.sala and parado(jugador, pl) and acto ~= "raid" then
+					pl.sala, s.plataforma, s.fin = s, pl, os.clock() + CUENTA_SALA
+				end
 			end
 		end
 	elseif nombre == "unirse" and type(datos) == "string" then
@@ -578,6 +608,9 @@ salaRemota.OnServerInvoke = function(jugador, nombre, datos)
 					salaDe[j] = nil
 				end
 				salas[s.id] = nil
+				if s.plataforma then
+					s.plataforma.sala = nil
+				end
 				res.empezo = true
 			end
 		end
@@ -630,6 +663,92 @@ local function usarEstacion(jugador: Player, estacion: string)
 end
 local hub = Hub.construir(usarEstacion)
 
+-- Salas físicas: quién está parado en cada plataforma, cuenta regresiva y carteles (cada 0,25 s).
+do
+	local ofrecida = {} -- [Player] = plataforma en la que ya se le abrió el panel
+	local fuera = {} -- [Player] = momento en que se bajó de su plataforma
+	local COLOR = { libre = Color3.fromHex("c2571a"), infinito = Color3.fromHex("3a7bd5"), activa = Color3.fromRGB(70, 210, 110) }
+	local function cartel(pl)
+		local s = pl.sala
+		if not s then
+			pl.titulo.Text = `SALA {pl.numero}`
+			pl.sub.Text = "Parate acá para jugar"
+			pl.anillo.Color = if pl.modo == "infinite" then COLOR.infinito else COLOR.libre
+			return
+		end
+		local n = niveles[indiceNivel(s.mapa)]
+		pl.titulo.Text = string.upper(n and n.name or s.mapa)
+		local acto = if s.acto == "infinito" then "Infinito" else `Acto {s.acto}`
+		pl.sub.Text = `{acto}{if s.pesadilla then " · Pesadilla" else ""} · {#s.miembros}/{Partida.MAX_JUGADORES} · empieza en {math.max(0, math.ceil(s.fin - os.clock()))} s`
+		pl.anillo.Color = COLOR.activa
+	end
+	task.spawn(function()
+		while true do
+			task.wait(0.25)
+			for _, pl in Hub.plataformas do
+				local s = pl.sala
+				if s and salas[s.id] ~= s then
+					pl.sala, s = nil, nil
+				end
+				if s then
+					-- Bajarse más de 1 s es salir de la sala (si es el anfitrión, la sala se cierra).
+					for _, j in table.clone(s.miembros) do
+						if parado(j, pl) then
+							fuera[j] = nil
+						elseif not fuera[j] then
+							fuera[j] = os.clock()
+						elseif os.clock() - fuera[j] > 1 then
+							fuera[j] = nil
+							salirDeSala(j)
+							aviso:FireClient(j, "Saliste de la sala")
+						end
+					end
+					s = pl.sala
+				end
+				for _, j in Players:GetPlayers() do
+					if partidaDe[j] or not parado(j, pl) then
+						if ofrecida[j] == pl and not parado(j, pl) then
+							ofrecida[j] = nil
+						end
+						continue
+					end
+					if s and not salaDe[j] and #s.miembros < Partida.MAX_JUGADORES then
+						-- Sumarse con sólo pararse (respetando «Sólo amigos»).
+						local ok, amigo = pcall(s.anfitrion.IsFriendsWith, s.anfitrion, j.UserId)
+						if not s.soloAmigos or (ok and amigo) then
+							table.insert(s.miembros, j)
+							salaDe[j] = s
+							s.fin = math.max(s.fin, os.clock() + 8)
+							aviso:FireClient(j, `Te sumaste a la sala de {s.anfitrion.DisplayName}`)
+						end
+					elseif not s and not salaDe[j] and ofrecida[j] ~= pl then
+						ofrecida[j] = pl
+						abrirPanel:FireClient(j, "historia", { infinito = pl.modo == "infinite", plataforma = pl.base.Name })
+					end
+				end
+				if s and os.clock() >= s.fin then
+					-- Se acabó la cuenta: arranca con los que están.
+					local fallo = iniciarPartida(table.clone(s.miembros), s.anfitrion, s.mapa, s.acto, s.pesadilla)
+					if fallo then
+						aviso:FireClient(s.anfitrion, fallo)
+						s.fin = os.clock() + CUENTA_SALA
+					else
+						for _, j in s.miembros do
+							salaDe[j] = nil
+						end
+						salas[s.id] = nil
+						pl.sala = nil
+					end
+				end
+				cartel(pl)
+			end
+		end
+	end)
+	Players.PlayerRemoving:Connect(function(j)
+		ofrecida[j], fuera[j] = nil, nil
+	end)
+end
+
 -- Botones del HUD del lobby: abren los mismos paneles que las estaciones, sin caminar hasta ellas.
 local PANELES_HUD = { story = true, infinite = true, summon = true, tienda = true, raids = true, unidades = "unidades", inventario = "objetos" }
 usarHud.OnServerEvent:Connect(function(jugador, nombre)
@@ -668,6 +787,15 @@ local function publicarSaldo(jugador: Player, perfil, motivo: string?)
 	jugador:SetAttribute("Creditos", perfil.credits)
 	jugador:SetAttribute("Gemas", perfil.gems)
 	jugador:SetAttribute("Nucleos", perfil.cores)
+	-- Las 3 primeras del escuadrón te siguen en chico por el lobby (Seguidores.client.luau): "heroId:shiny,…".
+	local seguidores = {}
+	for i = 1, math.min(3, #perfil.squad) do
+		local u = Unidades.buscar(perfil, perfil.squad[i])
+		if u then
+			table.insert(seguidores, `{u.heroId}:{if u.shiny then 1 else 0}`)
+		end
+	end
+	jugador:SetAttribute("Seguidores", table.concat(seguidores, ","))
 	Analitica.saldo(jugador, perfil, motivo)
 end
 
