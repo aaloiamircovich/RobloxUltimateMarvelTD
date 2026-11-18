@@ -450,7 +450,7 @@ local function paneo(estado: Instance, nivel)
 		end
 		return puntos[#puntos], Vector3.new(0, 0, 1)
 	end
-	nombreMapa.Text = string.upper(estado:GetAttribute("NombreNivel") or "")
+	nombreMapa.Text = Comic.mayus(estado:GetAttribute("NombreNivel") or "")
 	local acto = estado:GetAttribute("Acto")
 	subMapa.Text = if acto == "infinito" then "Modo infinito" elseif acto == "raid" then "Raid" elseif acto then `Acto {acto}` else ""
 	escalaTitulo.Scale = math.clamp(camara.ViewportSize.X / 1280, 0.55, 1.2)

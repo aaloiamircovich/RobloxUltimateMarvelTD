@@ -32,6 +32,16 @@ local function tween(obj: Instance, t: number, meta)
 	TweenService:Create(obj, TweenInfo.new(t, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), meta):Play()
 end
 
+-- Mayúsculas con acentos y eñe (string.upper deja «í» o «ñ» en minúscula).
+local ACENTOS = { ["á"] = "Á", ["é"] = "É", ["í"] = "Í", ["ó"] = "Ó", ["ú"] = "Ú", ["ñ"] = "Ñ", ["ü"] = "Ü" }
+function Comic.mayus(texto: string): string
+	local r = string.upper(texto)
+	for min, may in ACENTOS do
+		r = string.gsub(r, min, may)
+	end
+	return r
+end
+
 function Comic.crear(clase: string, props, padre: Instance?)
 	local i = Instance.new(clase)
 	for k, v in props do
@@ -113,7 +123,7 @@ function Comic.botonIcono(nombre: string, icono: string, props, padre, alClic)
 		Position = UDim2.new(0.5, 0, 0, 4),
 		Size = UDim2.new(1, -16, 0.64, 0),
 	}, b)
-	Comic.texto({ Text = string.upper(nombre), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -8), Size = UDim2.new(1, -8, 0.2, 0) }, b)
+	Comic.texto({ Text = Comic.mayus(nombre), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -8), Size = UDim2.new(1, -8, 0.2, 0) }, b)
 	b.Activated:Connect(function()
 		Sonido.efecto("clic")
 		alClic()
@@ -157,10 +167,10 @@ function Comic.panel(gui: Instance, titulo: string, tamano: UDim2)
 	local p = Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = tamano, BackgroundColor3 = Comic.FONDO, BackgroundTransparency = Comic.TRANSPARENCIA, Visible = false, ZIndex = 10 }, gui)
 	Comic.crear("UICorner", { CornerRadius = UDim.new(0, 12) }, p)
 	Comic.crear("UIStroke", { Color = Comic.BORDE, Thickness = 1, Transparency = 0.3 }, p)
-	Comic.texto({ Text = string.upper(titulo), Position = UDim2.fromOffset(22, 12), Size = UDim2.new(1, -90, 0, 30), TextSize = 26, TextXAlignment = Enum.TextXAlignment.Left }, p)
+	Comic.texto({ Text = Comic.mayus(titulo), Position = UDim2.fromOffset(22, 12), Size = UDim2.new(1, -90, 0, 30), TextSize = 26, TextXAlignment = Enum.TextXAlignment.Left }, p)
 	local linea = Comic.crear("Frame", { Position = UDim2.fromOffset(22, 46), Size = UDim2.fromOffset(64, 3), BackgroundColor3 = Comic.ROJO, BorderSizePixel = 0 }, p)
 	Comic.crear("UICorner", { CornerRadius = UDim.new(1, 0) }, linea)
-	Comic.boton("✕", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 10), Size = UDim2.fromOffset(36, 36), TextSize = 18, BackgroundColor3 = Comic.GRIS }, p, function()
+	Comic.boton("X", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 10), Size = UDim2.fromOffset(36, 36), TextSize = 18, BackgroundColor3 = Comic.GRIS }, p, function()
 		p.Visible = false
 	end)
 	-- Se achica para entrar en ventanas chicas.
@@ -209,7 +219,7 @@ function Comic.retrato(padre: GuiObject, id: string, nombre: string, color: Colo
 	-- Modelo propio (las evoluciones tienen el suyo) o el del personaje base.
 	local plantilla = retratos and (retratos:FindFirstChild(id) or (respaldo and retratos:FindFirstChild(respaldo)))
 	if not plantilla then
-		local iniciales = string.upper(string.gsub(nombre, "(%w)%w*%s*", "%1"))
+		local iniciales = Comic.mayus(string.gsub(nombre, "(%w)%w*%s*", "%1"))
 		return Comic.texto({ Text = string.sub(iniciales, 1, 3), TextColor3 = color, Size = UDim2.fromScale(1, 1) }, padre)
 	end
 	local vista = Comic.crear("ViewportFrame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Ambient = Color3.fromRGB(200, 200, 200), LightDirection = Vector3.new(-1, -1, -1) }, padre)

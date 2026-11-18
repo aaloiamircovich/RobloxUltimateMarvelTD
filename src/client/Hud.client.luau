@@ -368,7 +368,7 @@ function armarRaid(res, sala)
 		local nombre = if res.exclusiva then Personajes.todos[res.exclusiva].name else "próximamente"
 		barra(area, UDim2.fromOffset(0, y), UDim2.new(1, -170, 0, 28), math.min(1, res.fragmentos / res.fragmentosUnidad), Color3.fromRGB(255, 120, 40), `FRAGMENTOS {res.fragmentos} / {res.fragmentosUnidad}  ·  personaje de raid: {nombre}`)
 		local puede = res.exclusiva and res.fragmentos >= res.fragmentosUnidad
-		Comic.boton(`CANJEAR {string.upper(nombre)}`, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, y - 6), Size = UDim2.fromOffset(160, 40), TextSize = 18, BackgroundColor3 = if puede then Comic.VERDE else Comic.GRIS }, area, function()
+		Comic.boton(`CANJEAR {Comic.mayus(nombre)}`, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, y - 6), Size = UDim2.fromOffset(160, 40), TextSize = 18, BackgroundColor3 = if puede then Comic.VERDE else Comic.GRIS }, area, function()
 			if puede then
 				pedirRaid(raidRemoto, "canjear")
 			end
@@ -380,7 +380,7 @@ function armarRaid(res, sala)
 		local jefe = Comic.crear("Frame", { Size = UDim2.fromOffset(380, 250), BackgroundColor3 = Comic.ROJO_OSCURO }, area)
 		Comic.borde(jefe, 5)
 		Comic.texto({ Text = "JEFE DE LA SEMANA", Position = UDim2.fromOffset(12, 8), Size = UDim2.new(1, -24, 0, 26), TextSize = 22, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Left }, jefe)
-		Comic.texto({ Text = string.upper(res.nombreJefe), Position = UDim2.fromOffset(12, 36), Size = UDim2.new(1, -24, 0, 60), TextSize = 50, TextXAlignment = Enum.TextXAlignment.Left }, jefe)
+		Comic.texto({ Text = Comic.mayus(res.nombreJefe), Position = UDim2.fromOffset(12, 36), Size = UDim2.new(1, -24, 0, 60), TextSize = 50, TextXAlignment = Enum.TextXAlignment.Left }, jefe)
 		Comic.texto({
 			Text = `En {res.nombreMapa}. 5 oleadas de esbirros y después el jefe, que al 66 % y al 33 % de vida llama refuerzos y se enfurece.\nVictoria: 💎 {res.premio.gemas} · 🔷 {res.premio.nucleos} · 🔸 {res.premio.fichasRaid} fichas de raid · {res.premio.fragmentos} fragmentos y chance de objeto Legendario o Mítico.`,
 			Position = UDim2.fromOffset(12, 100),
@@ -397,7 +397,7 @@ function armarRaid(res, sala)
 		Comic.borde(der, 4)
 		local miSala = sala.sala
 		if miSala and miSala.acto == "raid" then
-			Comic.texto({ Text = `SALA DE {string.upper(miSala.anfitrion)}  ({#miSala.miembros}/4)`, Position = UDim2.fromOffset(10, 8), Size = UDim2.new(1, -20, 0, 28), TextSize = 24, TextColor3 = Comic.AMARILLO }, der)
+			Comic.texto({ Text = `SALA DE {Comic.mayus(miSala.anfitrion)}  ({#miSala.miembros}/4)`, Position = UDim2.fromOffset(10, 8), Size = UDim2.new(1, -20, 0, 28), TextSize = 24, TextColor3 = Comic.AMARILLO }, der)
 			local nombres = {}
 			for _, m in miSala.miembros do
 				table.insert(nombres, (if m.anfitrion then "★ " else "• ") .. m.nombre)
@@ -527,7 +527,7 @@ function armarRasgos(res)
 	local caja = Comic.crear("Frame", { Size = UDim2.fromOffset(504, 150), BackgroundColor3 = Comic.ROJO_OSCURO }, der)
 	Comic.borde(caja, 4)
 	Comic.texto({ Text = "RASGO", Position = UDim2.fromOffset(12, 6), Size = UDim2.fromOffset(200, 24), TextSize = 22, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Left }, caja)
-	Comic.texto({ Text = if r then `{string.upper(r.nombre)} · {r.rareza}` else "SIN RASGO", Position = UDim2.fromOffset(12, 32), Size = UDim2.fromOffset(300, 40), TextSize = 36, TextColor3 = if r then COLOR_RASGO[r.rareza] else Comic.CREMA, TextXAlignment = Enum.TextXAlignment.Left }, caja)
+	Comic.texto({ Text = if r then `{Comic.mayus(r.nombre)} · {r.rareza}` else "SIN RASGO", Position = UDim2.fromOffset(12, 32), Size = UDim2.fromOffset(300, 40), TextSize = 36, TextColor3 = if r then COLOR_RASGO[r.rareza] else Comic.CREMA, TextXAlignment = Enum.TextXAlignment.Left }, caja)
 	Comic.texto({ Text = Rasgos.descripcion(sel.rasgo), Position = UDim2.fromOffset(12, 78), Size = UDim2.fromOffset(300, 60), TextSize = 17, Font = Comic.TEXTO, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top }, caja)
 	Comic.boton("TIRAR RASGO\n🎫 1", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), Size = UDim2.fromOffset(170, 84), TextSize = 24, BackgroundColor3 = if res.fichas > 0 then Comic.VERDE else Comic.GRIS }, caja, function()
 		if Rasgos.rango(sel.rasgo) >= 3 then
@@ -608,7 +608,7 @@ function armarMascotas(res)
 	for i, h in res.huevos do
 		local f = Comic.crear("Frame", { Position = UDim2.fromOffset(0, 36 + (i - 1) * 196), Size = UDim2.fromOffset(220, 184), BackgroundColor3 = if h.id == "cosmico" then Color3.fromRGB(70, 30, 120) else Comic.ROJO }, cuerpoMascotas)
 		Comic.borde(f, 4)
-		Comic.texto({ Text = `🥚 {string.upper(h.nombre)}`, Position = UDim2.fromOffset(8, 6), Size = UDim2.new(1, -16, 0, 32), TextSize = 26, TextColor3 = Comic.AMARILLO }, f)
+		Comic.texto({ Text = `🥚 {Comic.mayus(h.nombre)}`, Position = UDim2.fromOffset(8, 6), Size = UDim2.new(1, -16, 0, 32), TextSize = 26, TextColor3 = Comic.AMARILLO }, f)
 		local probs = {}
 		for _, r in Mascotas.RAREZAS do
 			if (h.prob[r] or 0) > 0 then
@@ -658,7 +658,7 @@ function armarMascotas(res)
 			copias += 1
 		end
 	end
-	Comic.texto({ Text = `{if sel.dorada then "★ DORADA · " else ""}{string.upper(d.nombre)} · {d.rareza}\n{Mascotas.descripcion(sel.id, sel.dorada)}`, Position = UDim2.fromOffset(0, 306), Size = UDim2.fromOffset(300, 56), TextSize = 20, TextColor3 = COLOR_MASCOTA[d.rareza], TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true }, der)
+	Comic.texto({ Text = `{if sel.dorada then "★ DORADA · " else ""}{Comic.mayus(d.nombre)} · {d.rareza}\n{Mascotas.descripcion(sel.id, sel.dorada)}`, Position = UDim2.fromOffset(0, 306), Size = UDim2.fromOffset(300, 56), TextSize = 20, TextColor3 = COLOR_MASCOTA[d.rareza], TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true }, der)
 	Comic.boton(if equipada then "DESEQUIPAR" else `EQUIPAR ({#res.equipadas}/{Mascotas.MAX_EQUIPADAS})`, { Position = UDim2.fromOffset(310, 308), Size = UDim2.fromOffset(140, 50), TextSize = 20, BackgroundColor3 = if equipada then Comic.GRIS else Comic.VERDE }, der, function()
 		pedirMascotas("equipar", sel.uid)
 	end)
@@ -714,7 +714,7 @@ function armarEstilo(res)
 		local activo = if pestanaEstilo == "monturas" then e.montura == x.id else table.find(e.rueda, x.id) ~= nil
 		local f = Comic.crear("Frame", { Size = UDim2.fromOffset(ancho, 300), BackgroundColor3 = if activo then Color3.fromRGB(40, 110, 50) else Comic.ROJO_OSCURO }, area)
 		Comic.borde(f, 4)
-		Comic.texto({ Text = string.upper(x.nombre), Position = UDim2.fromOffset(6, 12), Size = UDim2.new(1, -12, 0, 70), TextSize = 24, TextWrapped = true, TextColor3 = Comic.AMARILLO }, f)
+		Comic.texto({ Text = Comic.mayus(x.nombre), Position = UDim2.fromOffset(6, 12), Size = UDim2.new(1, -12, 0, 70), TextSize = 24, TextWrapped = true, TextColor3 = Comic.AMARILLO }, f)
 		Comic.texto({ Text = if x.velocidad then `Velocidad ×{x.velocidad}` else (if activo then "En la rueda" else ""), Position = UDim2.fromOffset(6, 100), Size = UDim2.new(1, -12, 0, 40), TextSize = 18, Font = Comic.TEXTO, TextWrapped = true }, f)
 		local txt, color
 		if not tiene then
@@ -780,7 +780,7 @@ function armarBanners(res)
 	end
 	local h = Personajes.todos[res.destacado]
 	Comic.texto({ Text = "MÍTICO DESTACADO", Position = UDim2.fromOffset(14, 10), Size = UDim2.new(1, -28, 0, 26), TextSize = 22, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Left }, caja)
-	Comic.texto({ Text = string.upper(h.name), Position = UDim2.fromOffset(14, 38), Size = UDim2.new(1, -28, 0, 56), TextSize = 50, TextColor3 = COLOR_RAREZA.Mythic, TextXAlignment = Enum.TextXAlignment.Left }, caja)
+	Comic.texto({ Text = Comic.mayus(h.name), Position = UDim2.fromOffset(14, 38), Size = UDim2.new(1, -28, 0, 56), TextSize = 50, TextColor3 = COLOR_RAREZA.Mythic, TextXAlignment = Enum.TextXAlignment.Left }, caja)
 	Comic.texto({
 		Text = `Cambia en {duracion(res.cambiaEn)} (cada 3 horas).\n{table.concat(lineas, " · ")}\n{h.name}: {math.floor(res.prob.Mythic * res.parteDestacado * 10 + 0.5) / 10}% por tirada.`,
 		Position = UDim2.fromOffset(14, 100),
@@ -855,11 +855,11 @@ function armarEvento(res)
 	Comic.texto({ Text = res.error or "", Position = UDim2.new(0, 0, 1, -24), Size = UDim2.new(1, 0, 0, 22), TextSize = 16, Font = Comic.TEXTO, TextColor3 = Comic.AMARILLO }, cuerpoEvento)
 
 	if pestanaEvento == "desafio" then
-		Comic.texto({ Text = `DESAFÍO SEMANAL · {string.upper(res.nombreMapa)}`, Size = UDim2.new(1, 0, 0, 40), TextSize = 34, TextXAlignment = Enum.TextXAlignment.Left }, area)
+		Comic.texto({ Text = `DESAFÍO SEMANAL · {Comic.mayus(res.nombreMapa)}`, Size = UDim2.new(1, 0, 0, 40), TextSize = 34, TextXAlignment = Enum.TextXAlignment.Left }, area)
 		for i, m in res.modificadores do
 			local f = Comic.crear("Frame", { Position = UDim2.fromOffset((i - 1) * 390, 52), Size = UDim2.fromOffset(370, 96), BackgroundColor3 = Comic.ROJO_OSCURO }, area)
 			Comic.borde(f, 4)
-			Comic.texto({ Text = string.upper(m.nombre), Position = UDim2.fromOffset(12, 6), Size = UDim2.new(1, -24, 0, 36), TextSize = 30, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Left }, f)
+			Comic.texto({ Text = Comic.mayus(m.nombre), Position = UDim2.fromOffset(12, 6), Size = UDim2.new(1, -24, 0, 36), TextSize = 30, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Left }, f)
 			Comic.texto({ Text = m.texto, Position = UDim2.fromOffset(12, 48), Size = UDim2.new(1, -24, 0, 40), TextSize = 18, Font = Comic.TEXTO, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left }, f)
 		end
 		Comic.texto({
@@ -1340,7 +1340,7 @@ do
 			end
 		end
 		mostrarOferta(columna(316, 260, (if sesion.listoYo then "✔ " else "") .. "TU OFERTA"), sesion.mia)
-		mostrarOferta(columna(592, 230, (if sesion.listoOtro then "✔ " else "") .. `OFERTA DE {string.upper(sesion.conQuien)}`), sesion.suya)
+		mostrarOferta(columna(592, 230, (if sesion.listoOtro then "✔ " else "") .. `OFERTA DE {Comic.mayus(sesion.conQuien)}`), sesion.suya)
 		Comic.boton(if sesion.listoYo then "ESPERANDO AL OTRO…" else "✔ CONFIRMAR", { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -180, 1, 0), Size = UDim2.fromOffset(260, 52), TextSize = 24, AutoButtonColor = not sesion.listoYo, BackgroundColor3 = if sesion.listoYo then Comic.GRIS else Comic.VERDE }, area, function()
 			if not sesion.listoYo then
 				pedir("confirmar")

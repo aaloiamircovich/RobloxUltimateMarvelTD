@@ -61,7 +61,7 @@ local function armarRueda()
 	Comic.crear("UICorner", { CornerRadius = UDim.new(1, 0) }, centro)
 	for i = 1, Estilo.RUEDA do
 		local b = Estilo.baile(ids[i])
-		Comic.boton(if b then string.upper(b.nombre) else "—", { AnchorPoint = Vector2.new(0.5, 0.5), Position = LUGARES[i], Size = UDim2.fromOffset(130, 64), TextSize = 22, BackgroundColor3 = if b then Comic.ROJO else Comic.GRIS }, rueda, function()
+		Comic.boton(if b then Comic.mayus(b.nombre) else "—", { AnchorPoint = Vector2.new(0.5, 0.5), Position = LUGARES[i], Size = UDim2.fromOffset(130, 64), TextSize = 22, BackgroundColor3 = if b then Comic.ROJO else Comic.GRIS }, rueda, function()
 			rueda.Visible = false
 			if b then
 				bailar(b.id)
@@ -83,14 +83,14 @@ local function montar()
 	end
 end
 
--- Botones para celular / mouse (arriba a la izquierda, libre en el lobby y en la partida).
-local botones = Comic.crear("Frame", { Position = UDim2.fromOffset(16, 10), Size = UDim2.fromOffset(140, 64), BackgroundTransparency = 1 }, gui)
+-- Botones para mouse: abajo a la izquierda (arriba pisaban la columna de botones del lobby).
+local botones = Comic.crear("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -14), Size = UDim2.fromOffset(140, 52), BackgroundTransparency = 1 }, gui)
 Comic.escalar(botones)
 Comic.crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8) }, botones)
-local botonMontar = Comic.boton("🛹 G", { Size = UDim2.fromOffset(64, 56), TextSize = 22 }, botones, montar)
-Comic.boton("💃 B", { Size = UDim2.fromOffset(64, 56), TextSize = 22, BackgroundColor3 = Color3.fromRGB(150, 30, 90) }, botones, alternarRueda)
+local botonMontar = Comic.boton("🛹 G", { Size = UDim2.fromOffset(64, 48), TextSize = 18, BackgroundColor3 = Comic.GRIS }, botones, montar)
+Comic.boton("💃 B", { Size = UDim2.fromOffset(64, 48), TextSize = 18, BackgroundColor3 = Comic.GRIS }, botones, alternarRueda)
 jugador:GetAttributeChangedSignal("Montado"):Connect(function()
-	botonMontar.BackgroundColor3 = if jugador:GetAttribute("Montado") then Comic.VERDE else Comic.ROJO
+	botonMontar.BackgroundColor3 = if jugador:GetAttribute("Montado") then Comic.VERDE else Comic.GRIS
 end)
 
 UserInputService.InputBegan:Connect(function(input, procesado)

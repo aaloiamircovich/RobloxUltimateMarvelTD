@@ -858,7 +858,7 @@ local function entradaJefe(cuerpo: BasePart)
 		return
 	end
 	ultimaEntrada = os.clock()
-	nombreJefe.Text = string.upper(cuerpo:GetAttribute("Jefe") or "JEFE")
+	nombreJefe.Text = Comic.mayus(cuerpo:GetAttribute("Jefe") or "JEFE")
 	fraseJefe.Text = `«{FRASES[cuerpo.Name] or "Prepárense para caer."}»`
 	escalaVineta.Scale = math.clamp(camara.ViewportSize.X / 1280, 0.6, 1.2)
 	pantalla.Enabled = true

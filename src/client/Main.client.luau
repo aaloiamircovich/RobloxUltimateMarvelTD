@@ -215,7 +215,7 @@ local function refrescar()
 			Comic.borde(marcoRetrato, 3)
 			Comic.retrato(marcoRetrato, id, config.name, Comic.AMARILLO, Personajes.base(id))
 		end
-		nombreUnidad.Text = string.upper(config.name)
+		nombreUnidad.Text = Comic.mayus(config.name)
 		Comic.resaltar(marcoRetrato, Comic.RAREZA[config.rarity] or Comic.NEGRO)
 		local rasgo = Rasgos.de(seleccion:GetAttribute("Rasgo"))
 		local nombreRasgo = if rasgo then rasgo.nombre else "Sin rasgo"
@@ -226,13 +226,13 @@ local function refrescar()
 			end
 		end
 		local siguiente = config and Mejoras.lista(config)[hecho + 1]
-		botonMejorar.Text = if siguiente then `▲ MEJORA {hecho + 1}: {string.upper(siguiente.nombre)}  💰 {miles(siguiente.costo)}\n<font face="GothamBold" size="13">{Mejoras.descripcion(siguiente)}</font>` else "MEJORAS COMPLETAS"
+		botonMejorar.Text = if siguiente then `▲ MEJORA {hecho + 1}: {Comic.mayus(siguiente.nombre)}  💰 {miles(siguiente.costo)}\n<font face="GothamBold" size="13">{Mejoras.descripcion(siguiente)}</font>` else "MEJORAS COMPLETAS"
 		pintarBoton(botonMejorar, siguiente ~= nil and plata >= siguiente.costo, Color3.fromRGB(200, 130, 20))
 		botonVender.Text = `VENDER  +💰 {miles((seleccion:GetAttribute("Invertido") or 0) * 0.5)}`
-		botonPrioridad.Text = `🎯 OBJETIVO: {string.upper(NOMBRE_PRIORIDAD[seleccion:GetAttribute("Prioridad")] or "Primero")}`
+		botonPrioridad.Text = `🎯 OBJETIVO: {Comic.mayus(NOMBRE_PRIORIDAD[seleccion:GetAttribute("Prioridad")] or "Primero")}`
 		local municion = seleccion:GetAttribute("Municion")
 		botonMunicion.Visible = municion ~= nil
-		botonMunicion.Text = `MUNICIÓN: {string.upper(Kits.NOMBRE_MODO[municion] or "")}`
+		botonMunicion.Text = `MUNICIÓN: {Comic.mayus(Kits.NOMBRE_MODO[municion] or "")}`
 		botonMover.BackgroundColor3 = if modo.tipo == "mover" then Color3.fromRGB(60, 120, 200) else Comic.ROJO
 	end
 
@@ -258,7 +258,7 @@ local function refrescar()
 	local oleada = estado:GetAttribute("Oleada")
 	local base, baseMax = estado:GetAttribute("Base"), estado:GetAttribute("BaseMax")
 	local acto = estado:GetAttribute("Acto")
-	titulo.Text = string.upper(`{estado:GetAttribute("NombreNivel")} · {if acto == "Infinito" or acto == "Evento" or acto == "Raid" then acto else "Acto " .. acto}{if estado:GetAttribute("Pesadilla") then " · Pesadilla" else ""}`)
+	titulo.Text = Comic.mayus(`{estado:GetAttribute("NombreNivel")} · {if acto == "Infinito" or acto == "Evento" or acto == "Raid" then acto else "Acto " .. acto}{if estado:GetAttribute("Pesadilla") then " · Pesadilla" else ""}`)
 	barraVida.Size = UDim2.fromScale(math.clamp(base / baseMax, 0, 1), 1)
 	textoVida.Text = `🛡 {base} / {baseMax}`
 	textoOleada.Text = if total == 0 then tostring(oleada) else `{oleada}/{total}`
@@ -270,7 +270,7 @@ local function refrescar()
 	barraJefe.Visible = maxJefe ~= nil and fase ~= "fin"
 	if maxJefe then
 		rellenoJefe.Size = UDim2.fromScale(math.clamp((vidaJefe or 0) / maxJefe, 0, 1), 1)
-		textoJefe.Text = `{string.upper(estado:GetAttribute("NombreJefe") or "")}  ·  {miles(vidaJefe or 0)} / {miles(maxJefe)}`
+		textoJefe.Text = `{Comic.mayus(estado:GetAttribute("NombreJefe") or "")}  ·  {miles(vidaJefe or 0)} / {miles(maxJefe)}`
 	end
 
 	-- Controles.
