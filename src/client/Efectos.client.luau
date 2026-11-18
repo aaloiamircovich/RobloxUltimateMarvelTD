@@ -2,6 +2,7 @@
 -- rayo al mejorar, aura con la mejora máxima y humo al vender. «Calidad baja» apaga las partículas (Ajustes.luau).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 local Comic = require(script.Parent:WaitForChild("Comic"))
 local Personajes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Personajes"))
 
@@ -106,6 +107,119 @@ local function aura(modelo: Model)
 	luz.Parent = raiz
 end
 
+-- Anillo de rareza bajo los pies (Épico para arriba): círculo que gira despacio; Legendario con chispas, Mítico
+-- arcoíris con luz, Secreto turquesa. Se dibuja con un SurfaceGui sobre una placa invisible que sigue a la unidad.
+local ORDEN = { Common = 1, Rare = 2, Epic = 3, Legendary = 4, Mythic = 5, Secret = 6 }
+local ARCOIRIS = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 80, 80)),
+	ColorSequenceKeypoint.new(0.25, Color3.fromRGB(255, 210, 70)),
+	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(90, 230, 120)),
+	ColorSequenceKeypoint.new(0.75, Color3.fromRGB(90, 170, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(190, 110, 255)),
+})
+local anillos = {} -- [modelo] = { placa, gradientes }
+local function anillo(modelo: Model)
+	local h = Personajes.todos[modelo:GetAttribute("Heroe") or ""]
+	local orden = h and ORDEN[h.rarity] or 1
+	if orden < ORDEN.Epic or anillos[modelo] then
+		return
+	end
+	local color = colorDe(modelo)
+	local _, tam = modelo:GetBoundingBox()
+	local lado = math.clamp(math.max(tam.X, tam.Z) * 1.6, 5, 9)
+	local placa = pieza({ Transparency = 1, Size = Vector3.new(lado, 0.05, lado), CFrame = CFrame.new(piso(modelo)) })
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Top
+	gui.LightInfluence = 0
+	gui.Brightness = 2
+	gui.CanvasSize = Vector2.new(200, 200)
+	gui.Parent = placa
+	local gradientes = {}
+	for i, r in { { 0, 10 }, { 30, 4 } } do
+		local aro = Instance.new("Frame")
+		aro.AnchorPoint = Vector2.new(0.5, 0.5)
+		aro.Position = UDim2.fromScale(0.5, 0.5)
+		aro.Size = UDim2.new(1, -r[1] * 2 - 12, 1, -r[1] * 2 - 12)
+		aro.BackgroundTransparency = 1
+		aro.Parent = gui
+		local esquina = Instance.new("UICorner")
+		esquina.CornerRadius = UDim.new(1, 0)
+		esquina.Parent = aro
+		local trazo = Instance.new("UIStroke")
+		trazo.Color = if h.rarity == "Mythic" then Color3.new(1, 1, 1) else color
+		trazo.Thickness = r[2]
+		trazo.Transparency = if i == 1 then 0.1 else 0.45
+		trazo.Parent = aro
+		if h.rarity == "Mythic" then
+			local g = Instance.new("UIGradient")
+			g.Color = ARCOIRIS
+			g.Parent = trazo
+			table.insert(gradientes, g)
+		end
+		-- Cuatro marcas sobre el aro de afuera, que giran con él.
+		if i == 1 then
+			for k = 0, 3 do
+				local marca = Instance.new("Frame")
+				marca.AnchorPoint = Vector2.new(0.5, 0.5)
+				marca.Size = UDim2.fromOffset(16, 16)
+				marca.Rotation = 45
+				marca.BackgroundColor3 = color
+				marca.BorderSizePixel = 0
+				local a = k * math.pi / 2
+				marca.Position = UDim2.fromScale(0.5 + math.cos(a) * 0.47, 0.5 + math.sin(a) * 0.47)
+				marca.Parent = aro
+			end
+			table.insert(gradientes, aro)
+		end
+	end
+	if orden >= ORDEN.Legendary then
+		local e = Instance.new("ParticleEmitter")
+		e.Color = if h.rarity == "Mythic" then ARCOIRIS else ColorSequence.new(color)
+		e.LightEmission = 1
+		e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 0) })
+		e.Lifetime = NumberRange.new(0.8, 1.4)
+		e.Speed = NumberRange.new(1.5, 3)
+		e.EmissionDirection = Enum.NormalId.Top
+		e.SpreadAngle = Vector2.new(20, 20)
+		e.Rate = if orden >= ORDEN.Mythic then 18 else 10
+		e.Parent = placa
+	end
+	if orden >= ORDEN.Mythic then
+		local luz = Instance.new("PointLight")
+		luz.Color, luz.Range, luz.Brightness = color, 9, 1.5
+		luz.Parent = placa
+	end
+	anillos[modelo] = { placa = placa, giran = gradientes, raiz = modelo:FindFirstChild("HumanoidRootPart"), suelo = nil, medido = 0 }
+	modelo.AncestryChanged:Connect(function()
+		if not modelo:IsDescendantOf(workspace) and anillos[modelo] then
+			anillos[modelo].placa:Destroy()
+			anillos[modelo] = nil
+		end
+	end)
+end
+-- Altura del piso bajo la unidad (se vuelve a medir cada segundo: el servidor la reacomoda al apoyar los pies).
+local filtro = RaycastParams.new()
+filtro.FilterType = Enum.RaycastFilterType.Exclude
+local function medirSuelo(modelo: Model, a)
+	filtro.FilterDescendantsInstances = { modelo, a.placa }
+	local golpe = a.raiz and workspace:Raycast(a.raiz.Position, Vector3.new(0, -40, 0), filtro)
+	a.suelo = if golpe then golpe.Position.Y else piso(modelo).Y
+	a.medido = os.clock()
+end
+RunService.RenderStepped:Connect(function(dt)
+	for modelo, a in anillos do
+		if not a.suelo or os.clock() - a.medido > 1 then
+			medirSuelo(modelo, a)
+		end
+		local p = if a.raiz then a.raiz.Position else piso(modelo)
+		-- Un poco arriba del piso: el pasto 3D tapa lo que está al ras.
+		a.placa.CFrame = CFrame.new(p.X, a.suelo + 0.5, p.Z) * CFrame.Angles(0, os.clock() * 0.6, 0)
+		for _, g in a.giran do
+			g.Rotation += dt * 40
+		end
+	end
+end)
+
 local function vender(modelo: Model)
 	local base = piso(modelo)
 	local humo = pieza({ Transparency = 1, Size = Vector3.new(1, 1, 1), CFrame = CFrame.new(base + Vector3.new(0, 2, 0)) })
@@ -134,6 +248,7 @@ local function seguir(modelo: Instance)
 		return
 	end
 	task.defer(aparecer, modelo)
+	task.delay(0.5, anillo, modelo) -- después de que el servidor la apoye
 	local mejora = modelo:GetAttribute("Mejora") or 0
 	if mejora >= MEJORA_MAXIMA then
 		aura(modelo)

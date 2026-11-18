@@ -23,6 +23,7 @@ local Actos = require(Shared.Actos)
 local Temporada = require(Shared.Temporada)
 local Recompensas = require(Shared.Recompensas)
 local Reposo = require(Shared.Reposo)
+local Entradas = require(Shared.Entradas)
 local Analitica = require(script.Parent.Analitica)
 local Evento = require(Shared.Evento)
 local Raid = require(Shared.Raid)
@@ -182,11 +183,25 @@ local function crearModelo(config): (Model, BasePart, AnimationTrack?, number)
 		local reposo = animator:LoadAnimation(animReposo)
 		reposo.Priority = Enum.AnimationPriority.Idle
 		reposo.Looped = true
+		-- Entrada propia de los Míticos y Legendarios (docs/UNIDADES_VISUAL.md): una vez, encima del reposo.
+		local idEntrada = Entradas.para(config.id)
+		local entrada
+		if idEntrada then
+			local animEntrada = Instance.new("Animation")
+			animEntrada.AnimationId = idEntrada
+			entrada = animator:LoadAnimation(animEntrada)
+			entrada.Priority = Enum.AnimationPriority.Action2
+			entrada.Looped = false
+		end
 		task.defer(function()
 			if modelo.Parent then
 				reposo:Play(0.3)
+				if entrada then
+					entrada:Play(0.1)
+				end
 			end
 		end)
+		modelo:SetAttribute("Entrada", idEntrada ~= nil)
 	end
 	modelo.Name = config.name
 	return modelo, raiz, ataque, modelo:GetAttribute("VelocidadAtaque") or 1
@@ -586,7 +601,30 @@ function Partida.nueva(op)
 		local alto = if u.modelo:FindFirstChildOfClass("Humanoid") then u.modelo.Humanoid.HipHeight + u.raiz.Size.Y / 2 else u.raiz.Size.Y / 2
 		-- Apoyada sobre la superficie real (techos y plataformas de montaña son más altos).
 		local suelo = origen + Vector3.new(u.x * Mapa.ESCALA, Mapa.alturaSuelo(NIVEL, u.x, u.y), u.y * Mapa.ESCALA)
-		ponerRaiz(u, CFrame.new(suelo + Vector3.new(0, alto + 0.1, 0)))
+		ponerRaiz(u, CFrame.new(suelo + Vector3.new(0, alto + 0.1 + (u.ajustePies or 0), 0)))
+	end
+
+	-- Con la raíz anclada, el reposo mueve el cuerpo respecto de ella y algunos modelos quedaban flotando o hundidos.
+	-- Ya en reposo (después de la entrada, si tiene), se corrige la altura hasta que el pie más bajo toque el suelo.
+	local function apoyarPies(u)
+		if not table.find(unidades, u) or not u.modelo.Parent then
+			return
+		end
+		local bajo = math.huge
+		for _, d in u.modelo:GetDescendants() do
+			if d:IsA("BasePart") and string.find(d.Name, "Foot") then
+				bajo = math.min(bajo, d.Position.Y - d.Size.Y / 2)
+			end
+		end
+		if bajo == math.huge then
+			return
+		end
+		local suelo = origen.Y + Mapa.alturaSuelo(NIVEL, u.x, u.y)
+		local diferencia = bajo - suelo
+		if math.abs(diferencia) > 0.15 then
+			u.ajustePies = (u.ajustePies or 0) - diferencia
+			ubicar(u)
+		end
 	end
 
 	local function listaUnidades()
@@ -683,6 +721,7 @@ function Partida.nueva(op)
 		modelo:SetAttribute("Municion", if base == "hawkeye" then "explosive" else nil)
 		ubicar(u)
 		modelo.Parent = carpetaUnidades
+		task.delay(if modelo:GetAttribute("Entrada") then 3 else 1, apoyarPies, u)
 		table.insert(unidades, u)
 		evento(j, "colocar", 1)
 		Analitica.unidad(j, "colocada", e.heroId, config.rarity)

@@ -32,7 +32,7 @@ animaciones) ahora; ForgeGUI (audio, íconos, imágenes de UI) cuando vuelvan lo
    carga con ilustración y consejos.
 4. **Subir de nivel / evolucionar**: animación de la tarjeta, luz y cambio de modelo en vivo.
 
-## Etapa 4 · Unidades con presencia
+## Etapa 4 · Unidades con presencia — ✅ 17/11/2026 (falta arreglar lo que mostró la hoja de fotos), `docs/UNIDADES_VISUAL.md`
 1. **Aura por rareza** en el piso (anillo o partículas: épico violeta, legendario dorado, mítico arcoíris) y
    efecto distinto al máximo de mejoras.
 2. **Revisión de los 212 modelos** en partida (script que coloca y saca foto de cada uno) y arreglo de los que se

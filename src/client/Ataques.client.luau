@@ -10,6 +10,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Comic = require(script.Parent:WaitForChild("Comic"))
 local Ajustes = require(script.Parent:WaitForChild("Ajustes"))
+local Personajes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Personajes"))
 
 local jugador = Players.LocalPlayer
 local camara = workspace.CurrentCamera
@@ -918,8 +919,33 @@ local function seguir(cuerpo: Instance)
 		disolver(cuerpo)
 	end)
 end
+--------------------------------------------------------------------------------
+-- Entrada de los únicos al colocarlos: su ataque cae del cielo sobre ellos (docs/UNIDADES_VISUAL.md)
+--------------------------------------------------------------------------------
+local function entrada(modelo: Instance)
+	if not modelo:IsA("Model") or modelo:GetAttribute("Uid") == nil or not modelo:GetAttribute("Entrada") then
+		return
+	end
+	local id = Personajes.base(modelo:GetAttribute("Heroe") or "")
+	local efecto = UNICOS[id]
+	if not efecto then
+		return
+	end
+	task.delay(0.35, function()
+		if not modelo.Parent then
+			return
+		end
+		local cf, tam = modelo:GetBoundingBox()
+		local pie = cf.Position - Vector3.new(0, tam.Y / 2 - 0.5, 0)
+		efecto(pie + Vector3.new(0, 30, 0), pie, { critico = true, escala = TAMANO * 1.5 })
+		onda(pie, BLANCO, 8, 0.5)
+		sacudir(0.35, pie)
+	end)
+end
+
 local partidas = workspace:WaitForChild("Partidas")
 partidas.DescendantAdded:Connect(seguir)
+partidas.DescendantAdded:Connect(entrada)
 for _, d in partidas:GetDescendants() do
 	seguir(d)
 end
