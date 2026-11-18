@@ -80,21 +80,58 @@ rotuloOleada.Text = "OLEADA"
 local circuloReloj, rotuloReloj, textoReloj = circulo(1)
 rotuloReloj.Text = "⏱"
 
+-- Barra de oleadas (fase B): un segmento por oleada (las pasadas en gris claro, la actual roja, el jefe al final) y
+-- debajo quiénes vienen ahora y en la próxima (atributos Composicion y Proxima de la partida).
+local segmentos = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 8), Size = UDim2.fromOffset(500, 12), BackgroundTransparency = 1 }, arriba)
+crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }, segmentos)
+-- Ahora / próxima en una franja de vidrio para que se lean sobre el mapa.
+local franjaOleadas = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 24), Size = UDim2.fromOffset(560, 40), BackgroundColor3 = Comic.FONDO, BackgroundTransparency = 0.25 }, arriba)
+crear("UICorner", { CornerRadius = UDim.new(0, 8) }, franjaOleadas)
+local textoAhora = texto({ Position = UDim2.fromOffset(10, 3), Size = UDim2.new(1, -20, 0, 17), TextSize = 13, Font = Comic.TEXTO, RichText = true, TextTruncate = Enum.TextTruncate.AtEnd }, franjaOleadas)
+local textoProxima = texto({ Position = UDim2.fromOffset(10, 20), Size = UDim2.new(1, -20, 0, 16), TextSize = 12, Font = Comic.TEXTO, TextColor3 = Comic.TENUE, RichText = true, TextTruncate = Enum.TextTruncate.AtEnd }, franjaOleadas)
+local segmentosDe = 0
+local function dibujarSegmentos(total: number, oleada: number)
+	if total ~= segmentosDe then
+		segmentosDe = total
+		for _, c in segmentos:GetChildren() do
+			if c:IsA("GuiObject") then
+				c:Destroy()
+			end
+		end
+		local ancho = math.clamp(math.floor((480 - (total - 1) * 4) / math.max(total, 1)), 8, 60)
+		for i = 1, total do
+			local seg = crear("Frame", { Name = tostring(i), LayoutOrder = i, Size = UDim2.fromOffset(ancho, 12), BackgroundColor3 = Comic.GRIS, BorderSizePixel = 0 }, segmentos)
+			crear("UICorner", { CornerRadius = UDim.new(0, 4) }, seg)
+			if i == total then
+				-- El jefe: segmento con una calavera.
+				texto({ Text = "☠", TextSize = 11, Size = UDim2.fromScale(1, 1) }, seg)
+			end
+		end
+	end
+	for _, seg in segmentos:GetChildren() do
+		local i = tonumber(seg.Name)
+		if i and seg:IsA("Frame") then
+			seg.BackgroundColor3 = if i < oleada then Comic.TENUE elseif i == oleada then Comic.ROJO elseif i == total then Color3.fromRGB(110, 30, 50) else Comic.GRIS
+			seg.BackgroundTransparency = if i < oleada then 0.4 else 0
+		end
+	end
+end
+
 -- Mensaje de la partida (fase, modificador de oleada) en una franja oscura debajo.
-local mensaje = texto({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 10), Size = UDim2.fromOffset(560, 26), TextSize = 18, Font = Comic.TEXTO }, arriba)
+local mensaje = texto({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 70), Size = UDim2.fromOffset(560, 26), TextSize = 18, Font = Comic.TEXTO }, arriba)
 mensaje.BackgroundTransparency = 0.3
 mensaje.BackgroundColor3 = Comic.FONDO
 crear("UICorner", { CornerRadius = UDim.new(0, 6) }, mensaje)
 
 -- Barra del jefe (atributos JefeVida/JefeVidaMax de la partida).
-local barraJefe = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 96), Size = UDim2.fromOffset(600, 34), BackgroundColor3 = Comic.FONDO, Visible = false }, arriba)
+local barraJefe = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 140), Size = UDim2.fromOffset(600, 34), BackgroundColor3 = Comic.FONDO, Visible = false }, arriba)
 Comic.borde(barraJefe, 4)
 local rellenoJefe = crear("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(150, 30, 90), BorderSizePixel = 0 }, barraJefe)
 crear("UICorner", { CornerRadius = UDim.new(0, 6) }, rellenoJefe)
 local textoJefe = texto({ Size = UDim2.fromScale(1, 1), TextSize = 24 }, barraJefe)
 
 -- Avisos (errores, premios): globo de diálogo blanco.
-local aviso = texto({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 46), Size = UDim2.fromOffset(560, 40), TextSize = 18, Font = Comic.TEXTO, TextWrapped = true, Visible = false, ZIndex = 5 }, arriba)
+local aviso = texto({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 96), Size = UDim2.fromOffset(560, 40), TextSize = 18, Font = Comic.TEXTO, TextWrapped = true, Visible = false, ZIndex = 5 }, arriba)
 aviso.BackgroundTransparency = Comic.TRANSPARENCIA
 aviso.BackgroundColor3 = Comic.FONDO
 Comic.borde(aviso)
@@ -114,22 +151,32 @@ crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Horizonta
 local lateral = crear("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -16, 0.5, 0), Size = UDim2.fromOffset(190, 320), BackgroundTransparency = 1 }, gui)
 crear("UIListLayout", { Padding = UDim.new(0, 10), HorizontalAlignment = Enum.HorizontalAlignment.Right, SortOrder = Enum.SortOrder.LayoutOrder }, lateral)
 
--- Izquierda: panel de la unidad elegida.
-local panelUnidad = crear("Frame", { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 16, 0.5, 10), Size = UDim2.fromOffset(300, 470), BackgroundColor3 = Comic.FONDO, BackgroundTransparency = Comic.TRANSPARENCIA, Visible = false }, gui)
+-- Izquierda: panel de la unidad elegida (docs/INTERFAZ.md, fase B): retrato y datos arriba, estrellas de mejora,
+-- stats con lo que sube en la próxima mejora, MEJORAR grande y acciones abajo.
+local panelUnidad = crear("Frame", { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 16, 0.5, 10), Size = UDim2.fromOffset(300, 404), BackgroundColor3 = Comic.FONDO, BackgroundTransparency = Comic.TRANSPARENCIA, Visible = false }, gui)
 Comic.borde(panelUnidad)
--- Encabezado: nombre arriba a la izquierda con una línea del color de la rareza debajo (como los paneles).
-local franjaUnidad = crear("Frame", { Position = UDim2.fromOffset(0, 0), Size = UDim2.new(1, -30, 0, 34), BackgroundTransparency = 1 }, panelUnidad)
-local nombreUnidad = texto({ TextSize = 20, Position = UDim2.fromOffset(14, 8), Size = UDim2.new(1, -24, 0, 22), TextXAlignment = Enum.TextXAlignment.Left }, franjaUnidad)
-crear("Frame", { Position = UDim2.fromOffset(14, 32), Size = UDim2.fromOffset(48, 3), BackgroundColor3 = Comic.ROJO, BorderSizePixel = 0 }, franjaUnidad)
-local marcoRetrato = crear("Frame", { Position = UDim2.fromOffset(14, 36), Size = UDim2.fromOffset(110, 110), BackgroundColor3 = Comic.ROJO_OSCURO }, panelUnidad)
-Comic.borde(marcoRetrato, 3)
-local statsUnidad = texto({ Position = UDim2.fromOffset(134, 36), Size = UDim2.fromOffset(152, 110), TextSize = 16, Font = Comic.TEXTO, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, RichText = true }, panelUnidad)
-local pips = crear("Frame", { Position = UDim2.fromOffset(14, 156), Size = UDim2.new(1, -28, 0, 16), BackgroundTransparency = 1 }, panelUnidad)
-crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }, pips)
+local marcoRetrato = crear("Frame", { Position = UDim2.fromOffset(14, 14), Size = UDim2.fromOffset(88, 88), BackgroundColor3 = Comic.ROJO_OSCURO }, panelUnidad)
+Comic.borde(marcoRetrato)
+local nombreUnidad = texto({ TextSize = 18, Position = UDim2.fromOffset(112, 16), Size = UDim2.new(1, -150, 0, 22), TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd }, panelUnidad)
+local rarezaUnidad = texto({ TextSize = 12, Font = Comic.TEXTO, Position = UDim2.fromOffset(112, 40), Size = UDim2.new(1, -124, 0, 16), TextXAlignment = Enum.TextXAlignment.Left }, panelUnidad)
+local rasgoUnidad = texto({ TextSize = 12, Font = Comic.TEXTO, TextColor3 = Color3.fromRGB(255, 143, 176), Position = UDim2.fromOffset(112, 60), Size = UDim2.new(1, -124, 0, 16), TextXAlignment = Enum.TextXAlignment.Left }, panelUnidad)
+local gradosUnidad = texto({ TextSize = 12, Font = Comic.TEXTO, TextColor3 = Comic.TENUE, Position = UDim2.fromOffset(112, 80), Size = UDim2.new(1, -124, 0, 16), TextXAlignment = Enum.TextXAlignment.Left }, panelUnidad)
+-- Estrellas de mejora.
+local estrellas = crear("Frame", { Position = UDim2.fromOffset(14, 112), Size = UDim2.new(1, -28, 0, 26), BackgroundTransparency = 1 }, panelUnidad)
+crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Center }, estrellas)
 for i = 1, Mejoras.MAXIMO do
-	Comic.borde(crear("Frame", { Name = tostring(i), LayoutOrder = i, Size = UDim2.fromOffset(48, 16), BackgroundColor3 = Comic.GRIS }, pips), 2)
+	texto({ Name = tostring(i), LayoutOrder = i, Text = "★", TextSize = 24, Size = UDim2.fromOffset(26, 26), TextColor3 = Comic.GRIS }, estrellas)
 end
-local accionesUnidad = crear("Frame", { Position = UDim2.fromOffset(14, 184), Size = UDim2.new(1, -28, 1, -196), BackgroundTransparency = 1 }, panelUnidad)
+local mejoraTexto = texto({ LayoutOrder = 10, TextSize = 12, Font = Comic.TEXTO, TextColor3 = Comic.TENUE, Size = UDim2.fromOffset(120, 26), TextXAlignment = Enum.TextXAlignment.Left }, estrellas)
+-- Stats: valor actual y, en verde, cómo queda con la próxima mejora.
+local filasStat = {}
+for k, def in { { "dano", "Daño" }, { "alcance", "Alcance" }, { "cadencia", "Ataques/s" } } do
+	local y = 146 + (k - 1) * 22
+	texto({ Text = def[2], TextSize = 14, Font = Comic.TEXTO, TextColor3 = Comic.TENUE, Position = UDim2.fromOffset(14, y), Size = UDim2.fromOffset(110, 20), TextXAlignment = Enum.TextXAlignment.Left }, panelUnidad)
+	filasStat[def[1]] = texto({ TextSize = 15, RichText = true, Position = UDim2.new(0, 120, 0, y), Size = UDim2.new(1, -134, 0, 20), TextXAlignment = Enum.TextXAlignment.Right }, panelUnidad)
+end
+local proximaMejora = texto({ TextSize = 12, Font = Comic.TEXTO, TextColor3 = Comic.TENUE, TextWrapped = true, Position = UDim2.fromOffset(14, 216), Size = UDim2.new(1, -28, 0, 30), TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top }, panelUnidad)
+local accionesUnidad = crear("Frame", { Position = UDim2.fromOffset(14, 252), Size = UDim2.new(1, -28, 1, -264), BackgroundTransparency = 1 }, panelUnidad)
 crear("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }, accionesUnidad)
 
 -- Todo se achica en pantallas chicas (diseñado para 1280×760).
@@ -209,31 +256,53 @@ local function refrescar()
 		local id = seleccion:GetAttribute("Heroe")
 		local config = heroes[id]
 		local hecho = seleccion:GetAttribute("Mejora") or 0
+		local color = Comic.RAREZA[config.rarity] or Comic.CREMA
 		if retratoUid ~= modo.uid then
 			retratoUid = modo.uid
-			marcoRetrato:ClearAllChildren()
-			Comic.borde(marcoRetrato, 3)
-			Comic.retrato(marcoRetrato, id, config.name, Comic.AMARILLO, Personajes.base(id))
+			for _, c in marcoRetrato:GetChildren() do
+				if not c:IsA("UIStroke") and not c:IsA("UICorner") then
+					c:Destroy()
+				end
+			end
+			Comic.retrato(marcoRetrato, id, config.name, color, Personajes.base(id))
 		end
 		nombreUnidad.Text = Comic.mayus(config.name)
-		Comic.resaltar(marcoRetrato, Comic.RAREZA[config.rarity] or Comic.NEGRO)
+		Comic.resaltar(marcoRetrato, color)
+		rarezaUnidad.Text = `{Personajes.NOMBRE_RAREZA[config.rarity] or ""} · Nv {seleccion:GetAttribute("NivelUnidad") or 1}`
+		rarezaUnidad.TextColor3 = color
 		local rasgo = Rasgos.de(seleccion:GetAttribute("Rasgo"))
-		local nombreRasgo = if rasgo then rasgo.nombre else "Sin rasgo"
-		statsUnidad.Text = `Nv {seleccion:GetAttribute("NivelUnidad") or 1}\n⚔ Daño <font color="#ffd628">{seleccion:GetAttribute("Dano") or "?"}</font>\n◎ Alcance <font color="#ffd628">{seleccion:GetAttribute("Alcance") or "?"}</font>\n⚡ Ataques/s <font color="#ffd628">{seleccion:GetAttribute("Cadencia") or "?"}</font>\n<font color="#ff8fb0">{nombreRasgo}</font> · {seleccion:GetAttribute("Grados") or "B/B/B"}`
-		for _, pip in pips:GetChildren() do
-			if pip:IsA("Frame") then
-				pip.BackgroundColor3 = if tonumber(pip.Name) <= hecho then Comic.AMARILLO else Comic.GRIS
+		rasgoUnidad.Text = if rasgo then `Rasgo: {rasgo.nombre}` else "Sin rasgo"
+		gradosUnidad.Text = `Grados {seleccion:GetAttribute("Grados") or "B/B/B"}`
+		for _, e in estrellas:GetChildren() do
+			local n = tonumber(e.Name)
+			if n and e:IsA("TextLabel") then
+				e.TextColor3 = if n <= hecho then Comic.AMARILLO else Comic.GRIS
 			end
 		end
+		mejoraTexto.Text = `Mejora {hecho}/{Mejoras.MAXIMO}`
+		-- Stats actuales y cuánto quedan con la próxima mejora (proporción entre el efecto acumulado de antes y después).
 		local siguiente = config and Mejoras.lista(config)[hecho + 1]
-		botonMejorar.Text = if siguiente then `▲ MEJORA {hecho + 1}: {Comic.mayus(siguiente.nombre)}  💰 {miles(siguiente.costo)}\n<font face="GothamBold" size="13">{Mejoras.descripcion(siguiente)}</font>` else "MEJORAS COMPLETAS"
-		pintarBoton(botonMejorar, siguiente ~= nil and plata >= siguiente.costo, Color3.fromRGB(200, 130, 20))
+		local antes, despues = Mejoras.efecto(config, hecho), Mejoras.efecto(config, hecho + 1)
+		local actuales = { dano = seleccion:GetAttribute("Dano"), alcance = seleccion:GetAttribute("Alcance"), cadencia = seleccion:GetAttribute("Cadencia") }
+		for clave, l in filasStat do
+			local v = actuales[clave]
+			local valorTxt = if v then tostring(v) else "?"
+			if siguiente and v and despues[clave] ~= antes[clave] then
+				local nuevo = v * (1 + despues[clave]) / (1 + antes[clave])
+				nuevo = if clave == "cadencia" then math.floor(nuevo * 100 + 0.5) / 100 else math.floor(nuevo + 0.5)
+				valorTxt ..= `  <font color="#5fe36a">→ {nuevo}</font>`
+			end
+			l.Text = valorTxt
+		end
+		proximaMejora.Text = if siguiente then `Próxima: {siguiente.nombre} · {Mejoras.descripcion(siguiente)}` else "Todas las mejoras compradas."
+		botonMejorar.Text = if siguiente then `MEJORAR   💰 {miles(siguiente.costo)}` else "MEJORAS COMPLETAS"
+		pintarBoton(botonMejorar, siguiente ~= nil and plata >= siguiente.costo, Color3.fromRGB(230, 150, 30))
 		botonVender.Text = `VENDER  +💰 {miles((seleccion:GetAttribute("Invertido") or 0) * 0.5)}`
 		botonPrioridad.Text = `🎯 OBJETIVO: {Comic.mayus(NOMBRE_PRIORIDAD[seleccion:GetAttribute("Prioridad")] or "Primero")}`
 		local municion = seleccion:GetAttribute("Municion")
 		botonMunicion.Visible = municion ~= nil
 		botonMunicion.Text = `MUNICIÓN: {Comic.mayus(Kits.NOMBRE_MODO[municion] or "")}`
-		botonMover.BackgroundColor3 = if modo.tipo == "mover" then Color3.fromRGB(60, 120, 200) else Comic.ROJO
+		botonMover.BackgroundColor3 = if modo.tipo == "mover" then Color3.fromRGB(60, 120, 200) else Comic.GRIS
 	end
 
 	-- Tarjetas del escuadrón.
@@ -264,6 +333,15 @@ local function refrescar()
 	textoOleada.Text = if total == 0 then tostring(oleada) else `{oleada}/{total}`
 	circuloReloj.Visible = fase ~= "fin"
 	textoReloj.Text = reloj()
+	-- Barra de oleadas (Infinito no tiene total: sólo el texto).
+	segmentos.Visible = total > 0 and fase ~= "fin"
+	if total > 0 then
+		dibujarSegmentos(total, oleada)
+	end
+	local ahora, proxima = estado:GetAttribute("Composicion"), estado:GetAttribute("Proxima")
+	franjaOleadas.Visible = ahora ~= nil and ahora ~= "" and (oleada or 0) > 0 and fase ~= "fin"
+	textoAhora.Text = `<font color="#e22634">AHORA</font>  {ahora or ""}`
+	textoProxima.Text = if proxima and proxima ~= "" then `PRÓXIMA  {proxima}` else "PRÓXIMA  —"
 	mensaje.Text = estado:GetAttribute("Mensaje")
 	mensaje.Visible = mensaje.Text ~= "" and fase ~= "fin"
 	local vidaJefe, maxJefe = estado:GetAttribute("JefeVida"), estado:GetAttribute("JefeVidaMax")
@@ -305,7 +383,11 @@ local function tarjeta(i: number, ranura: number, id: string, nivel: number, lim
 	crear("UIStroke", { Color = color, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, t)
 	crear("UICorner", { CornerRadius = UDim.new(0, 8) }, t)
 	crear("UIScale", {}, t)
-	crear("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), color:Lerp(Color3.new(0, 0, 0), 0.4)) }, t)
+	crear("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), color:Lerp(Color3.new(1, 1, 1), 0.2)), Transparency = NumberSequence.new(0, 0) }, t)
+	-- Degradado del color de la rareza abajo, como las tarjetas del lobby.
+	local pie = crear("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, 0, 0.55, 0), BackgroundColor3 = color, BackgroundTransparency = 0.5, BorderSizePixel = 0 }, t)
+	crear("UIGradient", { Rotation = 90, Transparency = NumberSequence.new(1, 0.2) }, pie)
+	crear("UICorner", { CornerRadius = UDim.new(0, 8) }, pie)
 	local foto = crear("Frame", { Position = UDim2.fromOffset(4, 4), Size = UDim2.new(1, -8, 0, 80), BackgroundTransparency = 1, ClipsDescendants = true }, t)
 	Comic.retrato(foto, id, config.name, color, Personajes.base(id))
 	texto({ Text = config.name, Position = UDim2.fromOffset(4, 66), Size = UDim2.new(1, -8, 0, 18), TextSize = 16 }, t)
@@ -315,10 +397,11 @@ local function tarjeta(i: number, ranura: number, id: string, nivel: number, lim
 	local barra = texto({ Name = "Costo", Text = `💰 {miles(costo)}`, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4), Size = UDim2.new(1, -8, 0, 26), TextSize = 20, TextColor3 = Comic.CREMA }, t)
 	barra.BackgroundTransparency = 0
 	Comic.borde(barra, 2)
-	local tecla = texto({ Text = tostring(i), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 0, 0, 0), Size = UDim2.fromOffset(26, 26), TextSize = 18, TextColor3 = Comic.ROJO_OSCURO, TextStrokeTransparency = 1 }, t)
+	-- Tecla del atajo: círculo oscuro chico arriba a la izquierda.
+	local tecla = texto({ Text = tostring(i), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 2, 0, 2), Size = UDim2.fromOffset(22, 22), TextSize = 13 }, t)
 	tecla.BackgroundTransparency = 0
-	tecla.BackgroundColor3 = Comic.AMARILLO
-	crear("UIStroke", { Thickness = 2 }, tecla)
+	tecla.BackgroundColor3 = Comic.FONDO
+	crear("UIStroke", { Thickness = 1, Color = color }, tecla)
 	crear("UICorner", { CornerRadius = UDim.new(1, 0) }, tecla)
 	t:SetAttribute("Costo", costo)
 	t:SetAttribute("Limite", limite)
@@ -360,17 +443,19 @@ botonMejorar = botonUnidad("MEJORAR", Color3.fromRGB(200, 130, 20), 1, function(
 		Sonido.efecto("mejorar")
 	end
 end)
-botonMejorar.Size = UDim2.new(1, 0, 0, 74)
+botonMejorar.Size = UDim2.new(1, 0, 0, 54)
 botonMejorar.Name = "Mejorar"
-botonMejorar.RichText = true
-botonMejorar.TextSize = 19
-botonPrioridad = botonUnidad("OBJETIVO", Comic.ROJO, 2, function()
+botonMejorar.TextSize = 20
+botonPrioridad = botonUnidad("OBJETIVO", Comic.GRIS, 2, function()
 	pedir("prioridad", modo.uid)
 end)
-botonMunicion = botonUnidad("MUNICIÓN", Comic.ROJO, 3, function()
+botonMunicion = botonUnidad("MUNICIÓN", Comic.GRIS, 3, function()
 	pedir("municion", modo.uid)
 end)
-botonMover = botonUnidad("✥ MOVER", Comic.ROJO, 4, function()
+-- Mover y vender comparten fila.
+local filaAcciones = crear("Frame", { LayoutOrder = 4, Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1 }, accionesUnidad)
+crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8) }, filaAcciones)
+botonMover = botonUnidad("MOVER", Comic.GRIS, 4, function()
 	local m = unidadDe(modo.uid)
 	modo = { tipo = "mover", uid = modo.uid, heroe = m and m:GetAttribute("Heroe") }
 	refrescar()
@@ -382,8 +467,15 @@ botonVender = botonUnidad("VENDER", Comic.GRIS, 5, function()
 	modo = nil
 	refrescar()
 end)
-botonVender.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
-Comic.boton("X", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 14, 0, -18), Size = UDim2.fromOffset(42, 42), TextSize = 26 }, panelUnidad, function()
+botonVender.BackgroundColor3 = Color3.fromRGB(150, 45, 50)
+for _, b in { botonMover, botonVender } do
+	b.Parent = filaAcciones
+	b.Size = UDim2.new(0.5, -4, 1, 0)
+	b.TextSize = 15
+end
+botonPrioridad.Size, botonPrioridad.TextSize = UDim2.new(1, 0, 0, 36), 15
+botonMunicion.Size, botonMunicion.TextSize = UDim2.new(1, 0, 0, 36), 15
+Comic.boton("X", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 10), Size = UDim2.fromOffset(30, 30), TextSize = 14, BackgroundColor3 = Comic.GRIS }, panelUnidad, function()
 	modo = nil
 	refrescar()
 end)

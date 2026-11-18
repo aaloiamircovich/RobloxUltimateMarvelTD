@@ -28,6 +28,17 @@ Como Anime Vanguards, en todo el juego (también cinemáticas, carteles, transic
   «LLEGA EL JEFE»), fin de partida (VICTORIA en dorado, DERROTA en gris), cartel del mapa, transición (velo oscuro con
   una línea roja) y pantalla de carga (fondo oscuro, título blanco, barra roja fina).
 
+## HUD de partida (fase B, 18/11/2026)
+- **Panel de unidad** (izquierda, decidido por el usuario): retrato con marco de rareza, nombre, rareza y nivel,
+  rasgo y grados; **5 estrellas** de mejora; daño, alcance y ataques/s con **lo que queda tras la próxima mejora en
+  verde** (`27 → 32`, calculado con `Mejoras.efecto`); qué trae la próxima mejora; botón **MEJORAR** grande con el
+  costo (dorado si alcanza la plata); objetivo, munición (Hawkeye) y Mover / Vender en una fila.
+- **Barra de oleadas**: un segmento por oleada (pasadas tenues, la actual roja, el jefe al final con ☠) y una franja
+  con **AHORA** y **PRÓXIMA**: los enemigos de esta oleada y de la siguiente con su cantidad. El servidor los publica
+  en los atributos `Composicion` y `Proxima` de la partida al empezar cada oleada (`Partida.luau`). En Infinito no hay
+  segmentos (no tiene total).
+- Tarjetas del escuadrón con degradado de rareza y la tecla 1–6 en un círculo oscuro.
+
 ## Interfaz (diseño anterior, 14/11/2026)
 - **PC primero**: diseño base 1280×720. Cada bloque del HUD tiene su `UIScale` (`Comic.escalar`) entre ×0,55 y ×1,35
   según el lado más corto de la pantalla, así nada se pisa en ventanas chicas.

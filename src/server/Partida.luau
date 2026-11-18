@@ -1332,6 +1332,35 @@ function Partida.nueva(op)
 			local oleada2D = if sinFin then n elseif esRaid then n * 2 else Actos.oleada2D(op.acto, n)
 			local jefe = if sinFin then nil elseif esRaid or n ~= Actos.OLEADAS then false else op.acto
 			local cola, mod = Oleadas.preparar(oleada2D, enemigosDatos, NIVEL, INDICE_NIVEL, equipo, modo, jefe)
+			-- Barra de oleadas del cliente (docs/INTERFAZ.md): quiénes vienen en esta oleada y en la próxima.
+			local function resumen(c): string
+				local cuenta, orden = {}, {}
+				for _, entrada in c do
+					local nombre = entrada.enemigo and entrada.enemigo.name
+					if nombre then
+						if not cuenta[nombre] then
+							table.insert(orden, nombre)
+						end
+						cuenta[nombre] = (cuenta[nombre] or 0) + 1
+					end
+				end
+				local partes = {}
+				for _, nombre in orden do
+					table.insert(partes, `{nombre} ×{cuenta[nombre]}`)
+				end
+				return table.concat(partes, " · ")
+			end
+			fijar("Composicion", resumen(cola))
+			local totalOleadas = estado:GetAttribute("OleadasTotal") or 0
+			if not esRaid and (sinFin or n < totalOleadas) then
+				local n2 = n + 1
+				local oleadaSiguiente = if sinFin then n2 else Actos.oleada2D(op.acto, n2)
+				local jefeSiguiente = if sinFin then nil elseif n2 ~= Actos.OLEADAS then false else op.acto
+				local ok, colaSiguiente = pcall(Oleadas.preparar, oleadaSiguiente, enemigosDatos, NIVEL, INDICE_NIVEL, equipo, modo, jefeSiguiente)
+				fijar("Proxima", if ok then resumen(colaSiguiente) else nil)
+			else
+				fijar("Proxima", nil)
+			end
 			fijar("Mensaje", `Oleada {n}: {mod.nombre}` .. (if n == Actos.OLEADAS and not sinFin and not esRaid then " · ¡JEFE!" else ""))
 			if esRaid and n > Raid.OLEADAS_ESBIRROS then
 				-- Oleada final: sólo el jefe de raid, con vida según los jugadores, lento y con fases.

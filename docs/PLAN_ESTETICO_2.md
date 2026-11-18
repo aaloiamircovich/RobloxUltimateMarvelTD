@@ -36,7 +36,7 @@ comparando con All Star Tower Defense, Anime Adventures, Tower Defense Simulator
 - **All Star Tower Defense (X)**: hub caminable con zonas y botón de viaje, animación de invocación que se puede
   saltar, orbes equipables y árbol de habilidades.
 
-## Fase A · Interfaz limpia (primero)
+## Fase A · Interfaz limpia (primero) — ✅ 18/11/2026
 1. **Sistema de estilo nuevo**: reemplazar `Comic.luau` por un módulo de estilo (`Estilo UI`) con paneles oscuros
    semitransparentes, esquinas suaves, borde fino, sombra, tipografía limpia (títulos en una fuente gruesa sin
    inclinación, textos en Gotham/Montserrat), botones con estados (normal, encima, presionado, deshabilitado) y
@@ -55,7 +55,7 @@ comparando con All Star Tower Defense, Anime Adventures, Tower Defense Simulator
 9. **Rehacer en el estilo nuevo** lo cómic: invocación (portal, cartas, Mítico), evolución, fin de partida, entrada
    de jefe, transición y pantalla de carga.
 
-## Fase B · HUD de partida
+## Fase B · HUD de partida — ✅ 18/11/2026
 1. **Panel de unidad renovado**: retrato, estrellas de mejora, próximo stat que sube, botón MEJORAR grande, vender
    y prioridad de objetivo.
 2. **Barra de oleadas**: las que vienen, el jefe al final y los tipos de enemigo de cada una.
