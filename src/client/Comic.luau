@@ -68,6 +68,24 @@ function Comic.resaltar(objeto: GuiObject, color: Color3)
 	trazo.Color, trazo.Transparency, trazo.Thickness = color, 0, 2
 end
 
+-- Marca Shiny (docs/SHINY.md) en una tarjeta: borde dorado con un brillo que lo recorre y la etiqueta «★ SHINY».
+Comic.DORADO_SHINY = Color3.fromRGB(255, 214, 90)
+function Comic.marcoShiny(objeto: GuiObject)
+	Comic.resaltar(objeto, Comic.DORADO_SHINY)
+	local trazo = objeto:FindFirstChildOfClass("UIStroke")
+	trazo.Thickness = 3
+	local g = Comic.crear("UIGradient", { Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Comic.DORADO_SHINY), ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)), ColorSequenceKeypoint.new(1, Comic.DORADO_SHINY) }) }, trazo)
+	task.spawn(function()
+		while g.Parent and objeto.Parent do
+			g.Rotation = (g.Rotation + 5) % 360
+			task.wait(0.03)
+		end
+	end)
+	local etiqueta = Comic.crear("TextLabel", { Text = "★ SHINY", Font = Comic.TITULO, TextSize = 10, TextColor3 = Color3.fromRGB(40, 28, 0), BackgroundColor3 = Comic.DORADO_SHINY, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -4, 0, 4), Size = UDim2.fromOffset(52, 15), ZIndex = (objeto.ZIndex or 1) + 3 }, objeto)
+	Comic.crear("UICorner", { CornerRadius = UDim.new(1, 0) }, etiqueta)
+	return etiqueta
+end
+
 -- Texto limpio, sin contorno grueso (una sombra muy suave para leerse sobre el 3D).
 function Comic.texto(props, padre)
 	props.BackgroundTransparency = 1

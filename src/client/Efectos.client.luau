@@ -220,6 +220,36 @@ RunService.RenderStepped:Connect(function(dt)
 	end
 end)
 
+-- Shiny (docs/SHINY.md): contorno dorado suave y chispas doradas que flotan alrededor.
+local function brilloShiny(modelo: Model)
+	if not modelo.Parent or modelo:FindFirstChild("BrilloShiny") then
+		return
+	end
+	local h = Instance.new("Highlight")
+	h.Name = "BrilloShiny"
+	h.FillColor = Color3.fromRGB(255, 214, 90)
+	h.FillTransparency = 0.85
+	h.OutlineColor = Color3.fromRGB(255, 220, 110)
+	h.OutlineTransparency = 0.15
+	h.DepthMode = Enum.HighlightDepthMode.Occluded
+	h.Parent = modelo
+	local raiz = modelo:FindFirstChild("HumanoidRootPart")
+	if raiz then
+		local e = Instance.new("ParticleEmitter")
+		e.Name = "ChispasShiny"
+		e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+		e.Color = ColorSequence.new(Color3.fromRGB(255, 230, 140), Color3.fromRGB(255, 190, 60))
+		e.LightEmission = 1
+		e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 0) })
+		e.Lifetime = NumberRange.new(1, 1.6)
+		e.Speed = NumberRange.new(0.5, 1.5)
+		e.SpreadAngle = Vector2.new(180, 180)
+		e.Acceleration = Vector3.new(0, 1.5, 0)
+		e.Rate = 10
+		e.Parent = raiz
+	end
+end
+
 local function vender(modelo: Model)
 	local base = piso(modelo)
 	local humo = pieza({ Transparency = 1, Size = Vector3.new(1, 1, 1), CFrame = CFrame.new(base + Vector3.new(0, 2, 0)) })
@@ -249,6 +279,9 @@ local function seguir(modelo: Instance)
 	end
 	task.defer(aparecer, modelo)
 	task.delay(0.5, anillo, modelo) -- después de que el servidor la apoye
+	if modelo:GetAttribute("Shiny") then
+		task.delay(0.2, brilloShiny, modelo)
+	end
 	local mejora = modelo:GetAttribute("Mejora") or 0
 	if mejora >= MEJORA_MAXIMA then
 		aura(modelo)

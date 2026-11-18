@@ -143,6 +143,9 @@ do
 				local c = Comic.crear("Frame", { Size = UDim2.fromOffset(140, 74), BackgroundColor3 = Comic.FONDO }, fila3)
 				Comic.borde(c)
 				Comic.resaltar(c, color)
+				if u.shiny then
+					Comic.marcoShiny(c)
+				end
 				local marco = Comic.crear("Frame", { Size = UDim2.fromOffset(64, 74), BackgroundTransparency = 1 }, c)
 				Comic.retrato(marco, u.heroId, h.name, color, Personajes.base(u.heroId))
 				Comic.texto({ Text = h.name, TextSize = 13, Position = UDim2.fromOffset(66, 14), Size = UDim2.new(1, -70, 0, 32), TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left }, c)
@@ -1447,6 +1450,9 @@ local function dibujarEscuadron()
 			-- Tarjeta: retrato 3D, degradado del color de la rareza abajo, nombre, nivel y costo.
 			local color = COLOR_RAREZA[h.rarity] or Comic.CREMA
 			Comic.resaltar(c, color)
+			if u.shiny then
+				Comic.marcoShiny(c).Position = UDim2.new(1, -4, 0, 4)
+			end
 			local pie = Comic.crear("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, 0, 0.5, 0), BackgroundColor3 = color, BackgroundTransparency = 0.5, BorderSizePixel = 0 }, c)
 			Comic.crear("UIGradient", { Rotation = 90, Transparency = NumberSequence.new(1, 0.15) }, pie)
 			Comic.crear("UICorner", { CornerRadius = UDim.new(0, 10) }, pie)

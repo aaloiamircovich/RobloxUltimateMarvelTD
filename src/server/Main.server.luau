@@ -92,7 +92,7 @@ perfilPublico.OnServerInvoke = function(_jugador, userId)
 	end)
 	local destacadas = {}
 	for i = 1, math.min(3, #mejores) do
-		table.insert(destacadas, { heroId = mejores[i].heroId, level = mejores[i].level })
+		table.insert(destacadas, { heroId = mejores[i].heroId, level = mejores[i].level, shiny = mejores[i].shiny == true })
 	end
 	local logros, actos = 0, 0
 	for _ in perfil.logros or {} do

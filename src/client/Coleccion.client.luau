@@ -236,7 +236,9 @@ local function tarjetaUnidad(u, padre, elegida: boolean, enEscuadron: boolean, a
 	local b = boton("", { BackgroundColor3 = if elegida then Color3.fromRGB(78, 88, 120) else BOTON }, padre, alClic)
 	Comic.resaltar(b, color)
 	-- Brillo que recorre el marco de los más raros.
-	if h.rarity == "Mythic" or h.rarity == "Secret" then
+	if u.shiny then
+		Comic.marcoShiny(b)
+	elseif h.rarity == "Mythic" or h.rarity == "Secret" then
 		local trazo = b:FindFirstChildOfClass("UIStroke")
 		local g = crear("UIGradient", { Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, color), ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)), ColorSequenceKeypoint.new(1, color) }) }, trazo)
 		task.spawn(function()
@@ -355,13 +357,17 @@ local function pantallaUnidades()
 	crear("UIGradient", { Rotation = 90, Transparency = NumberSequence.new(0.3, 1) }, vista)
 	Cinematica.modelo3D(vista, u.heroId, true)
 	texto({ Position = UDim2.fromOffset(12, 132), Size = UDim2.new(1, -24, 0, 22), TextSize = 18, Font = Comic.TITULO, Text = Comic.mayus(h.name), TextXAlignment = Enum.TextXAlignment.Left }, der)
+	if u.shiny then
+		Comic.marcoShiny(vista)
+		texto({ AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 132), Size = UDim2.fromOffset(140, 22), TextSize = 12, Font = Comic.TEXTO, TextColor3 = Comic.DORADO_SHINY, Text = "+5 % de daño", TextXAlignment = Enum.TextXAlignment.Right }, der)
+	end
 	texto({ Position = UDim2.fromOffset(12, 154), Size = UDim2.new(1, -24, 0, 16), TextSize = 12, TextColor3 = color, Text = `{NOMBRE_RAREZA[h.rarity]} · {h.category} · Nv {u.level}`, TextXAlignment = Enum.TextXAlignment.Left }, der)
 	-- Barra de XP.
 	local fondoXp = crear("Frame", { Position = UDim2.fromOffset(12, 174), Size = UDim2.new(1, -24, 0, 6), BackgroundColor3 = Comic.FONDO }, der)
 	local llena = if u.level >= Unidades.NIVEL_MAXIMO then 1 else u.xp / Unidades.xpParaSubir(u.level)
 	crear("Frame", { Size = UDim2.fromScale(math.clamp(llena, 0, 1), 1), BackgroundColor3 = Comic.AMARILLO }, fondoXp)
 	local bono = 1 + (u.level - 1) / 100
-	stat(der, 186, "Daño", tostring(math.floor((h.damage or 0) * bono + 0.5)), Comic.AMARILLO)
+	stat(der, 186, "Daño", tostring(math.floor((h.damage or 0) * bono * Unidades.bonoShiny(u) + 0.5)), Comic.AMARILLO)
 	stat(der, 204, "Alcance", tostring(h.range or "?"))
 	stat(der, 222, "Ataques/s", tostring(h.fireRate or "?"))
 	local g = Rasgos.grados(u)

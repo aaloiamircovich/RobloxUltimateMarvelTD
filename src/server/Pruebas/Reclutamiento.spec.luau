@@ -83,6 +83,31 @@ return function()
 	end
 	assert(#p.units == 91 and select(2, Banner.invocar(p, 10, 0, azar)) ~= nil, "no pasa de 100")
 
+	-- Shiny (docs/SHINY.md): ~1,5 % de las invocaciones, +5 % de daño y se hereda al evolucionar.
+	local shinies = 0
+	for _, u in p.units do
+		if u.shiny then
+			shinies += 1
+		end
+	end
+	assert(shinies <= 8, `Shiny poco frecuente ({shinies} de 90)`)
+	local cuentaShiny = 0
+	for _ = 1, 20000 do
+		if Unidades.tirarShiny(azar) then
+			cuentaShiny += 1
+		end
+	end
+	assert(math.abs(cuentaShiny / 20000 - 0.015) < 0.004, `1,5 % de Shiny ({cuentaShiny}/20000)`)
+	assert(Unidades.bonoShiny({ shiny = true }) == 1.05 and Unidades.bonoShiny({}) == 1, "+5 % de daño")
+	local pe = { gems = 0, cores = 1e6, units = {}, nextUnitUid = 1, squad = {}, unlockedHeroIds = {}, equippedItems = {}, ownedItemIds = {}, level = 1 }
+	local c1 = Unidades.agregar(pe, "hawkeye", 1, true)
+	local c2 = Unidades.agregar(pe, "hawkeye")
+	local c3 = Unidades.agregar(pe, "hawkeye")
+	local evo = Unidades.evolucionar(pe, { c2.uid, c3.uid, c1.uid })
+	assert(evo and evo.shiny == true, "la evolución es Shiny si alguna copia lo era")
+	local d1, d2, d3 = Unidades.agregar(pe, "hawkeye"), Unidades.agregar(pe, "hawkeye"), Unidades.agregar(pe, "hawkeye")
+	assert(Unidades.evolucionar(pe, { d1.uid, d2.uid, d3.uid }).shiny == nil, "sin copias Shiny, no es Shiny")
+
 	-- Venta: no las del escuadrón; devuelve gemas por rareza.
 	assert(select(2, Unidades.vender(p, p.squad[1])) ~= nil, "no se vende una del escuadrón")
 	local fuera

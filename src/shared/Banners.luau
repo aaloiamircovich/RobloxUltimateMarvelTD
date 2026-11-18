@@ -85,7 +85,7 @@ function Banners.limitado(perfil, cantidad: number, t: number, azar: () -> numbe
 			end
 		end
 		perfil.shop.limitadoPity = if id == destacado then 0 else perfil.shop.limitadoPity + 1
-		table.insert(nuevas, Unidades.agregar(perfil, id))
+		table.insert(nuevas, Unidades.agregar(perfil, id, nil, Unidades.tirarShiny(azar)))
 	end
 	return nuevas, nil
 end

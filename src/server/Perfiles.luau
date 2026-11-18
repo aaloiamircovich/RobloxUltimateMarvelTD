@@ -91,7 +91,7 @@ function Perfiles.normalizar(crudo)
 			local uid = type(u) == "table" and entero(u.uid, 1, 1e9, nil)
 			if uid and not usados[uid] and type(u.heroId) == "string" and Personajes.de(u.heroId) and #p.units < Unidades.MAX_INVENTARIO then
 				usados[uid] = true
-				local nueva = { uid = uid, heroId = u.heroId, level = entero(u.level, 1, Unidades.NIVEL_MAXIMO, 1), xp = entero(u.xp, 0, 1e9, 0) }
+				local nueva = { uid = uid, heroId = u.heroId, level = entero(u.level, 1, Unidades.NIVEL_MAXIMO, 1), xp = entero(u.xp, 0, 1e9, 0), shiny = if u.shiny == true then true else nil }
 				Rasgos.normalizarUnidad(u, nueva) -- rasgo y grados (docs/RASGOS.md)
 				table.insert(p.units, nueva)
 				p.nextUnitUid = math.max(p.nextUnitUid, uid + 1)

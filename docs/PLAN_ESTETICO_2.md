@@ -61,7 +61,7 @@ comparando con All Star Tower Defense, Anime Adventures, Tower Defense Simulator
 2. **Barra de oleadas**: las que vienen, el jefe al final y los tipos de enemigo de cada una.
 3. Barra superior, tarjetas del escuadrón para colocar, votaciones y carteles de oleada en el estilo nuevo.
 
-## Fase C · Shiny
+## Fase C · Shiny — ✅ 18/11/2026, `docs/SHINY.md`
 - Sistema: 1,5 % por invocación (ambos banners), se guarda en la unidad, se ve en todas partes, +5 % de daño.
   Toca perfil, invocación, intercambio y combate: necesita sus pruebas.
 - Visual: brillo dorado y partículas en el modelo, marco especial en la tarjeta, revelación propia al invocar.

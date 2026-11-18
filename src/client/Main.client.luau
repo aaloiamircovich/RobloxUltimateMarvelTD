@@ -376,7 +376,7 @@ local function elegirTarjeta(ranura: number, id: string)
 end
 
 -- Tarjeta del escuadrón: retrato 3D, nivel, colocadas/límite, costo y tecla.
-local function tarjeta(i: number, ranura: number, id: string, nivel: number, limite: number)
+local function tarjeta(i: number, ranura: number, id: string, nivel: number, limite: number, shiny: boolean?)
 	local config = heroes[id]
 	local color = Comic.RAREZA[config.rarity] or Comic.CREMA
 	local t = crear("TextButton", { Name = "Tarjeta" .. i, Text = "", Size = UDim2.fromOffset(106, 120), BackgroundColor3 = Comic.FONDO, AutoButtonColor = true, LayoutOrder = i }, tarjetas)
@@ -405,7 +405,10 @@ local function tarjeta(i: number, ranura: number, id: string, nivel: number, lim
 	crear("UICorner", { CornerRadius = UDim.new(1, 0) }, tecla)
 	t:SetAttribute("Costo", costo)
 	t:SetAttribute("Limite", limite)
-	t:SetAttribute("ColorRareza", color)
+	t:SetAttribute("ColorRareza", if shiny then Comic.DORADO_SHINY else color)
+	if shiny then
+		Comic.marcoShiny(t).Position = UDim2.new(1, -4, 0, 22)
+	end
 	t:SetAttribute("Heroe", id)
 	t.Activated:Connect(function()
 		elegirTarjeta(ranura, id)
@@ -424,7 +427,7 @@ local function armarEscuadron()
 		local partes = string.split(entrada, ":")
 		local ranura, id = tonumber(partes[1]), partes[2]
 		if ranura and id and heroes[id] then
-			tarjetasHeroe[ranura] = tarjeta(i, ranura, id, tonumber(partes[3]) or 1, tonumber(partes[4]) or 1)
+			tarjetasHeroe[ranura] = tarjeta(i, ranura, id, tonumber(partes[3]) or 1, tonumber(partes[4]) or 1, partes[5] == "1")
 			table.insert(ordenRanuras, ranura)
 		end
 	end

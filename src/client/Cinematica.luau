@@ -134,7 +134,7 @@ end
 --------------------------------------------------------------------------------
 -- Revelación grande de un personaje
 --------------------------------------------------------------------------------
-local function revelar(id: string, saltar: { valor: boolean })
+local function revelar(id: string, saltar: { valor: boolean }, shiny: boolean?)
 	local h = Personajes.todos[id]
 	if not h then
 		return
@@ -176,6 +176,18 @@ local function revelar(id: string, saltar: { valor: boolean })
 	local cartel = Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.78), Size = UDim2.fromOffset(640, 120), BackgroundTransparency = 1, ZIndex = 33 }, capa)
 	Comic.crear("UIScale", { Scale = escala() }, cartel)
 	Comic.texto({ Text = Comic.mayus(h.name), Size = UDim2.new(1, 0, 0, 58), TextStrokeTransparency = 0.4, ZIndex = 34 }, cartel)
+	if shiny then
+		-- Shiny (docs/SHINY.md): halo dorado extra, destello y la etiqueta arriba del nombre.
+		rayos(capa, Comic.DORADO_SHINY, 6)
+		destello(capa, Comic.DORADO_SHINY)
+		local marca = Comic.texto({ Text = "★ SHINY ★", TextSize = 22, TextColor3 = Comic.DORADO_SHINY, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 0, -6), Size = UDim2.fromOffset(300, 26), ZIndex = 35 }, cartel)
+		task.spawn(function()
+			while marca.Parent do
+				marca.TextTransparency = 0.15 + math.sin(os.clock() * 5) * 0.15
+				task.wait()
+			end
+		end)
+	end
 	Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 64), Size = UDim2.fromOffset(110, 3), BackgroundColor3 = color, BorderSizePixel = 0, ZIndex = 34 }, cartel)
 	Comic.texto({ Text = `{Comic.mayus(NOMBRE[h.rarity] or h.rarity)}  ·  {h.ability or ""}`, Position = UDim2.fromOffset(0, 74), Size = UDim2.new(1, 0, 0, 26), TextSize = 20, TextColor3 = color, ZIndex = 34 }, cartel)
 	if mitico then
@@ -256,7 +268,7 @@ function Cinematica.invocar(nuevas)
 		portal:Destroy()
 
 		if #nuevas == 1 then
-			revelar(nuevas[1].heroId, saltar)
+			revelar(nuevas[1].heroId, saltar, nuevas[1].shiny)
 		else
 			-- Cartas boca abajo que se dan vuelta de a una; Épico o más se muestra en grande.
 			local mesa = Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(5 * 170, 2 * 230), BackgroundTransparency = 1, ZIndex = 22 }, f)
@@ -269,7 +281,7 @@ function Cinematica.invocar(nuevas)
 				Comic.borde(carta)
 				local giro = Comic.crear("UIScale", { Scale = 1 }, carta)
 				local dorso = Comic.texto({ Text = "◆", TextSize = 48, TextColor3 = Comic.ROJO, Size = UDim2.fromScale(1, 1), ZIndex = 24 }, carta)
-				table.insert(cartas, { carta = carta, giro = giro, dorso = dorso, id = u.heroId })
+				table.insert(cartas, { carta = carta, giro = giro, dorso = dorso, id = u.heroId, shiny = u.shiny })
 			end
 			local function darVuelta(c, rapido: boolean)
 				local h = Personajes.todos[c.id]
@@ -282,6 +294,9 @@ function Cinematica.invocar(nuevas)
 				Comic.retrato(caja, c.id, h and h.name or c.id, color, Personajes.base(c.id))
 				Comic.texto({ Text = h and h.name or c.id, Position = UDim2.new(0, 6, 1, -50), Size = UDim2.new(1, -12, 0, 28), TextColor3 = color, ZIndex = 25 }, c.carta)
 				Comic.texto({ Text = NOMBRE[h and h.rarity or ""] or "", Position = UDim2.new(0, 6, 1, -24), Size = UDim2.new(1, -12, 0, 20), Font = Comic.TEXTO, TextSize = 14, ZIndex = 25 }, c.carta)
+				if c.shiny then
+					Comic.marcoShiny(c.carta).ZIndex = 26
+				end
 				c.giro.Scale = 1.25
 				tween(c.giro, t * 2, { Scale = 1 }, Enum.EasingStyle.Back)
 			end
@@ -293,8 +308,8 @@ function Cinematica.invocar(nuevas)
 					tween(c.giro, 0.12, { Scale = 0.05 }).Completed:Wait()
 					darVuelta(c, false)
 					task.wait(0.22)
-					if h and ORDEN[h.rarity] >= ORDEN.Epic and not saltar.valor then
-						revelar(c.id, saltar)
+					if h and (ORDEN[h.rarity] >= ORDEN.Epic or c.shiny) and not saltar.valor then
+						revelar(c.id, saltar, c.shiny)
 					end
 				end
 			end

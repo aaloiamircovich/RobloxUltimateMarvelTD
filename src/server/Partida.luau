@@ -218,9 +218,9 @@ local function escuadronDe(perfil)
 	for _, uid in (perfil and perfil.squad) or {} do
 		local u = Unidades.buscar(perfil, uid)
 		if u then
-			local e = { uid = uid, heroId = u.heroId, nivel = u.level, limite = Unidades.LIMITE_COLOCACION[heroes[u.heroId].rarity] or 1, rasgo = u.rasgo, grados = u.grados }
+			local e = { uid = uid, heroId = u.heroId, nivel = u.level, limite = Unidades.LIMITE_COLOCACION[heroes[u.heroId].rarity] or 1, rasgo = u.rasgo, grados = u.grados, shiny = u.shiny == true }
 			table.insert(r, e)
-			table.insert(texto, `{e.uid}:{e.heroId}:{e.nivel}:{e.limite}`)
+			table.insert(texto, `{e.uid}:{e.heroId}:{e.nivel}:{e.limite}:{if e.shiny then 1 else 0}`)
 		end
 	end
 	return r, table.concat(texto, ",")
@@ -582,7 +582,7 @@ function Partida.nueva(op)
 	local function statsUnidad(u)
 		local s = Progresion.stats(u.config, 1, u.objeto, vidasEquivalentes(), true)
 		local m = Mejoras.efecto(u.config, u.mejora)
-		s.damage *= (1 + m.dano) * Unidades.bonoDano(u.nivelUnidad)
+		s.damage *= (1 + m.dano) * Unidades.bonoDano(u.nivelUnidad) * Unidades.bonoShiny(u) -- Shiny: +5 % (docs/SHINY.md)
 		s.range *= 1 + m.alcance
 		s.fireRate *= 1 + m.cadencia
 		Rasgos.aplicar(s, u) -- rasgo y grados (docs/RASGOS.md)
@@ -694,6 +694,7 @@ function Partida.nueva(op)
 			invertido = costo,
 			prioridad = "primero",
 			nivelUnidad = e.nivel,
+			shiny = e.shiny,
 			rasgo = e.rasgo,
 			grados = e.grados,
 			objeto = objeto,
@@ -710,6 +711,7 @@ function Partida.nueva(op)
 		modelo:SetAttribute("Uid", u.uid)
 		modelo:SetAttribute("Dueno", j.UserId)
 		modelo:SetAttribute("Heroe", e.heroId)
+		modelo:SetAttribute("Shiny", e.shiny or nil) -- brillo dorado en los clientes (Efectos.client.luau)
 		modelo:SetAttribute("Ranura", ranura)
 		modelo:SetAttribute("NivelUnidad", e.nivel)
 		modelo:SetAttribute("Rasgo", e.rasgo)

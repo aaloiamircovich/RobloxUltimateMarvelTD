@@ -94,7 +94,7 @@ function Banner.invocar(perfil, cantidad: number, hora: number, azar: () -> numb
 	for _ = 1, cantidad do
 		local id = Banner.tirar(destacados, perfil.shop.heroPity >= Banner.GARANTIA, azar)
 		perfil.shop.heroPity = if Personajes.de(id).rarity == "Common" then perfil.shop.heroPity + 1 else 0
-		table.insert(nuevas, Unidades.agregar(perfil, id))
+		table.insert(nuevas, Unidades.agregar(perfil, id, nil, Unidades.tirarShiny(azar)))
 	end
 	return nuevas, nil
 end

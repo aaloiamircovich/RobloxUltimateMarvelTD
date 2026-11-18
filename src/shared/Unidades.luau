@@ -53,8 +53,22 @@ function Unidades.sincronizar(perfil)
 	end
 end
 
-function Unidades.agregar(perfil, heroId: string, nivel: number?)
-	local u = { uid = perfil.nextUnitUid, heroId = heroId, level = nivel or 1, xp = 0 }
+-- Shiny (docs/SHINY.md, decidido el 18/11/2026): 1,5 % en cada invocación de los dos banners, brillo dorado y
+-- +5 % de daño. Se guarda en la unidad (u.shiny = true), viaja con ella en los intercambios y se hereda al evolucionar.
+Unidades.PROB_SHINY = 0.015
+Unidades.BONO_SHINY = 0.05
+
+function Unidades.tirarShiny(azar: () -> number): boolean
+	return azar() < Unidades.PROB_SHINY
+end
+
+-- Multiplicador de daño por ser Shiny.
+function Unidades.bonoShiny(u): number
+	return if u and u.shiny then 1 + Unidades.BONO_SHINY else 1
+end
+
+function Unidades.agregar(perfil, heroId: string, nivel: number?, shiny: boolean?)
+	local u = { uid = perfil.nextUnitUid, heroId = heroId, level = nivel or 1, xp = 0, shiny = if shiny then true else nil }
 	perfil.nextUnitUid += 1
 	table.insert(perfil.units, u)
 	if #perfil.squad < Cuenta.casillas(perfil.level or 1) then
@@ -140,9 +154,10 @@ function Unidades.evolucionar(perfil, uids): (any?, string?)
 	if perfil.cores < costo then
 		return nil, `Faltan {costo - perfil.cores} núcleos`
 	end
-	local nivel, lugar = 1, nil
+	local nivel, lugar, shiny = 1, nil, false
 	for _, u in elegidas do
 		nivel = math.max(nivel, u.level)
+		shiny = shiny or u.shiny == true
 		local enEscuadron = table.find(perfil.squad, u.uid)
 		if enEscuadron then
 			lugar = lugar or enEscuadron
@@ -151,7 +166,8 @@ function Unidades.evolucionar(perfil, uids): (any?, string?)
 		table.remove(perfil.units, select(2, Unidades.buscar(perfil, u.uid)))
 	end
 	perfil.cores -= costo
-	local nueva = { uid = perfil.nextUnitUid, heroId = destino, level = nivel, xp = 0 }
+	-- Shiny si alguna de las copias lo era.
+	local nueva = { uid = perfil.nextUnitUid, heroId = destino, level = nivel, xp = 0, shiny = if shiny then true else nil }
 	-- La evolución hereda el rasgo y los grados de la copia con el mejor rasgo.
 	local mejor
 	for _, u in elegidas do
