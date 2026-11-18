@@ -159,7 +159,8 @@ function Comic.retrato(padre: GuiObject, id: string, nombre: string, color: Colo
 	local m = plantilla:Clone()
 	m.Parent = mundo
 	local humanoide = m:FindFirstChildOfClass("Humanoid")
-	local animator = humanoide and humanoide:FindFirstChildOfClass("Animator")
+	-- Algunos retratos llegan sin Animator (Nightcrawler quedaba en pose T): se crea si falta.
+	local animator = humanoide and (humanoide:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoide))
 	if animator then
 		local Reposo = require(game:GetService("ReplicatedStorage").Shared.Reposo)
 		local anim = Instance.new("Animation")

@@ -36,6 +36,17 @@ Los 212 retratos de cuerpo entero con su reposo, de a 16 por página (14 página
 - **Más chicos que el resto en la foto** (algo agranda su caja): Gamora, Heimdall, Lady Sif evolucionado,
   Nightcrawler evolucionado y Elsa Bloodstone.
 
+## Arreglos (17/11/2026)
+- **Nightcrawler en pose T**: tiene el mismo esqueleto que los demás; su retrato llegaba sin `Animator` y el reposo
+  no se reproducía. `Comic.retrato` y `Cinematica.modelo3D` ahora lo crean si falta. En partida ya se creaba.
+- **Armas que atraviesan**: nuevo reposo `espadachin` (espada baja al costado, generado con la IA de Roblox) para
+  Valkyrie, Lady Sif, Heimdall y Magik (sus evoluciones lo heredan).
+- **Los «más chicos»** miden lo mismo que el resto (3,97 studs de pies a cabeza; evoluciones ×1,1): en la foto los
+  achicaba la caja que suman espada, capa o alas. No hace falta tocarlos.
+- **Los 5 grises**: sus texturas cargan bien (`PreloadAsync` → Success) y sus mallas tienen el tamaño correcto, así
+  que probablemente era la carga en la foto. Falta verlos en 3D: la vista de Studio dejó de dibujar el 3D y hay que
+  reiniciarlo.
+
 ## Verificado en Play
 Dagger colocada queda con los pies a 0,09 studs del suelo; un Thor de prueba muestra el anillo arcoíris (visto desde
 arriba) y su entrada; las 27 animaciones se generaron y publicaron.

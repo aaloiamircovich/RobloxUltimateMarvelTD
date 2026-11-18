@@ -13,6 +13,8 @@ Reposo.ESTILOS = {
 	pequeno = "rbxassetid://75136570730254", -- animales chicos
 	armadura = "rbxassetid://136657500362740", -- trajes robóticos
 	comandante = "rbxassetid://140137303306970", -- los que no atacan
+	-- Espada baja al costado (17/11/2026): con «guerrero» la hoja atravesaba la pierna o el cuerpo.
+	espadachin = "rbxassetid://95756352340287",
 }
 
 -- Personajes base cuyo estilo no se deduce bien del efecto de ataque.
@@ -27,8 +29,8 @@ Reposo.POR_PERSONAJE = {
 	-- comandante (no atacan)
 	nick_fury = "comandante", maria_hill = "comandante", wasp = "comandante", wong = "comandante", profesor_x = "comandante",
 	-- guerrero (armas cuerpo a cuerpo)
-	thor = "guerrero", odin = "guerrero", blade = "guerrero", magik = "guerrero", angela = "guerrero", valkyrie = "guerrero",
-	lady_sif = "guerrero", heimdall = "guerrero", gamora = "guerrero", namor = "guerrero", namora = "guerrero",
+	thor = "guerrero", odin = "guerrero", blade = "guerrero", magik = "espadachin", angela = "guerrero", valkyrie = "espadachin",
+	lady_sif = "espadachin", heimdall = "espadachin", gamora = "guerrero", namor = "guerrero", namora = "guerrero",
 	okoye = "guerrero", elektra = "guerrero", psylocke = "guerrero", deadpool = "guerrero", x_23 = "guerrero",
 	wolverine = "guerrero", beta_ray_bill = "guerrero", capitan_america = "guerrero", black_panther = "guerrero",
 	daredevil = "guerrero", mockingbird = "guerrero", triton = "guerrero", ghost_rider = "guerrero",

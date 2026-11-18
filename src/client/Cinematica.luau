@@ -55,7 +55,8 @@ local function modelo3D(padre: GuiObject, id: string, giro: boolean?)
 	local m = plantilla:Clone()
 	m.Parent = mundo
 	local humanoide = m:FindFirstChildOfClass("Humanoid")
-	local animator = humanoide and humanoide:FindFirstChildOfClass("Animator")
+	-- Algunos retratos llegan sin Animator (Nightcrawler quedaba en pose T): se crea si falta.
+	local animator = humanoide and (humanoide:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoide))
 	if animator then
 		local Reposo = require(ReplicatedStorage.Shared.Reposo)
 		local anim = Instance.new("Animation")
