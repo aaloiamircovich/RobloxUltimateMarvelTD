@@ -13,8 +13,9 @@ Reposo.ESTILOS = {
 	pequeno = "rbxassetid://75136570730254", -- animales chicos
 	armadura = "rbxassetid://136657500362740", -- trajes robóticos
 	comandante = "rbxassetid://140137303306970", -- los que no atacan
-	-- Espada baja al costado (17/11/2026): con «guerrero» la hoja atravesaba la pierna o el cuerpo.
-	espadachin = "rbxassetid://95756352340287",
+	-- De pie con los brazos sueltos (el mismo reposo de los encargados del lobby, 17/11/2026): con «guerrero» la
+	-- espada atravesaba la pierna o el cuerpo; uno generado «con la espada al costado» los dejaba agachados.
+	espadachin = "rbxassetid://131664289365409",
 }
 
 -- Personajes base cuyo estilo no se deduce bien del efecto de ataque.
