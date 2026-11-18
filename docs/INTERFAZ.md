@@ -2,7 +2,33 @@
 
 Decidido por el usuario el 14/11/2026.
 
-## Interfaz
+## Estilo limpio (decidido el 17/11/2026, reemplaza al cómic)
+Como Anime Vanguards, en todo el juego (también cinemáticas, carteles, transición y pantalla de carga):
+- **Base en `src/client/Comic.luau`** (conserva el nombre y las funciones): paneles de vidrio oscuro
+  (`FONDO` al 10 % de transparencia), esquinas de 10–12 px, borde fino gris (`BORDE`), títulos en **Gotham Black**
+  sin inclinar, texto en Gotham Bold, sin contornos gruesos. Rojo Marvel (`ROJO`) para lo principal, dorado
+  (`AMARILLO`) para premios, `ROJO_OSCURO` (ahora gris azulado) para tarjetas y filas, `TENUE` para texto secundario.
+- **Botones** (`Comic.boton`): relleno con degradado suave, se agrandan al pasar el mouse y se hunden al apretar.
+  **Baldosas del lobby** (`Comic.botonIcono`): vidrio oscuro con una franja del color de la sección abajo; el borde
+  toma ese color al pasar el mouse. **¡JUGAR!** va relleno de rojo. `Comic.resaltar` pinta el borde de rareza.
+- **Paneles** (`Comic.panel`): título arriba a la izquierda con una línea roja debajo, ✕ gris, aparecen creciendo.
+- Lobby: columna izquierda de 6 baldosas; derecha en **grilla de 2 columnas** arriba (en una columna tapaba
+  ¡JUGAR!); monedas en vidrio con el borde del color de cada moneda; escuadrón con **tarjetas de retrato 3D**.
+- **Unidades** (`Coleccion.client.luau`): buscador, filtro por rareza, orden (rareza, nivel, nombre), tarjetas con
+  retrato 3D y marco de rareza (brillo que recorre el marco en Mítico y Secreto, tilde verde si está en el
+  escuadrón) y **ficha**: modelo girando, rareza, categoría, nivel y XP, daño, alcance, ataques/s, rasgo, grados,
+  habilidad, y botones Equipar/Sacar, Vender y Evolucionar.
+- **Perfil**: avatar, nombre, nivel, unidades, actos ganados, logros, enemigos y jefes derrotados y las 3 mejores
+  unidades; a la derecha, los jugadores del servidor para ver su tarjeta (remoto `PerfilPublico`, sólo jugadores de
+  este servidor).
+- **Avisos** (`src/client/Avisos.luau`): tarjetas que entran por la derecha y se van a los 4 s (nivel de cuenta,
+  premio diario listo, amigo conectado, mensajes del servidor fuera de partida).
+- Cinemáticas limpias: invocación (halo de luz en vez de rayos, cartas con dorso oscuro y rombo rojo, nombre grande
+  con línea de la rareza), evolución, entrada de jefe (vidrio con franja roja), carteles de oleada («OLEADA 3»,
+  «LLEGA EL JEFE»), fin de partida (VICTORIA en dorado, DERROTA en gris), cartel del mapa, transición (velo oscuro con
+  una línea roja) y pantalla de carga (fondo oscuro, título blanco, barra roja fina).
+
+## Interfaz (diseño anterior, 14/11/2026)
 - **PC primero**: diseño base 1280×720. Cada bloque del HUD tiene su `UIScale` (`Comic.escalar`) entre ×0,55 y ×1,35
   según el lado más corto de la pantalla, así nada se pisa en ventanas chicas.
 - **Lobby con barras compactas** (como Anime Defenders):

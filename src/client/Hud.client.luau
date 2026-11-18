@@ -80,12 +80,87 @@ do
 	end
 end
 
--- Perfil.
-local textoPerfil
+-- Perfil (docs/INTERFAZ.md): tarjeta con avatar, nivel, estadísticas y las 3 mejores unidades; a la derecha, los
+-- jugadores del servidor para ver la tarjeta de cualquiera.
+local textoPerfil -- (ya no se usa: la tarjeta se arma con mostrarPerfil)
+local mostrarPerfil
 do
-	local p, cuerpo = Comic.panel(gui, "PERFIL", UDim2.fromOffset(460, 320))
+	local perfilRemoto = ReplicatedStorage:WaitForChild("PerfilPublico")
+	local p, cuerpo = Comic.panel(gui, "PERFIL", UDim2.fromOffset(720, 420))
 	paneles.perfil = p
-	textoPerfil = Comic.texto({ Font = Comic.TEXTO, TextSize = 20, Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextWrapped = true }, cuerpo)
+	local tarjeta = Comic.crear("Frame", { Size = UDim2.new(1, -230, 1, 0), BackgroundColor3 = Comic.ROJO_OSCURO }, cuerpo)
+	Comic.borde(tarjeta)
+	local lado = Comic.crear("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = UDim2.new(0, 214, 1, 0), BackgroundTransparency = 1 }, cuerpo)
+	Comic.texto({ Text = "EN ESTE SERVIDOR", TextSize = 13, TextColor3 = Comic.TENUE, Size = UDim2.new(1, 0, 0, 18), TextXAlignment = Enum.TextXAlignment.Left }, lado)
+	local lista = Comic.crear("ScrollingFrame", { Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 1, -24), BackgroundTransparency = 1, ScrollBarThickness = 4, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new() }, lado)
+	Comic.crear("UIListLayout", { Padding = UDim.new(0, 6) }, lista)
+
+	local function fila(padre, y: number, nombre: string, valor: string)
+		Comic.texto({ Text = nombre, TextSize = 14, Font = Comic.TEXTO, TextColor3 = Comic.TENUE, Position = UDim2.fromOffset(20, y), Size = UDim2.new(0.5, -20, 0, 20), TextXAlignment = Enum.TextXAlignment.Left }, padre)
+		Comic.texto({ Text = valor, TextSize = 15, Position = UDim2.new(0.5, 0, 0, y), Size = UDim2.new(0.5, -20, 0, 20), TextXAlignment = Enum.TextXAlignment.Right }, padre)
+	end
+
+	function mostrarPerfil(userId: number)
+		for _, c in tarjeta:GetChildren() do
+			if c:IsA("GuiObject") then
+				c:Destroy()
+			end
+		end
+		local ok, d = pcall(perfilRemoto.InvokeServer, perfilRemoto, userId)
+		if not ok or not d then
+			Comic.texto({ Text = "Ese perfil todavía no cargó.", TextSize = 16, Font = Comic.TEXTO, TextColor3 = Comic.TENUE, Size = UDim2.fromScale(1, 1) }, tarjeta)
+			return
+		end
+		-- Avatar, nombre y nivel.
+		local foto = Comic.crear("ImageLabel", { Position = UDim2.fromOffset(20, 18), Size = UDim2.fromOffset(84, 84), BackgroundColor3 = Comic.FONDO }, tarjeta)
+		Comic.borde(foto)
+		Comic.resaltar(foto, Comic.ROJO)
+		task.spawn(function()
+			local okFoto, imagen = pcall(Players.GetUserThumbnailAsync, Players, d.userId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+			if okFoto and foto.Parent then
+				foto.Image = imagen
+			end
+		end)
+		Comic.texto({ Text = d.nombre, TextSize = 24, Position = UDim2.fromOffset(120, 22), Size = UDim2.new(1, -140, 0, 28), TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd }, tarjeta)
+		Comic.texto({ Text = "@" .. d.usuario, TextSize = 13, Font = Comic.TEXTO, TextColor3 = Comic.TENUE, Position = UDim2.fromOffset(120, 52), Size = UDim2.new(1, -140, 0, 18), TextXAlignment = Enum.TextXAlignment.Left }, tarjeta)
+		local insignia = Comic.crear("Frame", { Position = UDim2.fromOffset(120, 76), Size = UDim2.fromOffset(110, 26), BackgroundColor3 = Comic.ROJO }, tarjeta)
+		Comic.crear("UICorner", { CornerRadius = UDim.new(1, 0) }, insignia)
+		Comic.texto({ Text = `NIVEL {d.nivel}`, TextSize = 14, Size = UDim2.fromScale(1, 1) }, insignia)
+		-- Estadísticas.
+		fila(tarjeta, 120, "Unidades", tostring(d.unidades))
+		fila(tarjeta, 144, "Actos ganados", tostring(d.actos))
+		fila(tarjeta, 168, "Logros", `{d.logros} / {d.logrosTotal}`)
+		fila(tarjeta, 192, "Enemigos derrotados", tostring(d.enemigos))
+		fila(tarjeta, 216, "Jefes derrotados", tostring(d.jefes))
+		-- Unidades destacadas.
+		Comic.texto({ Text = "UNIDADES DESTACADAS", TextSize = 13, TextColor3 = Comic.TENUE, Position = UDim2.fromOffset(20, 248), Size = UDim2.new(1, -40, 0, 18), TextXAlignment = Enum.TextXAlignment.Left }, tarjeta)
+		local fila3 = Comic.crear("Frame", { Position = UDim2.fromOffset(20, 270), Size = UDim2.new(1, -40, 0, 74), BackgroundTransparency = 1 }, tarjeta)
+		Comic.crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8) }, fila3)
+		for _, u in d.destacadas do
+			local h = Personajes.de(u.heroId)
+			if h then
+				local color = COLOR_RAREZA[h.rarity] or Comic.CREMA
+				local c = Comic.crear("Frame", { Size = UDim2.fromOffset(140, 74), BackgroundColor3 = Comic.FONDO }, fila3)
+				Comic.borde(c)
+				Comic.resaltar(c, color)
+				local marco = Comic.crear("Frame", { Size = UDim2.fromOffset(64, 74), BackgroundTransparency = 1 }, c)
+				Comic.retrato(marco, u.heroId, h.name, color, Personajes.base(u.heroId))
+				Comic.texto({ Text = h.name, TextSize = 13, Position = UDim2.fromOffset(66, 14), Size = UDim2.new(1, -70, 0, 32), TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left }, c)
+				Comic.texto({ Text = `Nv {u.level}`, TextSize = 12, TextColor3 = color, Position = UDim2.fromOffset(66, 48), Size = UDim2.new(1, -70, 0, 16), TextXAlignment = Enum.TextXAlignment.Left }, c)
+			end
+		end
+		-- Lista de jugadores del servidor.
+		for _, c in lista:GetChildren() do
+			if c:IsA("GuiObject") then
+				c:Destroy()
+			end
+		end
+		for _, otro in Players:GetPlayers() do
+			Comic.boton(otro.DisplayName, { Size = UDim2.new(1, -6, 0, 38), TextSize = 14, BackgroundColor3 = if otro.UserId == d.userId then Comic.ROJO else Comic.GRIS }, lista, function()
+				mostrarPerfil(otro.UserId)
+			end)
+		end
+	end
 end
 
 -- Novedades.
@@ -137,7 +212,7 @@ local function duracion(s: number): string
 end
 
 local function barra(padre, pos: UDim2, tam: UDim2, fraccion: number, color: Color3, txt: string)
-	local fondo = Comic.crear("Frame", { Position = pos, Size = tam, BackgroundColor3 = Color3.fromRGB(50, 20, 24) }, padre)
+	local fondo = Comic.crear("Frame", { Position = pos, Size = tam, BackgroundColor3 = Comic.ROJO_OSCURO }, padre)
 	Comic.borde(fondo, 2)
 	local relleno = Comic.crear("Frame", { Size = UDim2.fromScale(math.clamp(fraccion, 0, 1), 1), BackgroundColor3 = color, BorderSizePixel = 0 }, fondo)
 	Comic.crear("UICorner", { CornerRadius = UDim.new(0, 6) }, relleno)
@@ -228,7 +303,7 @@ function armarPase(res)
 		local insignia = Comic.texto({ Text = tostring(nivel), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 4), Size = UDim2.fromOffset(44, 44), TextSize = 24, TextColor3 = if alcanzado then Comic.ROJO_OSCURO else Comic.CREMA, TextStrokeTransparency = if alcanzado then 1 else 0 }, col)
 		insignia.BackgroundTransparency = 0
 		insignia.BackgroundColor3 = if alcanzado then Comic.AMARILLO else Comic.GRIS
-		Comic.crear("UIStroke", { Thickness = 3 }, insignia)
+		Comic.crear("UIStroke", { Thickness = 1, Color = Comic.BORDE }, insignia)
 		Comic.crear("UICorner", { CornerRadius = UDim.new(1, 0) }, insignia)
 		local puede = alcanzado and not reclamado and not (pr.tipo == "unidad" and not pr.id)
 		local gratis = Comic.boton(textoPremio(pr) .. (if reclamado then "\n✔" elseif puede then "\n¡TOMAR!" else ""), {
@@ -243,7 +318,7 @@ function armarPase(res)
 			end
 		end)
 		if nivel % 10 == 0 then
-			gratis:FindFirstChildOfClass("UIStroke").Color = Comic.AMARILLO
+			Comic.resaltar(gratis, Comic.AMARILLO)
 		end
 		-- Fila premium: visible con candado hasta que se decida monetizar (CLAUDE.md).
 		local premium = Comic.texto({ Text = "🔒\nPremium\npróximamente", Position = UDim2.fromOffset(0, 206), Size = UDim2.fromOffset(104, 140), TextSize = 16, Font = Comic.TEXTO, TextColor3 = Color3.fromRGB(200, 190, 170) }, col)
@@ -302,7 +377,7 @@ function armarRaid(res, sala)
 
 	if pestanaRaid == "raid" then
 		-- Izquierda: jefe y premios.
-		local jefe = Comic.crear("Frame", { Size = UDim2.fromOffset(380, 250), BackgroundColor3 = Comic.ROJO, Rotation = -1.5 }, area)
+		local jefe = Comic.crear("Frame", { Size = UDim2.fromOffset(380, 250), BackgroundColor3 = Comic.ROJO_OSCURO }, area)
 		Comic.borde(jefe, 5)
 		Comic.texto({ Text = "JEFE DE LA SEMANA", Position = UDim2.fromOffset(12, 8), Size = UDim2.new(1, -24, 0, 26), TextSize = 22, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Left }, jefe)
 		Comic.texto({ Text = string.upper(res.nombreJefe), Position = UDim2.fromOffset(12, 36), Size = UDim2.new(1, -24, 0, 60), TextSize = 50, TextXAlignment = Enum.TextXAlignment.Left }, jefe)
@@ -440,7 +515,7 @@ function armarRasgos(res)
 			bloqueos = {}
 			armarRasgos(res)
 		end)
-		b:FindFirstChildOfClass("UIStroke").Color = COLOR_RAREZA[h.rarity] or Comic.NEGRO
+		Comic.resaltar(b, COLOR_RAREZA[h.rarity] or Comic.NEGRO)
 	end
 	if not sel then
 		return
@@ -449,7 +524,7 @@ function armarRasgos(res)
 	-- Derecha: rasgo y grados de la unidad elegida.
 	local der = Comic.crear("Frame", { Position = UDim2.fromOffset(316, 36), Size = UDim2.fromOffset(504, 380), BackgroundTransparency = 1 }, cuerpoRasgos)
 	local r = Rasgos.de(sel.rasgo)
-	local caja = Comic.crear("Frame", { Size = UDim2.fromOffset(504, 150), BackgroundColor3 = Comic.ROJO, Rotation = -1 }, der)
+	local caja = Comic.crear("Frame", { Size = UDim2.fromOffset(504, 150), BackgroundColor3 = Comic.ROJO_OSCURO }, der)
 	Comic.borde(caja, 4)
 	Comic.texto({ Text = "RASGO", Position = UDim2.fromOffset(12, 6), Size = UDim2.fromOffset(200, 24), TextSize = 22, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Left }, caja)
 	Comic.texto({ Text = if r then `{string.upper(r.nombre)} · {r.rareza}` else "SIN RASGO", Position = UDim2.fromOffset(12, 32), Size = UDim2.fromOffset(300, 40), TextSize = 36, TextColor3 = if r then COLOR_RASGO[r.rareza] else Comic.CREMA, TextXAlignment = Enum.TextXAlignment.Left }, caja)
@@ -531,7 +606,7 @@ function armarMascotas(res)
 
 	-- Izquierda: huevos.
 	for i, h in res.huevos do
-		local f = Comic.crear("Frame", { Position = UDim2.fromOffset(0, 36 + (i - 1) * 196), Size = UDim2.fromOffset(220, 184), BackgroundColor3 = if h.id == "cosmico" then Color3.fromRGB(70, 30, 120) else Comic.ROJO, Rotation = if i == 1 then -1.5 else 1.5 }, cuerpoMascotas)
+		local f = Comic.crear("Frame", { Position = UDim2.fromOffset(0, 36 + (i - 1) * 196), Size = UDim2.fromOffset(220, 184), BackgroundColor3 = if h.id == "cosmico" then Color3.fromRGB(70, 30, 120) else Comic.ROJO }, cuerpoMascotas)
 		Comic.borde(f, 4)
 		Comic.texto({ Text = `🥚 {string.upper(h.nombre)}`, Position = UDim2.fromOffset(8, 6), Size = UDim2.new(1, -16, 0, 32), TextSize = 26, TextColor3 = Comic.AMARILLO }, f)
 		local probs = {}
@@ -695,7 +770,7 @@ function armarBanners(res)
 	Comic.texto({ Text = `🔸 {res.fichasRaid} fichas de raid (se ganan en las raids)`, Size = UDim2.new(1, 0, 0, 30), TextSize = 24, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Left }, cuerpoBanners)
 	Comic.texto({ Text = res.error or "", Position = UDim2.new(0, 0, 1, -24), Size = UDim2.new(1, 0, 0, 22), TextSize = 16, Font = Comic.TEXTO, TextColor3 = Comic.AMARILLO }, cuerpoBanners)
 
-	local caja = Comic.crear("Frame", { Position = UDim2.fromOffset(0, 40), Size = UDim2.fromOffset(420, 330), BackgroundColor3 = Color3.fromRGB(110, 20, 60), Rotation = -1 }, cuerpoBanners)
+	local caja = Comic.crear("Frame", { Position = UDim2.fromOffset(0, 40), Size = UDim2.fromOffset(420, 330), BackgroundColor3 = Comic.ROJO_OSCURO }, cuerpoBanners)
 	Comic.borde(caja, 5)
 	local lineas = {}
 	for _, r in { "Common", "Rare", "Epic", "Legendary", "Mythic" } do
@@ -782,7 +857,7 @@ function armarEvento(res)
 	if pestanaEvento == "desafio" then
 		Comic.texto({ Text = `DESAFÍO SEMANAL · {string.upper(res.nombreMapa)}`, Size = UDim2.new(1, 0, 0, 40), TextSize = 34, TextXAlignment = Enum.TextXAlignment.Left }, area)
 		for i, m in res.modificadores do
-			local f = Comic.crear("Frame", { Position = UDim2.fromOffset((i - 1) * 390, 52), Size = UDim2.fromOffset(370, 96), BackgroundColor3 = Comic.ROJO, Rotation = if i == 1 then -1.5 else 1.5 }, area)
+			local f = Comic.crear("Frame", { Position = UDim2.fromOffset((i - 1) * 390, 52), Size = UDim2.fromOffset(370, 96), BackgroundColor3 = Comic.ROJO_OSCURO }, area)
 			Comic.borde(f, 4)
 			Comic.texto({ Text = string.upper(m.nombre), Position = UDim2.fromOffset(12, 6), Size = UDim2.new(1, -24, 0, 36), TextSize = 30, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Left }, f)
 			Comic.texto({ Text = m.texto, Position = UDim2.fromOffset(12, 48), Size = UDim2.new(1, -24, 0, 40), TextSize = 18, Font = Comic.TEXTO, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left }, f)
@@ -907,6 +982,9 @@ local jugar = Comic.botonIcono("¡JUGAR!", Iconos.jugar, { AnchorPoint = Vector2
 	abrir("jugar")
 end)
 jugar.Name = "jugar"
+-- El botón principal va relleno de rojo (los demás son baldosas oscuras).
+jugar.BackgroundColor3, jugar.BackgroundTransparency = Comic.ROJO, 0
+Comic.crear("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(175, 175, 185)) }, jugar)
 -- En ventanas angostas el escuadrón llega a la esquina: ahí ¡JUGAR! sube por encima de él.
 escalar(jugar, function(s)
 	local v = workspace.CurrentCamera.ViewportSize
@@ -915,8 +993,9 @@ escalar(jugar, function(s)
 	jugar.Position = UDim2.new(1, -16, 1, if choca then -(16 + (92 + 12) * s) else -16)
 end)
 
-local derecha = Comic.crear("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, -20), Size = UDim2.fromOffset(LADO, 7 * LADO + 6 * 8), BackgroundTransparency = 1 }, gui)
-Comic.crear("UIListLayout", { Padding = UDim.new(0, 8) }, derecha)
+-- Derecha: grilla de dos columnas arriba (siete botones en una sola columna tapaban ¡JUGAR!).
+local derecha = Comic.crear("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 12), Size = UDim2.fromOffset(2 * LADO + 8, 4 * LADO + 3 * 8), BackgroundTransparency = 1 }, gui)
+Comic.crear("UIGridLayout", { CellSize = UDim2.fromOffset(LADO, LADO), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder }, derecha)
 escalar(derecha)
 for _, b in {
 	{ "VIAJAR", "teleport", function()
@@ -924,6 +1003,7 @@ for _, b in {
 	end },
 	{ "PERFIL", "perfil", function()
 		abrir("perfil")
+		task.spawn(mostrarPerfil, jugador.UserId)
 	end },
 	{ "EVENTO", "evento", function()
 		abrirEvento("desafio")
@@ -932,7 +1012,7 @@ for _, b in {
 		abrir("log")
 	end },
 } do
-	Comic.botonIcono(b[1], Iconos[b[2]], { Size = UDim2.fromOffset(LADO, LADO) }, derecha, b[3])
+	Comic.botonIcono(b[1], Iconos[b[2]], { Size = UDim2.fromOffset(LADO, LADO), LayoutOrder = #derecha:GetChildren() }, derecha, b[3])
 end
 
 --------------------------------------------------------------------------------
@@ -1031,7 +1111,7 @@ do
 			for i, premio in res.premiosDiarios do
 				local hoy = i == d.dia
 				local hecho = i < d.dia or (hoy and d.reclamado)
-				local f = Comic.crear("Frame", { Position = UDim2.fromOffset((i - 1) * 112, 44), Size = UDim2.fromOffset(104, 170), BackgroundColor3 = if hoy then Comic.ROJO elseif hecho then Comic.GRIS else Comic.ROJO_OSCURO, Rotation = if hoy then -2 else 0 }, area)
+				local f = Comic.crear("Frame", { Position = UDim2.fromOffset((i - 1) * 112, 44), Size = UDim2.fromOffset(104, 170), BackgroundColor3 = if hoy then Comic.ROJO elseif hecho then Comic.GRIS else Comic.ROJO_OSCURO }, area)
 				Comic.borde(f, if hoy then 4 else 2)
 				Comic.texto({ Text = `DÍA {i}`, TextSize = 22, TextColor3 = Comic.AMARILLO, Position = UDim2.fromOffset(0, 6), Size = UDim2.new(1, 0, 0, 26) }, f)
 				Comic.texto({ Text = string.gsub(Recompensas.texto(premio), " %+ ", "\n"), Font = Comic.TEXTO, TextSize = 17, TextWrapped = true, Position = UDim2.fromOffset(4, 40), Size = UDim2.new(1, -8, 0, 90) }, f)
@@ -1065,7 +1145,7 @@ do
 			end
 		else
 			Comic.texto({ Text = "Escribí un código para canjear premios", TextSize = 24, TextColor3 = Comic.AMARILLO, Size = UDim2.new(1, 0, 0, 30), TextXAlignment = Enum.TextXAlignment.Left }, area)
-			cajaCodigo = Comic.crear("TextBox", { Text = "", PlaceholderText = "CÓDIGO", ClearTextOnFocus = false, Font = Comic.TITULO, TextSize = 30, TextColor3 = Comic.FONDO, BackgroundColor3 = Comic.CREMA, Position = UDim2.fromOffset(0, 50), Size = UDim2.fromOffset(420, 56) }, area)
+			cajaCodigo = Comic.crear("TextBox", { Text = "", PlaceholderText = "CÓDIGO", ClearTextOnFocus = false, Font = Comic.TITULO, TextSize = 30, TextColor3 = Comic.CREMA, PlaceholderColor3 = Comic.TENUE, BackgroundColor3 = Comic.ROJO_OSCURO, Position = UDim2.fromOffset(0, 50), Size = UDim2.fromOffset(420, 56) }, area)
 			Comic.borde(cajaCodigo, 3)
 			Comic.boton("CANJEAR", { Position = UDim2.fromOffset(436, 50), Size = UDim2.fromOffset(180, 56), TextSize = 28, BackgroundColor3 = Comic.VERDE }, area, function()
 				pedir("codigo", cajaCodigo.Text)
@@ -1080,7 +1160,7 @@ do
 		pedir("estado")
 	end
 end
-local botonPremios = Comic.botonIcono("PREMIOS", "", { Size = UDim2.fromOffset(LADO, LADO), BackgroundColor3 = Color3.fromRGB(200, 130, 20) }, derecha, function()
+local botonPremios = Comic.botonIcono("PREMIOS", "", { Size = UDim2.fromOffset(LADO, LADO), LayoutOrder = 10, BackgroundColor3 = Color3.fromRGB(200, 130, 20) }, derecha, function()
 	abrirPremios()
 end)
 Comic.texto({ Text = "🎁", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 4), Size = UDim2.new(1, -8, 0.68, 0) }, botonPremios)
@@ -1094,6 +1174,30 @@ local function globo()
 end
 jugador:GetAttributeChangedSignal("DiarioDisponible"):Connect(globo)
 globo()
+
+-- Avisos (docs/INTERFAZ.md): nivel de cuenta, premio diario y mensajes del servidor fuera de partida.
+do
+	local Avisos = require(script.Parent:WaitForChild("Avisos"))
+	local nivelAntes = jugador:GetAttribute("Nivel")
+	jugador:GetAttributeChangedSignal("Nivel"):Connect(function()
+		local n = jugador:GetAttribute("Nivel")
+		if nivelAntes and n and n > nivelAntes then
+			Avisos.mostrar(`¡Nivel de cuenta {n}!`, "Mirá si se abrió una casilla nueva del escuadrón", Comic.AMARILLO, "⭐")
+		end
+		nivelAntes = n
+	end)
+	jugador:GetAttributeChangedSignal("DiarioDisponible"):Connect(function()
+		if jugador:GetAttribute("DiarioDisponible") then
+			Avisos.mostrar("Premio diario listo", "Reclamalo en PREMIOS", Comic.AMARILLO, "🎁")
+		end
+	end)
+	-- En partida los mensajes los muestra el HUD de partida; en el lobby, un aviso.
+	ReplicatedStorage:WaitForChild("Aviso").OnClientEvent:Connect(function(texto)
+		if not jugador:GetAttribute("Partida") and type(texto) == "string" then
+			Avisos.mostrar("Aviso", texto, Comic.ROJO, "ℹ")
+		end
+	end)
+end
 
 --------------------------------------------------------------------------------
 -- Intercambio (docs/INTERCAMBIO.md): pedido a otro jugador del servidor y dos ofertas que confirman los dos.
@@ -1160,7 +1264,7 @@ do
 			-- Pedido entrante.
 			local y = 0
 			if estado.pedidoDe then
-				local f = Comic.crear("Frame", { Size = UDim2.new(1, 0, 0, 60), BackgroundColor3 = Comic.ROJO }, area)
+				local f = Comic.crear("Frame", { Size = UDim2.new(1, 0, 0, 60), BackgroundColor3 = Comic.ROJO_OSCURO }, area)
 				Comic.borde(f, 3)
 				Comic.texto({ Text = `¡{estado.pedidoDe} quiere intercambiar con vos!`, TextSize = 24, Position = UDim2.fromOffset(12, 0), Size = UDim2.new(1, -330, 1, 0), TextXAlignment = Enum.TextXAlignment.Left }, f)
 				Comic.boton("ACEPTAR", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -170, 0.5, 0), Size = UDim2.fromOffset(150, 42), TextSize = 22, BackgroundColor3 = Comic.VERDE }, f, function()
@@ -1275,12 +1379,12 @@ do
 		refrescar()
 	end
 end
-local botonIntercambio = Comic.botonIcono("CAMBIAR", "", { Size = UDim2.fromOffset(LADO, LADO), BackgroundColor3 = Color3.fromRGB(40, 110, 170) }, derecha, function()
+local botonIntercambio = Comic.botonIcono("CAMBIAR", "", { Size = UDim2.fromOffset(LADO, LADO), LayoutOrder = 11, BackgroundColor3 = Color3.fromRGB(40, 110, 170) }, derecha, function()
 	abrirIntercambio()
 end)
 Comic.texto({ Text = "🔁", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 4), Size = UDim2.new(1, -8, 0.68, 0) }, botonIntercambio)
 
-local botonAjustes = Comic.botonIcono("AJUSTES", "", { Size = UDim2.fromOffset(LADO, LADO), BackgroundColor3 = Comic.GRIS }, derecha, function()
+local botonAjustes = Comic.botonIcono("AJUSTES", "", { Size = UDim2.fromOffset(LADO, LADO), LayoutOrder = 12, BackgroundColor3 = Comic.GRIS }, derecha, function()
 	abrir("ajustes")
 end)
 Comic.texto({ Text = "⚙", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 4), Size = UDim2.new(1, -8, 0.68, 0), TextColor3 = Comic.CREMA }, botonAjustes)
@@ -1294,8 +1398,10 @@ local monedas = Comic.crear("Frame", { Size = UDim2.new(1, 0, 0, 40), Background
 Comic.crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 14), HorizontalAlignment = Enum.HorizontalAlignment.Center }, monedas)
 local etiquetas = {}
 for _, m in { { "Gemas", "💎", Color3.fromRGB(120, 60, 200) }, { "Creditos", "💰", Color3.fromRGB(190, 130, 20) }, { "Nucleos", "🔷", Color3.fromRGB(30, 110, 200) } } do
-	local f = Comic.crear("Frame", { Size = UDim2.fromOffset(160, 38), BackgroundColor3 = m[3], Rotation = -2 }, monedas)
-	Comic.borde(f, 3)
+	local f = Comic.crear("Frame", { Size = UDim2.fromOffset(160, 38), BackgroundColor3 = Comic.FONDO, BackgroundTransparency = Comic.TRANSPARENCIA }, monedas)
+	Comic.borde(f)
+	local trazo = f:FindFirstChildOfClass("UIStroke")
+	trazo.Color, trazo.Transparency = m[3]:Lerp(Color3.new(1, 1, 1), 0.25), 0
 	etiquetas[m[1]] = Comic.texto({ Text = m[2] .. " …", Size = UDim2.new(1, -16, 1, -6), Position = UDim2.fromOffset(8, 3) }, f)
 	etiquetas[m[1]]:SetAttribute("Simbolo", m[2])
 end
@@ -1335,17 +1441,24 @@ local function dibujarEscuadron()
 		end
 		local h = u and Personajes.de(u.heroId)
 		local cerrada = i > abiertas
-		local c = Comic.crear("TextButton", { Text = "", Size = UDim2.fromOffset(CASILLA, CASILLA), BackgroundColor3 = if h then Comic.ROJO_OSCURO elseif cerrada then Color3.fromRGB(45, 45, 52) else Color3.fromRGB(70, 22, 28) }, casillas)
-		Comic.borde(c, 3)
+		local c = Comic.crear("TextButton", { Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(CASILLA, CASILLA), BackgroundColor3 = if h then Comic.ROJO_OSCURO else Comic.FONDO, BackgroundTransparency = if h then 0 else Comic.TRANSPARENCIA }, casillas)
+		Comic.borde(c)
 		if h then
-			c:FindFirstChildOfClass("UIStroke").Color = COLOR_RAREZA[h.rarity] or Comic.NEGRO
-			Comic.texto({ Text = h.name, Position = UDim2.fromOffset(5, 6), Size = UDim2.new(1, -10, 0, 32), TextWrapped = true }, c)
-			Comic.texto({ Text = `Nv {u.level}`, TextColor3 = Comic.AMARILLO, Position = UDim2.fromOffset(5, 40), Size = UDim2.new(1, -10, 0, 20) }, c)
-			Comic.texto({ Text = `💰 {Mejoras.costoColocar(h)}`, Font = Comic.TEXTO, TextSize = 13, Position = UDim2.fromOffset(5, 66), Size = UDim2.new(1, -10, 0, 18) }, c)
+			-- Tarjeta: retrato 3D, degradado del color de la rareza abajo, nombre, nivel y costo.
+			local color = COLOR_RAREZA[h.rarity] or Comic.CREMA
+			Comic.resaltar(c, color)
+			local pie = Comic.crear("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, 0, 0.5, 0), BackgroundColor3 = color, BackgroundTransparency = 0.5, BorderSizePixel = 0 }, c)
+			Comic.crear("UIGradient", { Rotation = 90, Transparency = NumberSequence.new(1, 0.15) }, pie)
+			Comic.crear("UICorner", { CornerRadius = UDim.new(0, 10) }, pie)
+			local marco = Comic.crear("Frame", { Position = UDim2.fromOffset(4, 2), Size = UDim2.new(1, -8, 1, -30), BackgroundTransparency = 1 }, c)
+			Comic.retrato(marco, u.heroId, h.name, color, Personajes.base(u.heroId))
+			Comic.texto({ Text = `Nv {u.level}`, TextSize = 12, Font = Comic.TITULO, TextColor3 = Comic.AMARILLO, Position = UDim2.fromOffset(6, 4), Size = UDim2.fromOffset(40, 14), TextXAlignment = Enum.TextXAlignment.Left }, c)
+			Comic.texto({ Text = h.name, TextSize = 12, AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 4, 1, -16), Size = UDim2.new(1, -8, 0, 14), TextTruncate = Enum.TextTruncate.AtEnd }, c)
+			Comic.texto({ Text = `💰 {Mejoras.costoColocar(h)}`, Font = Comic.TEXTO, TextSize = 11, AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 4, 1, -2), Size = UDim2.new(1, -8, 0, 13) }, c)
 		elseif cerrada then
-			Comic.texto({ Text = `🔒 Nv {Cuenta.nivelCasilla(i) or "?"}`, Size = UDim2.new(1, -10, 0, 32), Position = UDim2.new(0, 5, 0.5, -16) }, c)
+			Comic.texto({ Text = `🔒\nNv {Cuenta.nivelCasilla(i) or "?"}`, TextSize = 15, TextColor3 = Comic.TENUE, Size = UDim2.fromScale(1, 1) }, c)
 		else
-			Comic.texto({ Text = "+ Vacía", Size = UDim2.new(1, -10, 0, 32), Position = UDim2.new(0, 5, 0.5, -16) }, c)
+			Comic.texto({ Text = "+", TextSize = 34, TextColor3 = Comic.TENUE, Size = UDim2.fromScale(1, 1) }, c)
 		end
 		c.Activated:Connect(function()
 			if not cerrada then

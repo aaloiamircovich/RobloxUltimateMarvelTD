@@ -415,12 +415,13 @@ end
 -- Paneo del recorrido al entrar a una partida
 --------------------------------------------------------------------------------
 local pantalla = Comic.crear("ScreenGui", { Name = "Paneo", ResetOnSpawn = false, DisplayOrder = 7, IgnoreGuiInset = true, Enabled = false }, jugador:WaitForChild("PlayerGui"))
-local titulo = Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.1, 0), Size = UDim2.fromOffset(620, 110), BackgroundColor3 = Comic.ROJO, Rotation = -2 }, pantalla)
-Comic.borde(titulo, 6)
+-- Título limpio sobre la imagen: nombre grande, línea roja y el acto debajo (sin caja).
+local titulo = Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.1, 0), Size = UDim2.fromOffset(720, 120), BackgroundTransparency = 1 }, pantalla)
 local escalaTitulo = Comic.crear("UIScale", {}, titulo)
-local nombreMapa = Comic.texto({ Position = UDim2.fromOffset(16, 6), Size = UDim2.new(1, -32, 0, 66), TextColor3 = Comic.AMARILLO }, titulo)
-local subMapa = Comic.texto({ Position = UDim2.fromOffset(16, 70), Size = UDim2.new(1, -32, 0, 30), Font = Comic.TEXTO, TextSize = 20 }, titulo)
-Comic.texto({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 10), Size = UDim2.fromOffset(400, 28), Font = Comic.TEXTO, TextSize = 20, Text = "Clic para saltar" }, titulo)
+local nombreMapa = Comic.texto({ Size = UDim2.new(1, 0, 0, 64), TextStrokeTransparency = 0.5 }, titulo)
+Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 70), Size = UDim2.fromOffset(90, 3), BackgroundColor3 = Comic.ROJO, BorderSizePixel = 0 }, titulo)
+local subMapa = Comic.texto({ Position = UDim2.fromOffset(0, 80), Size = UDim2.new(1, 0, 0, 26), Font = Comic.TEXTO, TextSize = 20, TextStrokeTransparency = 0.5 }, titulo)
+Comic.texto({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 10), Size = UDim2.fromOffset(400, 22), Font = Comic.TEXTO, TextSize = 15, TextColor3 = Comic.TENUE, Text = "Clic para saltar" }, titulo)
 
 local function paneo(estado: Instance, nivel)
 	local origen = estado:GetAttribute("Origen")

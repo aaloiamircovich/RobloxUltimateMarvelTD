@@ -90,27 +90,25 @@ local function modelo3D(padre: GuiObject, id: string, giro: boolean?)
 	return vista, m
 end
 
--- Rayos de luz que giran detrás (ventilador de franjas finas).
+-- Halo de luz detrás del personaje (estilo limpio, en vez de los rayos de cómic): círculos concéntricos del color
+-- dado, cada vez más tenues, que laten despacio. `cantidad` decide cuántos aros.
 local function rayos(padre: GuiObject, color: Color3, cantidad: number)
-	local centro = Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(10, 10), BackgroundTransparency = 1 }, padre)
-	for i = 1, cantidad do
-		Comic.crear("Frame", {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(0.5, 0.5),
-			Size = UDim2.fromOffset(2400, 26),
-			BackgroundColor3 = color,
-			BackgroundTransparency = 0.55,
-			BorderSizePixel = 0,
-			Rotation = i * 180 / cantidad,
-		}, centro)
+	local centro = Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.46), Size = UDim2.fromOffset(10, 10), BackgroundTransparency = 1 }, padre)
+	local aros = math.clamp(cantidad, 4, 8)
+	for i = 1, aros do
+		local lado = 160 + i * 90
+		local aro = Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(lado, lado), BackgroundColor3 = color, BackgroundTransparency = 0.78 + i * 0.025, BorderSizePixel = 0 }, centro)
+		Comic.crear("UICorner", { CornerRadius = UDim.new(1, 0) }, aro)
 	end
+	local escalaHalo = Comic.crear("UIScale", {}, centro)
 	local con
-	con = RunService.RenderStepped:Connect(function(dt)
+	con = RunService.RenderStepped:Connect(function()
 		if not centro.Parent then
 			con:Disconnect()
 			return
 		end
-		centro.Rotation += dt * 12
+		local base = math.clamp(math.min(camara.ViewportSize.X / 1280, camara.ViewportSize.Y / 720), 0.5, 1.3)
+		escalaHalo.Scale = base * (1 + math.sin(os.clock() * 2) * 0.04)
 	end)
 	return centro
 end
@@ -152,7 +150,7 @@ local function revelar(id: string, saltar: { valor: boolean })
 		-- Falso aviso de rareza baja (portal azul) que se rompe: pantalla dorada, temblor y rayos.
 		local portal = Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(260 * escala(), 260 * escala()), BackgroundColor3 = Comic.RAREZA.Rare, ZIndex = 31 }, capa)
 		Comic.crear("UICorner", { CornerRadius = UDim.new(1, 0) }, portal)
-		Comic.crear("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 6 }, portal)
+		Comic.crear("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2, Transparency = 0.2 }, portal)
 		tween(portal, 0.8, { Size = UDim2.fromOffset(320 * escala(), 320 * escala()) }, Enum.EasingStyle.Sine)
 		task.wait(0.9)
 		for i = 1, 8 do
@@ -174,15 +172,15 @@ local function revelar(id: string, saltar: { valor: boolean })
 	local esc = Comic.crear("UIScale", { Scale = 0.2 }, marco)
 	modelo3D(marco, id, mitico)
 	tween(esc, 0.45, { Scale = escala() }, Enum.EasingStyle.Back)
-	local cartel = Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.78), Size = UDim2.fromOffset(560, 120), BackgroundColor3 = Comic.ROJO_OSCURO, Rotation = -2, ZIndex = 33 }, capa)
-	Comic.borde(cartel, 6)
-	Comic.crear("UIStroke", { Color = color, Thickness = 4, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, cartel)
+	-- Estilo limpio: nombre grande sin caja, una línea del color de la rareza y «RAREZA · habilidad».
+	local cartel = Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.78), Size = UDim2.fromOffset(640, 120), BackgroundTransparency = 1, ZIndex = 33 }, capa)
 	Comic.crear("UIScale", { Scale = escala() }, cartel)
-	Comic.texto({ Text = string.upper(h.name), Position = UDim2.fromOffset(16, 4), Size = UDim2.new(1, -32, 0, 62), TextColor3 = Comic.AMARILLO, ZIndex = 34 }, cartel)
-	Comic.texto({ Text = `{string.upper(NOMBRE[h.rarity] or h.rarity)}  ·  {h.ability or ""}`, Position = UDim2.fromOffset(16, 68), Size = UDim2.new(1, -32, 0, 38), TextColor3 = color, ZIndex = 34 }, cartel)
+	Comic.texto({ Text = string.upper(h.name), Size = UDim2.new(1, 0, 0, 58), TextStrokeTransparency = 0.4, ZIndex = 34 }, cartel)
+	Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 64), Size = UDim2.fromOffset(110, 3), BackgroundColor3 = color, BorderSizePixel = 0, ZIndex = 34 }, cartel)
+	Comic.texto({ Text = `{string.upper(NOMBRE[h.rarity] or h.rarity)}  ·  {h.ability or ""}`, Position = UDim2.fromOffset(0, 74), Size = UDim2.new(1, 0, 0, 26), TextSize = 20, TextColor3 = color, ZIndex = 34 }, cartel)
 	if mitico then
 		-- Su habilidad como grito, grande y cruzada.
-		local grito = Comic.texto({ Text = `«{h.ability or ""}»`, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.12), Size = UDim2.fromOffset(900, 80), TextColor3 = Comic.AMARILLO, Rotation = -4, ZIndex = 35 }, capa)
+		local grito = Comic.texto({ Text = `«{h.ability or ""}»`, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.12), Size = UDim2.fromOffset(900, 80), TextColor3 = Comic.AMARILLO, ZIndex = 35 }, capa)
 		Comic.crear("UIScale", { Scale = 0.1 }, grito)
 		tween(grito:FindFirstChildOfClass("UIScale"), 0.4, { Scale = escala() }, Enum.EasingStyle.Back)
 	end
@@ -242,7 +240,7 @@ function Cinematica.invocar(nuevas)
 		local pista = if ORDEN[mejor] >= ORDEN.Mythic then Comic.RAREZA.Rare else colorDe(mejor)
 		local portal = Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(0, 0), BackgroundColor3 = pista, ZIndex = 21 }, f)
 		Comic.crear("UICorner", { CornerRadius = UDim.new(1, 0) }, portal)
-		Comic.crear("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 6 }, portal)
+		Comic.crear("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2, Transparency = 0.2 }, portal)
 		local grad = Comic.crear("UIGradient", { Color = ColorSequence.new(Color3.new(1, 1, 1), pista), Rotation = 0 }, portal)
 		local girar = RunService.RenderStepped:Connect(function(dt)
 			grad.Rotation += dt * 240
@@ -266,10 +264,11 @@ function Cinematica.invocar(nuevas)
 			Comic.crear("UIGridLayout", { CellSize = UDim2.fromOffset(156, 216), CellPadding = UDim2.fromOffset(14, 14), HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder }, mesa)
 			local cartas = {}
 			for i, u in nuevas do
-				local carta = Comic.crear("Frame", { BackgroundColor3 = Comic.ROJO, LayoutOrder = i, ZIndex = 23 }, mesa)
-				Comic.borde(carta, 4)
+				-- Dorso: vidrio oscuro con un rombo rojo al centro.
+				local carta = Comic.crear("Frame", { BackgroundColor3 = Comic.ROJO_OSCURO, LayoutOrder = i, ZIndex = 23 }, mesa)
+				Comic.borde(carta)
 				local giro = Comic.crear("UIScale", { Scale = 1 }, carta)
-				local dorso = Comic.texto({ Text = "?", Size = UDim2.fromScale(1, 1), TextColor3 = Comic.AMARILLO, ZIndex = 24 }, carta)
+				local dorso = Comic.texto({ Text = "◆", TextSize = 48, TextColor3 = Comic.ROJO, Size = UDim2.fromScale(1, 1), ZIndex = 24 }, carta)
 				table.insert(cartas, { carta = carta, giro = giro, dorso = dorso, id = u.heroId })
 			end
 			local function darVuelta(c, rapido: boolean)
@@ -278,8 +277,7 @@ function Cinematica.invocar(nuevas)
 				local t = if rapido then 0.05 else 0.12
 				c.dorso.TextTransparency = 1
 				c.carta.BackgroundColor3 = Comic.FONDO
-				local borde = c.carta:FindFirstChildOfClass("UIStroke")
-				borde.Color, borde.Thickness = color, 5
+				Comic.resaltar(c.carta, color)
 				local caja = Comic.crear("Frame", { Size = UDim2.new(1, 0, 1, -50), BackgroundTransparency = 1, ZIndex = 24 }, c.carta)
 				Comic.retrato(caja, c.id, h and h.name or c.id, color, Personajes.base(c.id))
 				Comic.texto({ Text = h and h.name or c.id, Position = UDim2.new(0, 6, 1, -50), Size = UDim2.new(1, -12, 0, 28), TextColor3 = color, ZIndex = 25 }, c.carta)
@@ -346,11 +344,11 @@ function Cinematica.evolucion(desde: string, hacia: string)
 		rayos(f, color, 8)
 		tween(luz, 0.5, { BackgroundTransparency = 1 })
 		destello(f, Color3.new(1, 1, 1))
-		local cartel = Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.8), Size = UDim2.fromOffset(620, 100), BackgroundColor3 = Comic.ROJO, Rotation = -2, ZIndex = 10 }, f)
-		Comic.borde(cartel, 6)
+		local cartel = Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.78), Size = UDim2.fromOffset(640, 110), BackgroundTransparency = 1, ZIndex = 10 }, f)
 		Comic.crear("UIScale", { Scale = escala() }, cartel)
-		Comic.texto({ Text = "¡EVOLUCIONÓ!", Position = UDim2.fromOffset(16, 4), Size = UDim2.new(1, -32, 0, 40), TextColor3 = Comic.CREMA, ZIndex = 11 }, cartel)
-		Comic.texto({ Text = string.upper(h and h.name or hacia), Position = UDim2.fromOffset(16, 44), Size = UDim2.new(1, -32, 0, 50), TextColor3 = Comic.AMARILLO, ZIndex = 11 }, cartel)
+		Comic.texto({ Text = "EVOLUCIONÓ", TextSize = 20, TextColor3 = color, Size = UDim2.new(1, 0, 0, 24), ZIndex = 11 }, cartel)
+		Comic.texto({ Text = string.upper(h and h.name or hacia), Position = UDim2.fromOffset(0, 28), Size = UDim2.new(1, 0, 0, 56), TextStrokeTransparency = 0.4, ZIndex = 11 }, cartel)
+		Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 90), Size = UDim2.fromOffset(110, 3), BackgroundColor3 = color, BorderSizePixel = 0, ZIndex = 11 }, cartel)
 		task.wait(0.6)
 		esperarClic(5)
 		tween(f, 0.25, { BackgroundTransparency = 1 })
@@ -375,7 +373,7 @@ function Cinematica.subidas(padre: GuiObject, texto: string?)
 		if h then
 			local t = Comic.crear("Frame", { Size = UDim2.fromOffset(150, 40), BackgroundColor3 = Comic.FONDO, ZIndex = 22 }, fila)
 			Comic.borde(t, 3)
-			t:FindFirstChildOfClass("UIStroke").Color = colorDe(h.rarity)
+			Comic.resaltar(t, colorDe(h.rarity))
 			Comic.texto({ Text = `{h.name}\nNv {desde} → {hasta}`, Size = UDim2.fromScale(1, 1), Font = Comic.TEXTO, TextSize = 15, TextColor3 = Comic.AMARILLO, ZIndex = 23 }, t)
 			local esc = Comic.crear("UIScale", { Scale = 0 }, t)
 			task.delay(0.6 + i * 0.2, function()

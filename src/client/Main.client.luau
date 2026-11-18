@@ -55,11 +55,11 @@ end
 --------------------------------------------------------------------------------
 local gui = crear("ScreenGui", { Name = "HUD", ResetOnSpawn = false, DisplayOrder = 2 })
 
--- Arriba: viñeta amarilla inclinada con mapa · acto y la vida de la base; a los lados, oleada y reloj.
+-- Arriba: panel de vidrio con mapa · acto y la vida de la base; a los lados, oleada y reloj.
 local arriba = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 10), Size = UDim2.fromOffset(500, 84), BackgroundTransparency = 1 }, gui)
-local vineta = crear("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Comic.AMARILLO, Rotation = -1.5 }, arriba)
-Comic.borde(vineta, 4)
-local titulo = texto({ TextColor3 = Comic.ROJO_OSCURO, TextStrokeTransparency = 1, Position = UDim2.fromOffset(14, 4), Size = UDim2.new(1, -28, 0, 32) }, vineta)
+local vineta = crear("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Comic.FONDO, BackgroundTransparency = Comic.TRANSPARENCIA }, arriba)
+Comic.borde(vineta)
+local titulo = texto({ TextSize = 22, Position = UDim2.fromOffset(14, 4), Size = UDim2.new(1, -28, 0, 32) }, vineta)
 local fondoVida = crear("Frame", { Position = UDim2.fromOffset(14, 40), Size = UDim2.new(1, -28, 0, 32), BackgroundColor3 = Comic.FONDO }, vineta)
 Comic.borde(fondoVida, 3)
 local barraVida = crear("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Comic.ROJO, BorderSizePixel = 0 }, fondoVida)
@@ -68,8 +68,8 @@ crear("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 
 local textoVida = texto({ Size = UDim2.fromScale(1, 1), TextSize = 24 }, fondoVida)
 
 local function circulo(lado: number): (Frame, TextLabel, TextLabel)
-	local c = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(lado, lado == 0 and -54 or 54, 0.5, 0), Size = UDim2.fromOffset(92, 92), BackgroundColor3 = Comic.ROJO }, arriba)
-	crear("UIStroke", { Thickness = 4 }, c)
+	local c = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(lado, lado == 0 and -54 or 54, 0.5, 0), Size = UDim2.fromOffset(84, 84), BackgroundColor3 = Comic.FONDO, BackgroundTransparency = Comic.TRANSPARENCIA }, arriba)
+	crear("UIStroke", { Thickness = 2, Color = Comic.ROJO }, c)
 	crear("UICorner", { CornerRadius = UDim.new(1, 0) }, c)
 	local arribaTxt = texto({ TextSize = 16, Font = Comic.TEXTO, Position = UDim2.fromOffset(0, 16), Size = UDim2.new(1, 0, 0, 16) }, c)
 	local grande = texto({ TextSize = 32, TextColor3 = Comic.AMARILLO, Position = UDim2.fromOffset(0, 34), Size = UDim2.new(1, 0, 0, 36) }, c)
@@ -94,18 +94,19 @@ crear("UICorner", { CornerRadius = UDim.new(0, 6) }, rellenoJefe)
 local textoJefe = texto({ Size = UDim2.fromScale(1, 1), TextSize = 24 }, barraJefe)
 
 -- Avisos (errores, premios): globo de diálogo blanco.
-local aviso = texto({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 46), Size = UDim2.fromOffset(560, 40), TextSize = 20, Font = Comic.TEXTO, TextColor3 = Comic.NEGRO, TextStrokeTransparency = 1, TextWrapped = true, Visible = false, ZIndex = 5 }, arriba)
-aviso.BackgroundTransparency = 0
-aviso.BackgroundColor3 = Comic.CREMA
-Comic.borde(aviso, 3)
+local aviso = texto({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 46), Size = UDim2.fromOffset(560, 40), TextSize = 18, Font = Comic.TEXTO, TextWrapped = true, Visible = false, ZIndex = 5 }, arriba)
+aviso.BackgroundTransparency = Comic.TRANSPARENCIA
+aviso.BackgroundColor3 = Comic.FONDO
+Comic.borde(aviso)
+Comic.resaltar(aviso, Comic.AMARILLO)
 crear("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) }, aviso)
 
 -- Abajo: dinero de partida y escuadrón en tarjetas con retrato.
 local abajo = crear("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12), Size = UDim2.fromOffset(800, 186), BackgroundTransparency = 1 }, gui)
-local dinero = texto({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0), Size = UDim2.fromOffset(220, 46), TextSize = 34, TextColor3 = Comic.AMARILLO, Rotation = -2 }, abajo)
-dinero.BackgroundTransparency = 0
-dinero.BackgroundColor3 = Comic.ROJO_OSCURO
-Comic.borde(dinero, 4)
+local dinero = texto({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0), Size = UDim2.fromOffset(220, 46), TextSize = 34, TextColor3 = Comic.AMARILLO }, abajo)
+dinero.BackgroundTransparency = Comic.TRANSPARENCIA
+dinero.BackgroundColor3 = Comic.FONDO
+Comic.borde(dinero)
 local tarjetas = crear("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, 0, 0, 126), BackgroundTransparency = 1 }, abajo)
 crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Bottom, Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }, tarjetas)
 
@@ -114,11 +115,12 @@ local lateral = crear("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = U
 crear("UIListLayout", { Padding = UDim.new(0, 10), HorizontalAlignment = Enum.HorizontalAlignment.Right, SortOrder = Enum.SortOrder.LayoutOrder }, lateral)
 
 -- Izquierda: panel de la unidad elegida.
-local panelUnidad = crear("Frame", { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 16, 0.5, 10), Size = UDim2.fromOffset(300, 470), BackgroundColor3 = Comic.FONDO, Visible = false }, gui)
-Comic.borde(panelUnidad, 5)
-local franjaUnidad = crear("Frame", { Position = UDim2.fromOffset(-8, -20), Size = UDim2.new(1, -30, 0, 46), BackgroundColor3 = Comic.AMARILLO, Rotation = -2 }, panelUnidad)
-Comic.borde(franjaUnidad, 4)
-local nombreUnidad = texto({ TextColor3 = Comic.ROJO_OSCURO, TextStrokeTransparency = 1, Position = UDim2.fromOffset(12, 4), Size = UDim2.new(1, -24, 1, -8), TextXAlignment = Enum.TextXAlignment.Left }, franjaUnidad)
+local panelUnidad = crear("Frame", { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 16, 0.5, 10), Size = UDim2.fromOffset(300, 470), BackgroundColor3 = Comic.FONDO, BackgroundTransparency = Comic.TRANSPARENCIA, Visible = false }, gui)
+Comic.borde(panelUnidad)
+-- Encabezado: nombre arriba a la izquierda con una línea del color de la rareza debajo (como los paneles).
+local franjaUnidad = crear("Frame", { Position = UDim2.fromOffset(0, 0), Size = UDim2.new(1, -30, 0, 34), BackgroundTransparency = 1 }, panelUnidad)
+local nombreUnidad = texto({ TextSize = 20, Position = UDim2.fromOffset(14, 8), Size = UDim2.new(1, -24, 0, 22), TextXAlignment = Enum.TextXAlignment.Left }, franjaUnidad)
+crear("Frame", { Position = UDim2.fromOffset(14, 32), Size = UDim2.fromOffset(48, 3), BackgroundColor3 = Comic.ROJO, BorderSizePixel = 0 }, franjaUnidad)
 local marcoRetrato = crear("Frame", { Position = UDim2.fromOffset(14, 36), Size = UDim2.fromOffset(110, 110), BackgroundColor3 = Comic.ROJO_OSCURO }, panelUnidad)
 Comic.borde(marcoRetrato, 3)
 local statsUnidad = texto({ Position = UDim2.fromOffset(134, 36), Size = UDim2.fromOffset(152, 110), TextSize = 16, Font = Comic.TEXTO, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, RichText = true }, panelUnidad)
@@ -214,7 +216,7 @@ local function refrescar()
 			Comic.retrato(marcoRetrato, id, config.name, Comic.AMARILLO, Personajes.base(id))
 		end
 		nombreUnidad.Text = string.upper(config.name)
-		marcoRetrato:FindFirstChildOfClass("UIStroke").Color = Comic.RAREZA[config.rarity] or Comic.NEGRO
+		Comic.resaltar(marcoRetrato, Comic.RAREZA[config.rarity] or Comic.NEGRO)
 		local rasgo = Rasgos.de(seleccion:GetAttribute("Rasgo"))
 		local nombreRasgo = if rasgo then rasgo.nombre else "Sin rasgo"
 		statsUnidad.Text = `Nv {seleccion:GetAttribute("NivelUnidad") or 1}\n⚔ Daño <font color="#ffd628">{seleccion:GetAttribute("Dano") or "?"}</font>\n◎ Alcance <font color="#ffd628">{seleccion:GetAttribute("Alcance") or "?"}</font>\n⚡ Ataques/s <font color="#ffd628">{seleccion:GetAttribute("Cadencia") or "?"}</font>\n<font color="#ff8fb0">{nombreRasgo}</font> · {seleccion:GetAttribute("Grados") or "B/B/B"}`
@@ -300,7 +302,7 @@ local function tarjeta(i: number, ranura: number, id: string, nivel: number, lim
 	local config = heroes[id]
 	local color = Comic.RAREZA[config.rarity] or Comic.CREMA
 	local t = crear("TextButton", { Name = "Tarjeta" .. i, Text = "", Size = UDim2.fromOffset(106, 120), BackgroundColor3 = Comic.FONDO, AutoButtonColor = true, LayoutOrder = i }, tarjetas)
-	crear("UIStroke", { Color = color, Thickness = 4, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, t)
+	crear("UIStroke", { Color = color, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, t)
 	crear("UICorner", { CornerRadius = UDim.new(0, 8) }, t)
 	crear("UIScale", {}, t)
 	crear("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), color:Lerp(Color3.new(0, 0, 0), 0.4)) }, t)
@@ -414,12 +416,14 @@ end)
 --------------------------------------------------------------------------------
 -- Cartel grande al empezar cada oleada (o «¡JEFE!» en la última de un acto).
 local function cartelOleada(n: number, jefe: boolean)
-	local c = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.38), Size = UDim2.fromOffset(520, 150), BackgroundTransparency = 1, ZIndex = 8 }, gui)
-	local escala = crear("UIScale", { Scale = 0.2 }, c)
-	local estallido = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(420, 120), BackgroundColor3 = if jefe then Comic.ROJO_OSCURO else Comic.ROJO, Rotation = -4, ZIndex = 8 }, c)
-	Comic.borde(estallido, 6)
-	texto({ Text = if jefe then "¡JEFE!" else `¡OLEADA {n}!`, Size = UDim2.fromScale(1, 1), TextColor3 = Comic.AMARILLO, ZIndex = 9, Rotation = -4 }, c)
-	animar(escala, 0.35, { Scale = escalaGlobal }, Enum.EasingStyle.Back)
+	-- Estilo limpio: texto grande sin caja, una línea roja debajo y el número de oleada en chico.
+	local c = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.36), Size = UDim2.fromOffset(520, 120), BackgroundTransparency = 1, ZIndex = 8 }, gui)
+	local escala = crear("UIScale", { Scale = escalaGlobal * 1.3 }, c)
+	local grande = texto({ Text = if jefe then "LLEGA EL JEFE" else `OLEADA {n}`, Size = UDim2.new(1, 0, 0, 70), TextColor3 = if jefe then Comic.ROJO else Comic.CREMA, TextStrokeTransparency = 0.4, TextTransparency = 1, ZIndex = 9 }, c)
+	local linea = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 76), Size = UDim2.fromOffset(0, 3), BackgroundColor3 = Comic.ROJO, BorderSizePixel = 0, ZIndex = 9 }, c)
+	animar(escala, 0.35, { Scale = escalaGlobal }, Enum.EasingStyle.Quad)
+	animar(grande, 0.3, { TextTransparency = 0 })
+	animar(linea, 0.4, { Size = UDim2.fromOffset(120, 3) })
 	task.delay(1.8, function()
 		animar(escala, 0.25, { Scale = 0 }, Enum.EasingStyle.Quad)
 		task.wait(0.3)
@@ -429,13 +433,13 @@ end
 
 -- Pantalla de victoria/derrota.
 resultado = crear("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Comic.NEGRO, BackgroundTransparency = 0.45, Visible = false, ZIndex = 20 }, gui)
-local panelFin = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(680, 500), BackgroundColor3 = Comic.FONDO, ZIndex = 20 }, resultado)
-Comic.borde(panelFin, 6)
+local panelFin = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(680, 500), BackgroundColor3 = Comic.FONDO, BackgroundTransparency = Comic.TRANSPARENCIA, ZIndex = 20 }, resultado)
+Comic.borde(panelFin)
 local escalaFin = crear("UIScale", {}, panelFin)
 table.insert(escalas, escalaFin)
-local tituloFin = texto({ AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 0), Size = UDim2.fromOffset(460, 110), TextColor3 = Comic.AMARILLO, Rotation = -4, ZIndex = 22 }, panelFin)
-tituloFin.BackgroundTransparency = 0
-Comic.borde(tituloFin, 6)
+-- Título grande arriba del panel, sin caja, con una línea del color del resultado debajo.
+local tituloFin = texto({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 10), Size = UDim2.fromOffset(460, 50), TextColor3 = Comic.AMARILLO, ZIndex = 22 }, panelFin)
+local lineaFin = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 62), Size = UDim2.fromOffset(110, 3), BackgroundColor3 = Comic.AMARILLO, BorderSizePixel = 0, ZIndex = 22 }, panelFin)
 local detalleFin = texto({ Position = UDim2.fromOffset(24, 66), Size = UDim2.new(1, -48, 0, 44), TextSize = 19, Font = Comic.TEXTO, TextWrapped = true, ZIndex = 21 }, panelFin)
 -- Escuadrón en 3D (posando o abatido), premios que caen de a uno y subidas de nivel (docs/PANTALLAS.md).
 local escuadronFin = crear("Frame", { Position = UDim2.fromOffset(20, 112), Size = UDim2.new(1, -40, 0, 160), BackgroundTransparency = 1, ZIndex = 21 }, panelFin)
@@ -531,7 +535,7 @@ local function armarBotonesFin()
 			end)
 			if miVoto == o then
 				local borde = b:FindFirstChildOfClass("UIStroke")
-				borde.Color, borde.Thickness = Comic.AMARILLO, 5
+				borde.Color, borde.Thickness, borde.Transparency = Comic.AMARILLO, 2, 0
 			end
 		end
 	end
@@ -544,8 +548,9 @@ end
 
 local function mostrarResultado()
 	local gano = estado:GetAttribute("Resultado") == "victoria"
-	tituloFin.Text = if gano then "¡VICTORIA!" else "DERROTA"
-	tituloFin.BackgroundColor3 = if gano then Comic.ROJO else Comic.GRIS
+	tituloFin.Text = if gano then "VICTORIA" else "DERROTA"
+	tituloFin.TextColor3 = if gano then Comic.AMARILLO else Comic.TENUE
+	lineaFin.BackgroundColor3 = if gano then Comic.AMARILLO else Comic.ROJO
 	detalleFin.Text = estado:GetAttribute("Mensaje")
 	armarPremios(jugador:GetAttribute("PremioActo"), gano)
 	armarEscuadronFin(gano)
@@ -569,7 +574,7 @@ local function numeroDano(cuerpo: BasePart, cantidad: number)
 	local punto = crear("Attachment", { Position = cuerpo.Position + Vector3.new(math.random(-10, 10) / 10, cuerpo.Size.Y / 2 + 1, 0) }, workspace.Terrain)
 	local b = crear("BillboardGui", { Size = UDim2.fromOffset(90, 40), AlwaysOnTop = true, Adornee = punto }, punto)
 	local grande = cantidad >= 100
-	local l = texto({ Text = miles(cantidad), Size = UDim2.fromScale(1, 1), TextSize = if grande then 34 else 26, TextColor3 = if grande then Comic.AMARILLO else Comic.CREMA, Rotation = math.random(-12, 12) }, b)
+	local l = texto({ Text = miles(cantidad), Size = UDim2.fromScale(1, 1), TextSize = if grande then 34 else 26, TextColor3 = if grande then Comic.AMARILLO else Comic.CREMA }, b)
 	animar(punto, 0.7, { Position = punto.Position + Vector3.new(0, 3, 0) })
 	animar(l, 0.7, { TextTransparency = 1, TextStrokeTransparency = 1 }, Enum.EasingStyle.Quint)
 	task.delay(0.7, function()
@@ -629,7 +634,7 @@ local dineroAntes = jugador:GetAttribute("Dinero")
 local function dineroSalta()
 	local ahora = jugador:GetAttribute("Dinero")
 	if enBatalla() and dineroAntes and ahora and ahora > dineroAntes then
-		local l = texto({ Text = `+💰 {miles(ahora - dineroAntes)}`, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, math.random(-40, 40), 0, -4), Size = UDim2.fromOffset(160, 34), TextSize = 30, TextColor3 = Comic.AMARILLO, Rotation = math.random(-8, 8) }, abajo)
+		local l = texto({ Text = `+💰 {miles(ahora - dineroAntes)}`, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, math.random(-40, 40), 0, -4), Size = UDim2.fromOffset(160, 34), TextSize = 30, TextColor3 = Comic.AMARILLO }, abajo)
 		animar(l, 0.9, { Position = l.Position - UDim2.fromOffset(0, 50), TextTransparency = 1, TextStrokeTransparency = 1 })
 		task.delay(0.9, l.Destroy, l)
 	end

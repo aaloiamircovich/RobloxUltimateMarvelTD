@@ -844,12 +844,14 @@ local ultimaEntrada = 0
 local pantalla = Comic.crear("ScreenGui", { Name = "EntradaJefe", ResetOnSpawn = false, DisplayOrder = 8, IgnoreGuiInset = true, Enabled = false }, jugador:WaitForChild("PlayerGui"))
 local franjaArriba = Comic.crear("Frame", { BackgroundColor3 = Comic.NEGRO, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0.12, 0), Position = UDim2.fromScale(0, -0.12) }, pantalla)
 local franjaAbajo = Comic.crear("Frame", { BackgroundColor3 = Comic.NEGRO, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0.12, 0), Position = UDim2.fromScale(0, 1) }, pantalla)
-local vineta = Comic.crear("Frame", { AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.fromOffset(560, 150), Position = UDim2.new(1, 40, 0.68, 0), BackgroundColor3 = Comic.ROJO_OSCURO, Rotation = -3 }, pantalla)
-Comic.borde(vineta, 6)
-Comic.crear("UIGradient", { Rotation = 90, Color = ColorSequence.new(Comic.ROJO, Comic.ROJO_OSCURO) }, vineta)
+-- Panel de vidrio con una franja roja a la izquierda: «JEFE», el nombre grande y su frase.
+local vineta = Comic.crear("Frame", { AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.fromOffset(560, 150), Position = UDim2.new(1, 40, 0.68, 0), BackgroundColor3 = Comic.FONDO, BackgroundTransparency = Comic.TRANSPARENCIA }, pantalla)
+Comic.borde(vineta)
+Comic.crear("Frame", { Position = UDim2.fromOffset(0, 14), Size = UDim2.new(0, 5, 1, -28), BackgroundColor3 = Comic.ROJO, BorderSizePixel = 0 }, vineta)
 local escalaVineta = Comic.crear("UIScale", {}, vineta)
-local nombreJefe = Comic.texto({ Position = UDim2.fromOffset(20, 10), Size = UDim2.new(1, -40, 0, 74), TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Left }, vineta)
-local fraseJefe = Comic.texto({ Position = UDim2.fromOffset(20, 88), Size = UDim2.new(1, -40, 0, 48), Font = Comic.TEXTO, TextSize = 22, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left }, vineta)
+Comic.texto({ Text = "JEFE", TextSize = 14, TextColor3 = Comic.ROJO, Position = UDim2.fromOffset(24, 14), Size = UDim2.fromOffset(100, 16), TextXAlignment = Enum.TextXAlignment.Left }, vineta)
+local nombreJefe = Comic.texto({ Position = UDim2.fromOffset(24, 32), Size = UDim2.new(1, -44, 0, 56), TextXAlignment = Enum.TextXAlignment.Left }, vineta)
+local fraseJefe = Comic.texto({ Position = UDim2.fromOffset(24, 94), Size = UDim2.new(1, -44, 0, 44), Font = Comic.TEXTO, TextSize = 18, TextColor3 = Comic.TENUE, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left }, vineta)
 
 local function entradaJefe(cuerpo: BasePart)
 	if os.clock() - ultimaEntrada < 20 or (camara.CFrame.Position - cuerpo.Position).Magnitude > 400 then

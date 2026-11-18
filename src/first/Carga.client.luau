@@ -1,4 +1,4 @@
--- Pantalla de carga (docs/PANTALLAS.md): al entrar al juego y al llegar a un servidor de partida o volver al lobby.
+-- Pantalla de carga (docs/PANTALLAS.md, estilo limpio): al entrar al juego y al llegar a un servidor de partida o volver al lobby.
 -- Corre desde ReplicatedFirst, antes que el resto: no usa módulos del juego. También se usa como pantalla del
 -- teletransporte entre servidores (TeleportService:SetTeleportGui).
 local Players = game:GetService("Players")
@@ -7,11 +7,11 @@ local ContentProvider = game:GetService("ContentProvider")
 local TeleportService = game:GetService("TeleportService")
 local TweenService = game:GetService("TweenService")
 
-local ROJO = Color3.fromRGB(200, 24, 32)
-local ROJO_OSCURO = Color3.fromRGB(110, 10, 18)
-local AMARILLO = Color3.fromRGB(255, 214, 40)
-local CREMA = Color3.fromRGB(255, 244, 222)
-local NEGRO = Color3.new(0, 0, 0)
+-- Misma paleta que Comic.luau (estilo limpio, 17/11/2026); acá no se puede usar el módulo porque corre antes.
+local ROJO = Color3.fromRGB(226, 38, 52)
+local FONDO = Color3.fromRGB(16, 18, 26)
+local TENUE = Color3.fromRGB(150, 158, 178)
+local CREMA = Color3.fromRGB(236, 240, 248)
 
 local CONSEJOS = {
 	"Cada unidad pide su terreno: pasto, agua o montaña.",
@@ -34,13 +34,10 @@ end
 
 local function armar(): (ScreenGui, Frame, TextLabel)
 	local gui = crear("ScreenGui", { Name = "Carga", IgnoreGuiInset = true, ResetOnSpawn = false, DisplayOrder = 100 })
-	local fondo = crear("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = ROJO_OSCURO, BorderSizePixel = 0 }, gui)
-	crear("UIGradient", { Rotation = 60, Color = ColorSequence.new(ROJO, Color3.fromRGB(40, 4, 10)) }, fondo)
-	-- Franjas diagonales de viñeta.
-	for i = -2, 6 do
-		crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(i * 0.18, 0.5), Size = UDim2.new(0, 26, 2, 0), Rotation = 25, BackgroundColor3 = NEGRO, BackgroundTransparency = 0.82, BorderSizePixel = 0 }, fondo)
-	end
-	local centro = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45), Size = UDim2.fromOffset(760, 300), BackgroundTransparency = 1 }, fondo)
+	local fondo = crear("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = FONDO, BorderSizePixel = 0 }, gui)
+	-- Resplandor rojo muy suave desde abajo.
+	crear("UIGradient", { Rotation = 90, Color = ColorSequence.new(FONDO, Color3.fromRGB(48, 14, 22)) }, fondo)
+	local centro = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(760, 260), BackgroundTransparency = 1 }, fondo)
 	local cam = workspace.CurrentCamera
 	local escala = crear("UIScale", {}, centro)
 	local function ajustar()
@@ -51,14 +48,13 @@ local function armar(): (ScreenGui, Frame, TextLabel)
 	if cam then
 		cam:GetPropertyChangedSignal("ViewportSize"):Connect(ajustar)
 	end
-	local cartel = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0), Size = UDim2.fromOffset(700, 150), BackgroundColor3 = AMARILLO, Rotation = -3 }, centro)
-	crear("UIStroke", { Color = NEGRO, Thickness = 8 }, cartel)
-	crear("TextLabel", { Size = UDim2.new(1, -30, 0, 96), Position = UDim2.fromOffset(15, 4), BackgroundTransparency = 1, Font = Enum.Font.Bangers, TextScaled = true, TextColor3 = ROJO, TextStrokeTransparency = 0, TextStrokeColor3 = NEGRO, Text = "ULTIMATE MARVEL TD" }, cartel)
-	crear("TextLabel", { Size = UDim2.new(1, -30, 0, 40), Position = UDim2.fromOffset(15, 100), BackgroundTransparency = 1, Font = Enum.Font.Bangers, TextScaled = true, TextColor3 = ROJO_OSCURO, Text = "TOWER DEFENSE" }, cartel)
-	local marcoBarra = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 190), Size = UDim2.fromOffset(560, 30), BackgroundColor3 = NEGRO }, centro)
-	crear("UIStroke", { Color = CREMA, Thickness = 3 }, marcoBarra)
-	local barra = crear("Frame", { Size = UDim2.fromScale(0.05, 1), BackgroundColor3 = AMARILLO, BorderSizePixel = 0 }, marcoBarra)
-	local consejo = crear("TextLabel", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 236), Size = UDim2.fromOffset(740, 50), BackgroundTransparency = 1, Font = Enum.Font.GothamBold, TextSize = 22, TextWrapped = true, TextColor3 = CREMA, TextStrokeTransparency = 0.4, Text = "Consejo: " .. CONSEJOS[math.random(#CONSEJOS)] }, centro)
+	crear("TextLabel", { Size = UDim2.new(1, 0, 0, 80), BackgroundTransparency = 1, Font = Enum.Font.GothamBlack, TextScaled = true, TextColor3 = CREMA, Text = "ULTIMATE MARVEL TD" }, centro)
+	crear("TextLabel", { Position = UDim2.fromOffset(0, 84), Size = UDim2.new(1, 0, 0, 22), BackgroundTransparency = 1, Font = Enum.Font.GothamBold, TextSize = 18, TextColor3 = ROJO, Text = "TOWER DEFENSE" }, centro)
+	local marcoBarra = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 150), Size = UDim2.fromOffset(420, 4), BackgroundColor3 = Color3.fromRGB(40, 44, 58), BorderSizePixel = 0 }, centro)
+	crear("UICorner", { CornerRadius = UDim.new(1, 0) }, marcoBarra)
+	local barra = crear("Frame", { Size = UDim2.fromScale(0.05, 1), BackgroundColor3 = ROJO, BorderSizePixel = 0 }, marcoBarra)
+	crear("UICorner", { CornerRadius = UDim.new(1, 0) }, barra)
+	local consejo = crear("TextLabel", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 176), Size = UDim2.fromOffset(700, 40), BackgroundTransparency = 1, Font = Enum.Font.GothamBold, TextSize = 16, TextWrapped = true, TextColor3 = TENUE, Text = "Consejo: " .. CONSEJOS[math.random(#CONSEJOS)] }, centro)
 	return gui, barra, consejo
 end
 
@@ -88,7 +84,15 @@ end
 avanzar(1)
 task.wait(0.3)
 -- Se va con un barrido hacia arriba.
+-- Se desvanece.
 local fondo = gui:FindFirstChildWhichIsA("Frame")
-TweenService:Create(fondo, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Position = UDim2.fromScale(0, -1.1) }):Play()
+TweenService:Create(fondo, TweenInfo.new(0.5), { BackgroundTransparency = 1 }):Play()
+for _, d in fondo:GetDescendants() do
+	if d:IsA("TextLabel") then
+		TweenService:Create(d, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()
+	elseif d:IsA("Frame") then
+		TweenService:Create(d, TweenInfo.new(0.4), { BackgroundTransparency = 1 }):Play()
+	end
+end
 task.wait(0.55)
 gui:Destroy()

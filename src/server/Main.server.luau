@@ -66,6 +66,56 @@ local recompensasRemoto = remoto("RemoteFunction", "Recompensas")
 local intercambioRemoto = remoto("RemoteFunction", "Intercambio")
 local intercambioAviso = remoto("RemoteEvent", "IntercambioAviso") -- el servidor avisa pedidos y cambios de la sesión
 
+-- Perfil público (docs/INTERFAZ.md): resumen de cualquier jugador del servidor para la tarjeta de perfil.
+-- Frontera de confianza: sólo un número de usuario de alguien que esté en este servidor; no se devuelve nada más.
+local perfilPublico = remoto("RemoteFunction", "PerfilPublico")
+local ORDEN_RAREZA = { Common = 1, Rare = 2, Epic = 3, Legendary = 4, Mythic = 5, Secret = 6 }
+perfilPublico.OnServerInvoke = function(_jugador, userId)
+	if type(userId) ~= "number" or userId ~= userId then
+		return nil
+	end
+	local otro = Players:GetPlayerByUserId(userId)
+	local perfil = otro and Perfiles.de(otro)
+	if not perfil then
+		return nil
+	end
+	local heroes = require(Shared.Personajes).todos
+	-- Las 3 mejores unidades: rareza y después nivel.
+	local mejores = table.clone(perfil.units or {})
+	table.sort(mejores, function(a, b)
+		local ra = heroes[a.heroId] and ORDEN_RAREZA[heroes[a.heroId].rarity] or 0
+		local rb = heroes[b.heroId] and ORDEN_RAREZA[heroes[b.heroId].rarity] or 0
+		if ra ~= rb then
+			return ra > rb
+		end
+		return (a.level or 1) > (b.level or 1)
+	end)
+	local destacadas = {}
+	for i = 1, math.min(3, #mejores) do
+		table.insert(destacadas, { heroId = mejores[i].heroId, level = mejores[i].level })
+	end
+	local logros, actos = 0, 0
+	for _ in perfil.logros or {} do
+		logros += 1
+	end
+	for _, prog in perfil.acts or {} do
+		actos += (prog.normal or 0)
+	end
+	return {
+		nombre = otro.DisplayName,
+		usuario = otro.Name,
+		userId = otro.UserId,
+		nivel = perfil.level or 1,
+		unidades = #(perfil.units or {}),
+		destacadas = destacadas,
+		logros = logros,
+		logrosTotal = #Recompensas.LOGROS,
+		actos = actos,
+		enemigos = perfil.estadisticas and perfil.estadisticas.enemigos or 0,
+		jefes = perfil.estadisticas and perfil.estadisticas.jefes or 0,
+	}
+end
+
 --------------------------------------------------------------------------------
 -- Partidas: cada una en su arena, lejos del HUB
 --------------------------------------------------------------------------------

@@ -26,10 +26,11 @@ for _, r in RAREZAS do
 	NOMBRE_RAREZA[r[1]], COLOR_RAREZA[r[1]] = r[2], r[3]
 end
 
--- Paleta cómic (la misma que Comic.luau del HUD): fondo rojo muy oscuro, botones rojos, acento amarillo.
-local OSCURO = Color3.fromRGB(28, 8, 12)
-local BOTON = Color3.fromRGB(150, 25, 32)
-local ACENTO = Color3.fromRGB(255, 214, 40)
+-- Misma paleta que Comic.luau (estilo limpio, 17/11/2026): vidrio oscuro, tarjetas gris azulado, acento dorado.
+local Comic = require(script.Parent:WaitForChild("Comic"))
+local OSCURO = Comic.FONDO
+local BOTON = Comic.ROJO_OSCURO
+local ACENTO = Comic.AMARILLO
 
 --------------------------------------------------------------------------------
 -- Piezas de interfaz
@@ -46,12 +47,7 @@ local function crear(clase: string, props, padre: Instance?)
 		i[k] = v
 	end
 	if clase == "Frame" or clase == "TextButton" or clase == "ScrollingFrame" then
-		Instance.new("UICorner", i).CornerRadius = UDim.new(0, 6)
-	end
-	if clase == "TextButton" then
-		local borde = Instance.new("UIStroke")
-		borde.Thickness, borde.ApplyStrokeMode = 2, Enum.ApplyStrokeMode.Border
-		borde.Parent = i
+		Instance.new("UICorner", i).CornerRadius = UDim.new(0, 8)
 	end
 	i.Parent = padre
 	return i
@@ -66,17 +62,11 @@ local function texto(props, padre)
 	return crear("TextLabel", props, padre)
 end
 
+-- Botones del estilo común (Comic.boton): relleno con degradado y borde fino que acá se pinta por rareza.
 local function boton(txt: string, props, padre, alClic)
-	props.Text = txt
 	props.BackgroundColor3 = props.BackgroundColor3 or BOTON
-	props.TextColor3 = Color3.new(1, 1, 1)
-	props.Font = Enum.Font.Bangers
-	props.TextSize = (props.TextSize or 16) + 4
-	props.TextStrokeTransparency = 0
-	props.TextWrapped = true
-	local b = crear("TextButton", props, padre)
-	b.Activated:Connect(alClic)
-	return b
+	props.TextSize = (props.TextSize or 16) + 2
+	return Comic.boton(txt, props, padre, alClic)
 end
 
 local ventana = crear("Frame", {
@@ -84,16 +74,18 @@ local ventana = crear("Frame", {
 	Position = UDim2.fromScale(0.5, 0.5),
 	Size = UDim2.fromOffset(780, 500),
 	BackgroundColor3 = OSCURO,
-	BackgroundTransparency = 0.05,
+	BackgroundTransparency = Comic.TRANSPARENCIA,
 }, gui)
 -- Se achica o agranda con la pantalla como el resto del HUD (docs/INTERFAZ.md).
 require(script.Parent:WaitForChild("Comic")).escalar(ventana)
 local bordeVentana = Instance.new("UIStroke")
-bordeVentana.Thickness = 5
+bordeVentana.Thickness, bordeVentana.Color, bordeVentana.Transparency = 1, Comic.BORDE, 0.3
 bordeVentana.Parent = ventana
-local titulo = texto({ Position = UDim2.fromOffset(24, 14), Size = UDim2.new(1, -120, 0, 36), Font = Enum.Font.Bangers, TextSize = 34, TextStrokeTransparency = 0, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = ACENTO }, ventana)
+-- Línea roja bajo el título, como en todos los paneles.
+local lineaTitulo = crear("Frame", { Position = UDim2.fromOffset(24, 52), Size = UDim2.fromOffset(64, 3), BackgroundColor3 = Comic.ROJO, BorderSizePixel = 0 }, ventana)
+local titulo = texto({ Position = UDim2.fromOffset(24, 14), Size = UDim2.new(1, -120, 0, 34), Font = Comic.TITULO, TextSize = 28, TextXAlignment = Enum.TextXAlignment.Left }, ventana)
 local saldo = texto({ Position = UDim2.new(1, -420, 0, 18), Size = UDim2.fromOffset(340, 28), TextSize = 18, TextXAlignment = Enum.TextXAlignment.Right }, ventana)
-boton("X", { Position = UDim2.new(1, -56, 0, 12), Size = UDim2.fromOffset(40, 40) }, ventana, function()
+boton("✕", { Position = UDim2.new(1, -52, 0, 12), Size = UDim2.fromOffset(36, 36), BackgroundColor3 = Comic.GRIS }, ventana, function()
 	gui.Enabled = false
 end)
 local mensaje = texto({ Position = UDim2.new(0, 24, 1, -40), Size = UDim2.new(1, -48, 0, 28), TextColor3 = Color3.fromRGB(255, 130, 130) }, ventana)
@@ -229,42 +221,122 @@ local function pantallaBanner()
 	end
 end
 
+-- Filtros del inventario (se mantienen mientras el panel está abierto).
+local busqueda, filtroRareza, ordenUnidades = "", nil, "rareza"
+local ORDENES = { rareza = "Rareza", nivel = "Nivel", nombre = "Nombre" }
+local SIGUIENTE_ORDEN = { rareza = "nivel", nivel = "nombre", nombre = "rareza" }
+local Rasgos = require(Shared.Rasgos)
+local Cinematica = require(script.Parent:WaitForChild("Cinematica"))
+
+-- Tarjeta de unidad: retrato 3D, marco del color de la rareza (brilla en Mítico y Secreto), nombre, nivel y
+-- marca de escuadrón. Devuelve el botón.
+local function tarjetaUnidad(u, padre, elegida: boolean, enEscuadron: boolean, alClic)
+	local h = heroes[u.heroId]
+	local color = COLOR_RAREZA[h.rarity] or Color3.new(1, 1, 1)
+	local b = boton("", { BackgroundColor3 = if elegida then Comic.GRIS else BOTON }, padre, alClic)
+	Comic.resaltar(b, color)
+	-- Brillo que recorre el marco de los más raros.
+	if h.rarity == "Mythic" or h.rarity == "Secret" then
+		local trazo = b:FindFirstChildOfClass("UIStroke")
+		local g = crear("UIGradient", { Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, color), ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)), ColorSequenceKeypoint.new(1, color) }) }, trazo)
+		task.spawn(function()
+			while g.Parent and b.Parent do
+				g.Rotation = (g.Rotation + 4) % 360
+				task.wait(0.03)
+			end
+		end)
+	end
+	-- Degradado del color de la rareza abajo.
+	local pie = crear("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, 0, 0.45, 0), BackgroundColor3 = color, BackgroundTransparency = 0.55, BorderSizePixel = 0 }, b)
+	crear("UIGradient", { Rotation = 90, Transparency = NumberSequence.new(1, 0.2) }, pie)
+	local marco = crear("Frame", { Position = UDim2.fromOffset(4, 4), Size = UDim2.new(1, -8, 1, -38), BackgroundTransparency = 1 }, b)
+	Comic.retrato(marco, u.heroId, h.name, color, Personajes.base(u.heroId))
+	texto({ AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 6, 1, -16), Size = UDim2.new(1, -12, 0, 16), TextSize = 13, Font = Comic.TITULO, Text = h.name, TextTruncate = Enum.TextTruncate.AtEnd }, b)
+	texto({ AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 6, 1, -2), Size = UDim2.new(1, -12, 0, 14), TextSize = 11, Font = Comic.TEXTO, TextColor3 = color, Text = `Nv {u.level}`, TextXAlignment = Enum.TextXAlignment.Left }, b)
+	if enEscuadron then
+		local marca = crear("Frame", { Position = UDim2.fromOffset(5, 5), Size = UDim2.fromOffset(20, 20), BackgroundColor3 = Comic.VERDE }, b)
+		marca:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(1, 0)
+		texto({ Size = UDim2.fromScale(1, 1), TextSize = 13, Font = Comic.TITULO, Text = "✓" }, marca)
+	end
+	return b
+end
+
+-- Fila de stat de la ficha: nombre a la izquierda, valor a la derecha.
+local function stat(padre, y: number, nombre: string, valor: string, color: Color3?)
+	texto({ Position = UDim2.fromOffset(12, y), Size = UDim2.new(0.5, -12, 0, 18), TextSize = 13, TextColor3 = Comic.TENUE, Text = nombre, TextXAlignment = Enum.TextXAlignment.Left }, padre)
+	texto({ Position = UDim2.new(0.5, 0, 0, y), Size = UDim2.new(0.5, -12, 0, 18), TextSize = 13, Font = Comic.TITULO, TextColor3 = color or Comic.CREMA, Text = valor, TextXAlignment = Enum.TextXAlignment.Right }, padre)
+end
+
 local function pantallaUnidades()
 	titulo.Text = "Unidades"
-	texto({ Position = UDim2.fromOffset(600, 4), Size = UDim2.fromOffset(130, 28), TextXAlignment = Enum.TextXAlignment.Right, Text = `{#estado.unidades} / {Unidades.MAX_INVENTARIO}` }, cuerpo)
-	local lista = crear("ScrollingFrame", { Position = UDim2.fromOffset(0, 46), Size = UDim2.new(0.62, -10, 1, -46), BackgroundTransparency = 1, ScrollBarThickness = 6, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new() }, cuerpo)
-	crear("UIGridLayout", { CellSize = UDim2.fromOffset(140, 62), CellPadding = UDim2.fromOffset(8, 8) }, lista)
-	-- Escuadrón primero, después por rareza (más alta arriba) y nivel.
-	local orden = table.clone(estado.unidades)
-	table.sort(orden, function(a, b)
-		local ea, eb = table.find(estado.escuadron, a.uid), table.find(estado.escuadron, b.uid)
-		if (ea ~= nil) ~= (eb ~= nil) then
-			return ea ~= nil
+	-- Barra de filtros: buscador, rarezas y orden; a la derecha, cuántas hay.
+	local caja = crear("TextBox", { Position = UDim2.fromOffset(0, 0), Size = UDim2.fromOffset(170, 32), Text = busqueda, PlaceholderText = "🔍 Buscar…", ClearTextOnFocus = false, Font = Comic.TEXTO, TextSize = 14, TextColor3 = Comic.CREMA, PlaceholderColor3 = Comic.TENUE, BackgroundColor3 = BOTON, TextXAlignment = Enum.TextXAlignment.Left }, cuerpo)
+	crear("UIPadding", { PaddingLeft = UDim.new(0, 10) }, caja)
+	crear("UICorner", { CornerRadius = UDim.new(0, 8) }, caja)
+	caja.FocusLost:Connect(function()
+		busqueda = caja.Text
+		mostrar()
+	end)
+	local chips = crear("Frame", { Position = UDim2.fromOffset(180, 0), Size = UDim2.fromOffset(330, 32), BackgroundTransparency = 1 }, cuerpo)
+	crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }, chips)
+	for k, r in { { nil, "Todas" }, table.unpack(RAREZAS) } do
+		local id = r[1]
+		local activo = filtroRareza == id
+		local chip = boton(if id then string.sub(r[2], 1, 3) else r[2], { LayoutOrder = k, Size = UDim2.fromOffset(if id then 40 else 58, 32), TextSize = 11, BackgroundColor3 = if activo then (id and COLOR_RAREZA[id] or Comic.ROJO) else BOTON, TextColor3 = if activo or not id then Comic.CREMA else COLOR_RAREZA[id] }, chips, function()
+			filtroRareza = id
+			mostrar()
+		end)
+		chip.Name = id or "todas"
+	end
+	boton(`⇅ {ORDENES[ordenUnidades]}`, { Position = UDim2.fromOffset(518, 0), Size = UDim2.fromOffset(100, 32), TextSize = 12, BackgroundColor3 = BOTON }, cuerpo, function()
+		ordenUnidades = SIGUIENTE_ORDEN[ordenUnidades]
+		mostrar()
+	end)
+	texto({ Position = UDim2.new(1, -110, 0, 0), Size = UDim2.fromOffset(110, 32), TextXAlignment = Enum.TextXAlignment.Right, TextSize = 14, TextColor3 = Comic.TENUE, Text = `{#estado.unidades} / {Unidades.MAX_INVENTARIO}` }, cuerpo)
+
+	-- Grilla de tarjetas (filtrada y ordenada).
+	local lista = crear("ScrollingFrame", { Position = UDim2.fromOffset(0, 42), Size = UDim2.new(0.6, -10, 1, -42), BackgroundTransparency = 1, ScrollBarThickness = 5, ScrollBarImageColor3 = Comic.BORDE, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new() }, cuerpo)
+	crear("UIGridLayout", { CellSize = UDim2.fromOffset(100, 132), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder }, lista)
+	crear("UIPadding", { PaddingTop = UDim.new(0, 3), PaddingLeft = UDim.new(0, 3) }, lista)
+	local orden = {}
+	local q = string.lower(busqueda)
+	for _, u in estado.unidades do
+		local h = heroes[u.heroId]
+		if h and (not filtroRareza or h.rarity == filtroRareza) and (q == "" or string.find(string.lower(h.name), q, 1, true)) then
+			table.insert(orden, u)
 		end
-		local ra, rb = table.find(Personajes.RAREZAS, heroes[a.heroId].rarity), table.find(Personajes.RAREZAS, heroes[b.heroId].rarity)
-		if ra ~= rb then
-			return ra > rb
+	end
+	local function rango(u)
+		return table.find(Personajes.RAREZAS, heroes[u.heroId].rarity) or 0
+	end
+	table.sort(orden, function(a, b)
+		-- El escuadrón siempre primero.
+		local ea, eb = table.find(estado.escuadron, a.uid) ~= nil, table.find(estado.escuadron, b.uid) ~= nil
+		if ea ~= eb then
+			return ea
+		end
+		if ordenUnidades == "nombre" and heroes[a.heroId].name ~= heroes[b.heroId].name then
+			return heroes[a.heroId].name < heroes[b.heroId].name
+		elseif ordenUnidades == "nivel" and a.level ~= b.level then
+			return a.level > b.level
+		elseif rango(a) ~= rango(b) then
+			return rango(a) > rango(b)
 		end
 		return if a.level ~= b.level then a.level > b.level else a.uid < b.uid
 	end)
-	for _, u in orden do
-		local h = heroes[u.heroId]
-		local enEscuadron = table.find(estado.escuadron, u.uid) ~= nil
-		local b = boton("", { BackgroundColor3 = if elegida == u.uid then Color3.fromRGB(90, 140, 220) elseif enEscuadron then Color3.fromRGB(40, 80, 140) else BOTON }, lista, function()
+	for i, u in orden do
+		local t = tarjetaUnidad(u, lista, elegida == u.uid, table.find(estado.escuadron, u.uid) ~= nil, function()
 			elegida = if elegida == u.uid then nil else u.uid
 			mostrar()
 		end)
-		-- El botón ya trae su borde: se pinta del color de la rareza.
-		b:FindFirstChildOfClass("UIStroke").Color = COLOR_RAREZA[h.rarity]
-		texto({ Position = UDim2.fromOffset(6, 4), Size = UDim2.new(1, -12, 0, 20), TextSize = 13, Font = Enum.Font.GothamBold, Text = h.name }, b)
-		texto({ Position = UDim2.fromOffset(6, 24), Size = UDim2.new(1, -12, 0, 16), TextSize = 12, TextColor3 = COLOR_RAREZA[h.rarity], Text = `Nv {u.level}` .. (if enEscuadron then " · Escuadrón" else "") }, b)
-		-- Barra de experiencia hacia el próximo nivel.
-		local fondo = crear("Frame", { Position = UDim2.new(0, 8, 1, -14), Size = UDim2.new(1, -16, 0, 6), BackgroundColor3 = Color3.fromRGB(20, 22, 32) }, b)
-		local llena = if u.level >= Unidades.NIVEL_MAXIMO then 1 else u.xp / Unidades.xpParaSubir(u.level)
-		crear("Frame", { Size = UDim2.fromScale(math.clamp(llena, 0, 1), 1), BackgroundColor3 = Color3.fromRGB(90, 220, 120) }, fondo)
+		t.LayoutOrder = i
 	end
-	-- Panel de la unidad elegida: escuadrón, venta y evolución.
-	local der = crear("Frame", { Position = UDim2.new(0.62, 10, 0, 46), Size = UDim2.new(0.38, -10, 1, -46), BackgroundColor3 = BOTON }, cuerpo)
+	if #orden == 0 then
+		texto({ Size = UDim2.new(1, 0, 0, 40), TextSize = 14, TextColor3 = Comic.TENUE, Text = "No hay unidades con ese filtro." }, lista)
+	end
+
+	-- Ficha de la unidad elegida.
+	local der = crear("Frame", { Position = UDim2.new(0.6, 0, 0, 42), Size = UDim2.new(0.4, 0, 1, -42), BackgroundColor3 = BOTON }, cuerpo)
 	local u
 	for _, x in estado.unidades do
 		if x.uid == elegida then
@@ -272,15 +344,34 @@ local function pantallaUnidades()
 		end
 	end
 	if not u then
-		texto({ Position = UDim2.fromOffset(12, 12), Size = UDim2.new(1, -24, 1, -24), TextSize = 14, TextYAlignment = Enum.TextYAlignment.Top, Text = `Elegí una unidad para sumarla o sacarla del escuadrón (hasta {Unidades.MAX_ESCUADRON}), venderla o evolucionarla.\n\nNúcleos: {estado.nucleos}` }, der)
+		texto({ Position = UDim2.fromOffset(16, 16), Size = UDim2.new(1, -32, 1, -32), TextSize = 14, TextColor3 = Comic.TENUE, TextYAlignment = Enum.TextYAlignment.Top, Text = `Elegí una unidad para ver su ficha, sumarla o sacarla del escuadrón (hasta {Unidades.MAX_ESCUADRON}), venderla o evolucionarla.\n\nNúcleos: {estado.nucleos}` }, der)
 		return
 	end
 	local h = heroes[u.heroId]
+	local color = COLOR_RAREZA[h.rarity]
 	local enEscuadron = table.find(estado.escuadron, u.uid)
-	texto({ Position = UDim2.fromOffset(12, 8), Size = UDim2.new(1, -24, 0, 26), TextSize = 19, Font = Enum.Font.GothamBold, Text = h.name }, der)
-	local xpTexto = if u.level >= Unidades.NIVEL_MAXIMO then "nivel máximo" else `{u.xp}/{Unidades.xpParaSubir(u.level)} XP`
-	texto({ Position = UDim2.fromOffset(12, 34), Size = UDim2.new(1, -24, 0, 40), TextSize = 13, TextColor3 = COLOR_RAREZA[h.rarity], Text = `{NOMBRE_RAREZA[h.rarity]} · Nv {u.level} ({xpTexto})\n+{u.level - 1}% de daño · se coloca hasta {Unidades.LIMITE_COLOCACION[h.rarity]} veces` }, der)
-	boton(if enEscuadron then "Sacar del escuadrón" else "Sumar al escuadrón", { Position = UDim2.fromOffset(12, 84), Size = UDim2.new(1, -24, 0, 38) }, der, function()
+	-- Modelo grande girando, con un halo del color de la rareza detrás.
+	local vista = crear("Frame", { Position = UDim2.fromOffset(8, 8), Size = UDim2.new(1, -16, 0, 120), BackgroundColor3 = color, BackgroundTransparency = 0.82 }, der)
+	crear("UIGradient", { Rotation = 90, Transparency = NumberSequence.new(0.3, 1) }, vista)
+	Cinematica.modelo3D(vista, u.heroId, true)
+	texto({ Position = UDim2.fromOffset(12, 132), Size = UDim2.new(1, -24, 0, 22), TextSize = 18, Font = Comic.TITULO, Text = string.upper(h.name), TextXAlignment = Enum.TextXAlignment.Left }, der)
+	texto({ Position = UDim2.fromOffset(12, 154), Size = UDim2.new(1, -24, 0, 16), TextSize = 12, TextColor3 = color, Text = `{NOMBRE_RAREZA[h.rarity]} · {h.category} · Nv {u.level}`, TextXAlignment = Enum.TextXAlignment.Left }, der)
+	-- Barra de XP.
+	local fondoXp = crear("Frame", { Position = UDim2.fromOffset(12, 174), Size = UDim2.new(1, -24, 0, 6), BackgroundColor3 = Comic.FONDO }, der)
+	local llena = if u.level >= Unidades.NIVEL_MAXIMO then 1 else u.xp / Unidades.xpParaSubir(u.level)
+	crear("Frame", { Size = UDim2.fromScale(math.clamp(llena, 0, 1), 1), BackgroundColor3 = Comic.AMARILLO }, fondoXp)
+	local bono = 1 + (u.level - 1) / 100
+	stat(der, 186, "Daño", tostring(math.floor((h.damage or 0) * bono + 0.5)), Comic.AMARILLO)
+	stat(der, 204, "Alcance", tostring(h.range or "?"))
+	stat(der, 222, "Ataques/s", tostring(h.fireRate or "?"))
+	local g = Rasgos.grados(u)
+	stat(der, 240, "Rasgo", Rasgos.descripcion(u.rasgo), Color3.fromRGB(255, 143, 176))
+	stat(der, 258, "Grados", `{g.dano} / {g.alcance} / {g.cadencia}`)
+	texto({ Position = UDim2.fromOffset(12, 278), Size = UDim2.new(1, -24, 0, 30), TextSize = 11, TextColor3 = Comic.TENUE, TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top, TextXAlignment = Enum.TextXAlignment.Left, Text = `{h.ability or ""}` }, der)
+	-- Acciones: escuadrón, vender y evolucionar.
+	local acciones = crear("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 10, 1, -8), Size = UDim2.new(1, -20, 0, 36), BackgroundTransparency = 1 }, der)
+	crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6) }, acciones)
+	boton(if enEscuadron then "SACAR" else "EQUIPAR", { Size = UDim2.new(0.34, -4, 1, 0), TextSize = 12, BackgroundColor3 = if enEscuadron then Comic.GRIS else Comic.VERDE }, acciones, function()
 		local nuevo = table.clone(estado.escuadron)
 		if enEscuadron then
 			table.remove(nuevo, enEscuadron)
@@ -290,7 +381,7 @@ local function pantallaUnidades()
 		pedir("escuadron", nuevo)
 		mostrar()
 	end)
-	boton(`Vender · 💎 {Unidades.VENTA[h.rarity]}`, { Position = UDim2.fromOffset(12, 130), Size = UDim2.new(1, -24, 0, 38), BackgroundColor3 = Color3.fromRGB(120, 50, 50) }, der, function()
+	boton(`VENDER 💎{Unidades.VENTA[h.rarity]}`, { Size = UDim2.new(0.33, -4, 1, 0), TextSize = 11, BackgroundColor3 = Color3.fromRGB(120, 50, 55) }, acciones, function()
 		if not pedir("vender", u.uid).error then
 			elegida = nil
 		end
@@ -307,19 +398,17 @@ local function pantallaUnidades()
 		end
 		local d = heroes[destino]
 		local nucleos = Unidades.NUCLEOS[d.rarity]
-		texto({ Position = UDim2.fromOffset(12, 178), Size = UDim2.new(1, -24, 0, 54), TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, Text = `Evoluciona en {d.name} ({NOMBRE_RAREZA[d.rarity]}).\nCopias {#copias}/{Unidades.COPIAS_EVOLUCION} · Núcleos {estado.nucleos}/{nucleos}` }, der)
 		local listo = #copias == Unidades.COPIAS_EVOLUCION and estado.nucleos >= nucleos
-		boton("Evolucionar", { Position = UDim2.new(0, 12, 1, -50), Size = UDim2.new(1, -24, 0, 40), BackgroundColor3 = if listo then Color3.fromRGB(150, 70, 200) else Color3.fromRGB(60, 60, 66) }, der, function()
+		texto({ AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 12, 1, -48), Size = UDim2.new(1, -24, 0, 14), TextSize = 11, TextColor3 = Comic.TENUE, TextXAlignment = Enum.TextXAlignment.Left, Text = `Evoluciona en {d.name}: copias {#copias}/{Unidades.COPIAS_EVOLUCION} · núcleos {estado.nucleos}/{nucleos}` }, der)
+		boton("EVOLUCIONAR", { Size = UDim2.new(0.33, -4, 1, 0), TextSize = 11, BackgroundColor3 = if listo then Color3.fromRGB(150, 70, 200) else Comic.GRIS }, acciones, function()
 			local res = pedir("evolucionar", copias)
 			if res.nueva then
-				require(script.Parent:WaitForChild("Cinematica")).evolucion(u.heroId, destino)
+				Cinematica.evolucion(u.heroId, destino)
 				elegida = res.nueva.uid
 				mensaje.Text = `¡{d.name} se unió a tus unidades!`
 			end
 			mostrar()
 		end)
-	else
-		texto({ Position = UDim2.fromOffset(12, 178), Size = UDim2.new(1, -24, 0, 40), TextSize = 13, Text = "Este personaje no evoluciona." }, der)
 	end
 end
 
@@ -461,7 +550,7 @@ function pantallaHistoria()
 
 	-- Centro: actos del mapa (y su Infinito).
 	local centro = crear("Frame", { Position = UDim2.fromOffset(182, 0), Size = UDim2.new(0, 300, 1, 0), BackgroundTransparency = 1 }, cuerpo)
-	texto({ Size = UDim2.new(1, 0, 0, 26), Font = Enum.Font.Bangers, TextSize = 26, TextColor3 = ACENTO, TextStrokeTransparency = 0, TextXAlignment = Enum.TextXAlignment.Left, Text = mapa.nombre }, centro)
+	texto({ Size = UDim2.new(1, 0, 0, 26), Font = Comic.TITULO, TextSize = 26, TextColor3 = ACENTO, TextXAlignment = Enum.TextXAlignment.Left, Text = mapa.nombre }, centro)
 	texto({ Position = UDim2.fromOffset(0, 26), Size = UDim2.new(1, 0, 0, 18), TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, Text = `{mapa.dificultad} · 5 actos de 10 oleadas, jefe en la 10` }, centro)
 	local actos = crear("Frame", { Position = UDim2.fromOffset(0, 50), Size = UDim2.new(1, 0, 1, -50), BackgroundTransparency = 1 }, centro)
 	crear("UIListLayout", { Padding = UDim.new(0, 6) }, actos)
@@ -491,7 +580,7 @@ function pantallaHistoria()
 	end
 	local sala = res.sala
 	if sala then
-		texto({ Position = UDim2.fromOffset(10, 6), Size = UDim2.new(1, -20, 0, 26), Font = Enum.Font.Bangers, TextSize = 24, TextColor3 = ACENTO, TextStrokeTransparency = 0, TextXAlignment = Enum.TextXAlignment.Left, Text = `Sala · {#sala.miembros}/4` }, der)
+		texto({ Position = UDim2.fromOffset(10, 6), Size = UDim2.new(1, -20, 0, 26), Font = Comic.TITULO, TextSize = 24, TextColor3 = ACENTO, TextXAlignment = Enum.TextXAlignment.Left, Text = `Sala · {#sala.miembros}/4` }, der)
 		linea(34, `{sala.nombreMapa} · {if sala.acto == "infinito" then "Infinito" elseif sala.acto == "raid" then "Raid" else "Acto " .. sala.acto}{if sala.pesadilla then " · Pesadilla" else ""}`, ACENTO)
 		for i, m in sala.miembros do
 			linea(58 + (i - 1) * 22, (if m.anfitrion then "👑 " else "• ") .. m.nombre)
@@ -513,7 +602,7 @@ function pantallaHistoria()
 		end)
 		return
 	end
-	texto({ Position = UDim2.fromOffset(10, 6), Size = UDim2.new(1, -20, 0, 26), Font = Enum.Font.Bangers, TextSize = 24, TextColor3 = ACENTO, TextStrokeTransparency = 0, TextXAlignment = Enum.TextXAlignment.Left, Text = "Sala" }, der)
+	texto({ Position = UDim2.fromOffset(10, 6), Size = UDim2.new(1, -20, 0, 26), Font = Comic.TITULO, TextSize = 24, TextColor3 = ACENTO, TextXAlignment = Enum.TextXAlignment.Left, Text = "Sala" }, der)
 	local actoElegido
 	for _, a in filas do
 		if a.numero == sel.acto then

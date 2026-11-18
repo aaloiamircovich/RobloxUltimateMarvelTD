@@ -1,16 +1,21 @@
--- Estilo de interfaz tipo cómic Marvel: rojo intenso, amarillo/dorado de acento, borde negro grueso,
--- paneles levemente inclinados y letras Bangers. Lo usan el HUD del lobby y los paneles.
+-- Estilo de interfaz (docs/INTERFAZ.md, decidido el 17/11/2026): limpio, como Anime Vanguards. Paneles de vidrio
+-- oscuro con esquinas redondeadas y borde fino, títulos en Gotham Black, botones rellenos con degradado que se
+-- agrandan al pasar el mouse; rojo Marvel para lo principal y dorado para premios. El módulo conserva el nombre y
+-- las funciones de cuando era cómic para que todo el juego cambie de aspecto desde acá.
+local TweenService = game:GetService("TweenService")
 local Comic = {}
 local Sonido = require(script.Parent:WaitForChild("Sonido"))
 
-Comic.ROJO = Color3.fromRGB(200, 24, 32)
-Comic.ROJO_OSCURO = Color3.fromRGB(110, 10, 18)
-Comic.FONDO = Color3.fromRGB(28, 8, 12)
-Comic.AMARILLO = Color3.fromRGB(255, 214, 40)
-Comic.CREMA = Color3.fromRGB(255, 244, 222)
+Comic.ROJO = Color3.fromRGB(226, 38, 52) -- botón principal
+Comic.ROJO_OSCURO = Color3.fromRGB(34, 38, 52) -- fondo secundario (tarjetas, filas)
+Comic.FONDO = Color3.fromRGB(16, 18, 26) -- panel
+Comic.AMARILLO = Color3.fromRGB(255, 200, 72) -- dorado: premios y valores destacados
+Comic.CREMA = Color3.fromRGB(236, 240, 248) -- texto
+Comic.TENUE = Color3.fromRGB(150, 158, 178) -- texto secundario
+Comic.BORDE = Color3.fromRGB(96, 104, 128)
 Comic.NEGRO = Color3.new(0, 0, 0)
-Comic.VERDE = Color3.fromRGB(40, 150, 60)
-Comic.GRIS = Color3.fromRGB(70, 70, 80)
+Comic.VERDE = Color3.fromRGB(46, 170, 90)
+Comic.GRIS = Color3.fromRGB(58, 63, 80)
 Comic.RAREZA = {
 	Common = Color3.fromRGB(170, 175, 185),
 	Rare = Color3.fromRGB(80, 160, 255),
@@ -19,8 +24,13 @@ Comic.RAREZA = {
 	Mythic = Color3.fromRGB(255, 90, 110),
 	Secret = Color3.fromRGB(80, 255, 220),
 }
-Comic.TITULO = Enum.Font.Bangers
+Comic.TITULO = Enum.Font.GothamBlack
 Comic.TEXTO = Enum.Font.GothamBold
+Comic.TRANSPARENCIA = 0.1 -- de los paneles (vidrio)
+
+local function tween(obj: Instance, t: number, meta)
+	TweenService:Create(obj, TweenInfo.new(t, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), meta):Play()
+end
 
 function Comic.crear(clase: string, props, padre: Instance?)
 	local i = Instance.new(clase)
@@ -31,97 +41,146 @@ function Comic.crear(clase: string, props, padre: Instance?)
 	return i
 end
 
--- Borde negro grueso y esquinas apenas redondeadas, como un recuadro de viñeta.
+-- Borde fino y esquinas redondeadas. `grosor` se respeta sólo como énfasis (2 como máximo).
 function Comic.borde(objeto: GuiObject, grosor: number?)
-	Comic.crear("UIStroke", { Color = Comic.NEGRO, Thickness = grosor or 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, objeto)
-	Comic.crear("UICorner", { CornerRadius = UDim.new(0, 6) }, objeto)
+	Comic.crear("UIStroke", {
+		Color = Comic.BORDE,
+		Thickness = if grosor and grosor >= 4 then 2 else 1,
+		Transparency = 0.35,
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+	}, objeto)
+	Comic.crear("UICorner", { CornerRadius = UDim.new(0, 10) }, objeto)
 end
 
--- Texto con contorno negro (letras de cómic).
+-- Pinta el borde de un elemento con un color fuerte (rareza, seleccionado, premio listo).
+function Comic.resaltar(objeto: GuiObject, color: Color3)
+	local trazo = objeto:FindFirstChildOfClass("UIStroke") or Comic.crear("UIStroke", { ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, objeto)
+	trazo.Color, trazo.Transparency, trazo.Thickness = color, 0, 2
+end
+
+-- Texto limpio, sin contorno grueso (una sombra muy suave para leerse sobre el 3D).
 function Comic.texto(props, padre)
 	props.BackgroundTransparency = 1
 	props.Font = props.Font or Comic.TITULO
 	props.TextColor3 = props.TextColor3 or Comic.CREMA
-	props.TextStrokeTransparency = props.TextStrokeTransparency or 0
+	props.TextStrokeTransparency = props.TextStrokeTransparency or 0.8
 	props.TextStrokeColor3 = Comic.NEGRO
 	props.TextScaled = if props.TextSize then false else true
 	return Comic.crear("TextLabel", props, padre)
 end
 
--- Botón con ícono grande y rótulo abajo (como los botones del lobby de los TD de Roblox).
+-- Agranda un poco al pasar el mouse y hunde al apretar.
+local function animarBoton(b: GuiButton, alPasar: (boolean) -> ()?)
+	local escala = Comic.crear("UIScale", {}, b)
+	b.MouseEnter:Connect(function()
+		tween(escala, 0.12, { Scale = 1.04 })
+		if alPasar then
+			alPasar(true)
+		end
+	end)
+	b.MouseLeave:Connect(function()
+		tween(escala, 0.12, { Scale = 1 })
+		if alPasar then
+			alPasar(false)
+		end
+	end)
+	b.MouseButton1Down:Connect(function()
+		tween(escala, 0.06, { Scale = 0.95 })
+	end)
+	b.MouseButton1Up:Connect(function()
+		tween(escala, 0.1, { Scale = 1.04 })
+	end)
+end
+
+-- Botón con ícono grande y rótulo abajo (columnas del lobby): baldosa de vidrio oscuro con una franja del color
+-- de la sección abajo; al pasar el mouse el borde toma ese color.
 function Comic.botonIcono(nombre: string, icono: string, props, padre, alClic)
-	props.BackgroundColor3 = props.BackgroundColor3 or Comic.ROJO
-	props.AutoButtonColor = true
+	local acento = props.BackgroundColor3 or Comic.ROJO
+	props.BackgroundColor3 = Comic.FONDO
+	props.BackgroundTransparency = Comic.TRANSPARENCIA
+	props.AutoButtonColor = false
 	props.Text = ""
 	local b = Comic.crear("TextButton", props, padre)
-	Comic.borde(b, 3)
-	Comic.crear("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(170, 170, 170)) }, b)
+	Comic.borde(b)
+	local trazo = b:FindFirstChildOfClass("UIStroke")
+	local franja = Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -3), Size = UDim2.new(1, -16, 0, 3), BackgroundColor3 = acento, BorderSizePixel = 0 }, b)
+	Comic.crear("UICorner", { CornerRadius = UDim.new(1, 0) }, franja)
 	Comic.crear("ImageLabel", {
 		BackgroundTransparency = 1,
 		Image = icono,
 		ScaleType = Enum.ScaleType.Fit,
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 2),
-		Size = UDim2.new(1, -8, 0.72, 0),
+		Position = UDim2.new(0.5, 0, 0, 4),
+		Size = UDim2.new(1, -16, 0.64, 0),
 	}, b)
-	Comic.texto({ Text = nombre, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -2), Size = UDim2.new(1, -6, 0.26, 0) }, b)
+	Comic.texto({ Text = string.upper(nombre), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -8), Size = UDim2.new(1, -8, 0.2, 0) }, b)
 	b.Activated:Connect(function()
 		Sonido.efecto("clic")
 		alClic()
 	end)
-	-- Pequeño rebote al apretar.
-	local escala = Comic.crear("UIScale", {}, b)
-	b.MouseButton1Down:Connect(function()
-		escala.Scale = 0.92
-	end)
-	b.MouseButton1Up:Connect(function()
-		escala.Scale = 1
-	end)
-	b.MouseLeave:Connect(function()
-		escala.Scale = 1
+	animarBoton(b, function(encima)
+		tween(trazo, 0.12, { Color = if encima then acento else Comic.BORDE, Transparency = if encima then 0 else 0.35 })
 	end)
 	return b
 end
 
--- Botón de texto (acciones dentro de los paneles).
+-- Botón de texto: relleno del color pedido con un degradado suave hacia abajo.
 function Comic.boton(txt: string, props, padre, alClic)
 	props.Text = txt
 	props.BackgroundColor3 = props.BackgroundColor3 or Comic.ROJO
 	props.TextColor3 = props.TextColor3 or Comic.CREMA
 	props.Font = props.Font or Comic.TITULO
-	props.TextSize = props.TextSize or 22
-	props.TextStrokeTransparency = 0
+	props.TextSize = props.TextSize or 20
+	props.TextStrokeTransparency = 1
 	props.TextWrapped = true
+	props.AutoButtonColor = false
 	local b = Comic.crear("TextButton", props, padre)
-	Comic.borde(b, 3)
+	Comic.crear("UICorner", { CornerRadius = UDim.new(0, 8) }, b)
+	Comic.crear("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1, Transparency = 0.82, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, b)
+	local degradado = Comic.crear("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(190, 190, 200)) }, b)
 	b.Activated:Connect(function()
 		Sonido.efecto("clic")
 		alClic()
 	end)
+	animarBoton(b, function(encima)
+		degradado.Color = if encima
+			then ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(225, 225, 232))
+			else ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(190, 190, 200))
+	end)
 	return b
 end
 
--- Panel centrado con franja de título amarilla inclinada y botón de cierre. Devuelve (panel, cuerpo).
+-- Panel centrado de vidrio oscuro: título arriba a la izquierda con una línea roja debajo y botón de cierre.
+-- Devuelve (panel, cuerpo). Aparece con un pequeño crecimiento.
 function Comic.panel(gui: Instance, titulo: string, tamano: UDim2)
 	-- ZIndex alto: el panel se dibuja encima de los botones, monedas y escuadrón del HUD.
-	local p = Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = tamano, BackgroundColor3 = Comic.FONDO, Visible = false, ZIndex = 10 }, gui)
-	Comic.borde(p, 5)
-	local franja = Comic.crear("Frame", { Position = UDim2.fromOffset(-10, -22), Size = UDim2.new(0, 320, 0, 52), BackgroundColor3 = Comic.AMARILLO, Rotation = -2 }, p)
-	Comic.borde(franja, 4)
-	Comic.texto({ Text = titulo, TextColor3 = Comic.ROJO_OSCURO, TextStrokeTransparency = 1, Position = UDim2.fromOffset(14, 4), Size = UDim2.new(1, -28, 1, -8), TextXAlignment = Enum.TextXAlignment.Left }, franja)
-	Comic.boton("X", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 14, 0, -18), Size = UDim2.fromOffset(46, 46), TextSize = 28 }, p, function()
+	local p = Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = tamano, BackgroundColor3 = Comic.FONDO, BackgroundTransparency = Comic.TRANSPARENCIA, Visible = false, ZIndex = 10 }, gui)
+	Comic.crear("UICorner", { CornerRadius = UDim.new(0, 12) }, p)
+	Comic.crear("UIStroke", { Color = Comic.BORDE, Thickness = 1, Transparency = 0.3 }, p)
+	Comic.texto({ Text = string.upper(titulo), Position = UDim2.fromOffset(22, 12), Size = UDim2.new(1, -90, 0, 30), TextSize = 26, TextXAlignment = Enum.TextXAlignment.Left }, p)
+	local linea = Comic.crear("Frame", { Position = UDim2.fromOffset(22, 46), Size = UDim2.fromOffset(64, 3), BackgroundColor3 = Comic.ROJO, BorderSizePixel = 0 }, p)
+	Comic.crear("UICorner", { CornerRadius = UDim.new(1, 0) }, linea)
+	Comic.boton("✕", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 10), Size = UDim2.fromOffset(36, 36), TextSize = 18, BackgroundColor3 = Comic.GRIS }, p, function()
 		p.Visible = false
 	end)
-	-- Se achica para entrar en pantallas chicas (celulares).
+	-- Se achica para entrar en ventanas chicas.
 	local escala = Comic.crear("UIScale", {}, p)
 	local camara = workspace.CurrentCamera
+	local base = 1
 	local function ajustar()
 		local v = camara.ViewportSize
-		escala.Scale = math.min(1, (v.X - 40) / tamano.X.Offset, (v.Y - 80) / (tamano.Y.Offset + 30))
+		base = math.min(1, (v.X - 40) / tamano.X.Offset, (v.Y - 80) / (tamano.Y.Offset + 30))
+		escala.Scale = base
 	end
 	camara:GetPropertyChangedSignal("ViewportSize"):Connect(ajustar)
 	ajustar()
-	local cuerpo = Comic.crear("Frame", { Position = UDim2.fromOffset(20, 46), Size = UDim2.new(1, -40, 1, -64), BackgroundTransparency = 1 }, p)
+	p:GetPropertyChangedSignal("Visible"):Connect(function()
+		if p.Visible then
+			escala.Scale = base * 0.94
+			tween(escala, 0.14, { Scale = base })
+		end
+	end)
+	local cuerpo = Comic.crear("Frame", { Position = UDim2.fromOffset(20, 60), Size = UDim2.new(1, -40, 1, -76), BackgroundTransparency = 1 }, p)
 	return p, cuerpo
 end
 

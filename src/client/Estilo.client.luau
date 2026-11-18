@@ -57,7 +57,7 @@ local function armarRueda()
 	local centro = Comic.texto({ Text = "BAILES", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(110, 110), TextSize = 30, TextColor3 = Comic.ROJO_OSCURO, TextStrokeTransparency = 1 }, rueda)
 	centro.BackgroundTransparency = 0
 	centro.BackgroundColor3 = Comic.AMARILLO
-	Comic.crear("UIStroke", { Thickness = 4 }, centro)
+	Comic.crear("UIStroke", { Thickness = 1, Color = Comic.BORDE }, centro)
 	Comic.crear("UICorner", { CornerRadius = UDim.new(1, 0) }, centro)
 	for i = 1, Estilo.RUEDA do
 		local b = Estilo.baile(ids[i])

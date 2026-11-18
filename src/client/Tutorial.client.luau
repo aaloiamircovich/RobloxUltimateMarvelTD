@@ -31,11 +31,11 @@ end
 -- Interfaz: cartel arriba, flecha que rebota y recuadro sobre el objetivo
 --------------------------------------------------------------------------------
 local gui = Comic.crear("ScreenGui", { Name = "Tutorial", ResetOnSpawn = false, DisplayOrder = 20, ZIndexBehavior = Enum.ZIndexBehavior.Sibling })
-local cartel = Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 96), Size = UDim2.fromOffset(560, 86), BackgroundColor3 = Comic.AMARILLO, Rotation = -1 }, gui)
+local cartel = Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 96), Size = UDim2.fromOffset(560, 86), BackgroundColor3 = Comic.FONDO, BackgroundTransparency = Comic.TRANSPARENCIA }, gui)
 Comic.borde(cartel, 4)
 Comic.escalar(cartel)
-Comic.texto({ Text = "TUTORIAL", TextSize = 18, TextColor3 = Comic.ROJO_OSCURO, TextStrokeTransparency = 1, Position = UDim2.fromOffset(12, 4), Size = UDim2.fromOffset(120, 20), TextXAlignment = Enum.TextXAlignment.Left }, cartel)
-local texto = Comic.texto({ Font = Comic.TEXTO, TextSize = 19, TextColor3 = Comic.FONDO, TextStrokeTransparency = 1, TextWrapped = true, Position = UDim2.fromOffset(12, 24), Size = UDim2.new(1, -130, 1, -28), TextXAlignment = Enum.TextXAlignment.Left }, cartel)
+Comic.texto({ Text = "TUTORIAL", TextSize = 18, TextColor3 = Comic.ROJO, Position = UDim2.fromOffset(12, 4), Size = UDim2.fromOffset(120, 20), TextXAlignment = Enum.TextXAlignment.Left }, cartel)
+local texto = Comic.texto({ Font = Comic.TEXTO, TextSize = 19, TextWrapped = true, Position = UDim2.fromOffset(12, 24), Size = UDim2.new(1, -130, 1, -28), TextXAlignment = Enum.TextXAlignment.Left }, cartel)
 Comic.boton("SALTEAR", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(104, 40), TextSize = 18, BackgroundColor3 = Comic.GRIS }, cartel, function()
 	pedir("saltar")
 	gui:Destroy()
