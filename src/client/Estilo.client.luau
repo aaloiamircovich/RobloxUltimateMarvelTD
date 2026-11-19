@@ -83,14 +83,21 @@ local function montar()
 	end
 end
 
--- Botones para mouse: abajo a la izquierda (arriba pisaban la columna de botones del lobby).
-local botones = Comic.crear("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -14), Size = UDim2.fromOffset(140, 52), BackgroundTransparency = 1 }, gui)
+-- Botones abajo a la izquierda, con la misma baldosa que los del lobby (Comic.botonIcono).
+local botones = Comic.crear("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 12, 1, -14), Size = UDim2.fromOffset(2 * 60 + 8, 60), BackgroundTransparency = 1 }, gui)
 Comic.escalar(botones)
 Comic.crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8) }, botones)
-local botonMontar = Comic.boton("🛹 G", { Size = UDim2.fromOffset(64, 48), TextSize = 18, BackgroundColor3 = Comic.GRIS }, botones, montar)
-Comic.boton("💃 B", { Size = UDim2.fromOffset(64, 48), TextSize = 18, BackgroundColor3 = Comic.GRIS }, botones, alternarRueda)
+local function botonTecla(tecla: string, simbolo: string, acento: Color3, alClic)
+	local b = Comic.botonIcono(tecla, "", { Size = UDim2.fromOffset(60, 60), BackgroundColor3 = acento }, botones, alClic)
+	Comic.texto({ Text = simbolo, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 6), Size = UDim2.new(1, -20, 0.5, 0) }, b)
+	return b
+end
+local botonMontar = botonTecla("G", "🛹", Comic.GRIS, montar)
+botonTecla("B", "💃", Comic.ROJO, alternarRueda)
+-- Montado: la franja de abajo se pone verde.
+local franjaMontar = botonMontar:FindFirstChildWhichIsA("Frame")
 jugador:GetAttributeChangedSignal("Montado"):Connect(function()
-	botonMontar.BackgroundColor3 = if jugador:GetAttribute("Montado") then Comic.VERDE else Comic.GRIS
+	franjaMontar.BackgroundColor3 = if jugador:GetAttribute("Montado") then Comic.VERDE else Comic.GRIS
 end)
 
 UserInputService.InputBegan:Connect(function(input, procesado)

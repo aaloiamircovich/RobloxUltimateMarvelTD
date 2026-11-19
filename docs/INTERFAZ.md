@@ -35,8 +35,11 @@ jugador, movimiento medio y botones agrupados.
   nivel suelta del centro desaparece.
 - **Botones agrupados**: izquierda UNIDADES, INVOCAR, INVENTARIO, TIENDA; derecha VIAJAR, MISIONES, PASE, EVENTO,
   PREMIOS y **MÁS**, que abre una fila con PERFIL, NOVEDADES, CAMBIAR y AJUSTES.
-- **Retratos 3D**: UNIDADES muestra tu mejor unidad, INVOCAR el Mítico destacado del Banner 2 y ¡JUGAR! el líder del
-  escuadrón.
+- **Sin retratos en los botones** (se probaron en UNIDADES, INVOCAR y ¡JUGAR! y se sacaron a pedido): vuelven los
+  íconos.
+- **Monedas** abajo de TIENDA, en la misma columna (chicas, con insignias planas: rombo violeta para gemas, moneda
+  dorada para créditos y hexágono azul para núcleos). La columna arranca justo debajo de la tarjeta de jugador.
+- **G y B** con la misma baldosa que el resto (`Comic.botonIcono`); la franja de G se pone verde al montar.
 - **Corte en diagonal** (`Comic.diagonal`) arriba a la derecha en botones, casillas del escuadrón y ¡JUGAR!, con la
   esquina del color de acento (al pasar el mouse se pinta todo el borde). Sólo piezas casi cuadradas: en las anchas
   el degradado girado de Roblox se come un tercio; para eso haría falta una imagen 9-slice (ForgeGUI, diciembre).

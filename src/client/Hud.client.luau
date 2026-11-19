@@ -29,8 +29,6 @@ local items = require(Shared.Data.items)
 local jugador = Players.LocalPlayer
 
 local COLOR_RAREZA = Comic.RAREZA
-local ORDEN_RAREZA = { Common = 1, Rare = 2, Epic = 3, Legendary = 4, Mythic = 5, Secret = 6 }
-local Banners = require(Shared.Banners)
 
 local gui = Comic.crear("ScreenGui", { Name = "Hud", ResetOnSpawn = false, IgnoreGuiInset = false, DisplayOrder = 1, ZIndexBehavior = Enum.ZIndexBehavior.Sibling })
 
@@ -952,15 +950,18 @@ local function pronto(que: string)
 end
 
 --------------------------------------------------------------------------------
--- Disposición «barras compactas» (docs/INTERFAZ.md): columnas de íconos a los costados, monedas y nivel arriba,
+-- Disposición «barras compactas» (docs/INTERFAZ.md): columnas de íconos a los costados, tarjeta de jugador arriba, monedas abajo a la izquierda,
 -- escuadrón abajo y ¡JUGAR! abajo a la derecha. Diseñado para 1280×720; cada bloque se escala con la pantalla.
 --------------------------------------------------------------------------------
 local LADO = 84
 local escalar = Comic.escalar
 
-local grilla = Comic.crear("Frame", { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 12, 0.5, 20), Size = UDim2.fromOffset(LADO, 4 * LADO + 3 * 8), BackgroundTransparency = 1 }, gui)
+-- Columna izquierda justo debajo de la tarjeta de jugador (78 de alto, arriba a 12), con las monedas al final.
+local grilla = Comic.crear("Frame", { Size = UDim2.fromOffset(128, 4 * LADO + 4 * 8 + 3 * 30 + 2 * 6), BackgroundTransparency = 1 }, gui)
 Comic.crear("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }, grilla)
-escalar(grilla)
+escalar(grilla, function(s)
+	grilla.Position = UDim2.fromOffset(12, 12 + (78 + 12) * s)
+end)
 -- Izquierda: tus cosas. Derecha: lo del juego y «MÁS» con lo que se usa poco (docs/INTERFAZ.md, 18/11/2026).
 local BOTONES_IZQ = {
 	{ "UNIDADES", "unidades", function()
@@ -976,31 +977,9 @@ local BOTONES_IZQ = {
 		abrir("tienda")
 	end },
 }
-local botones = {}
 for i, b in BOTONES_IZQ do
 	local boton = Comic.botonIcono(b[1], Iconos[b[2]], { LayoutOrder = i, Size = UDim2.fromOffset(LADO, LADO), BackgroundColor3 = if b[2] == "tienda" then Comic.VERDE else Comic.ROJO }, grilla, b[3])
 	boton.Name = b[2]
-	botones[b[2]] = boton
-end
-
--- Retrato 3D de un héroe en lugar del ícono de un botón (UNIDADES, INVOCAR y ¡JUGAR!). Sólo se rehace si cambia.
-local function ponerRetrato(boton: GuiObject, heroId: string?)
-	local icono = boton:FindFirstChild("Icono")
-	local actual = boton:FindFirstChild("Retrato")
-	if (actual and actual:GetAttribute("Heroe")) == heroId or not icono then
-		return
-	end
-	if actual then
-		actual:Destroy()
-	end
-	local h = heroId and Personajes.todos[heroId]
-	icono.ImageTransparency = if h then 1 else 0
-	if not h then
-		return
-	end
-	local marco = Comic.crear("Frame", { Name = "Retrato", AnchorPoint = icono.AnchorPoint, Position = icono.Position, Size = icono.Size, BackgroundTransparency = 1, ClipsDescendants = true }, boton)
-	marco:SetAttribute("Heroe", heroId)
-	Comic.retrato(marco, heroId, h.name, COLOR_RAREZA[h.rarity] or Comic.CREMA, Personajes.base(heroId))
 end
 
 -- ¡JUGAR!: el botón principal, grande y abajo a la derecha.
@@ -1453,18 +1432,41 @@ end)
 --------------------------------------------------------------------------------
 -- Arriba: monedas y nivel de cuenta
 --------------------------------------------------------------------------------
-local arriba = Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 12), Size = UDim2.fromOffset(540, 40), BackgroundTransparency = 1 }, gui)
-escalar(arriba)
-local monedas = Comic.crear("Frame", { Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1 }, arriba)
-Comic.crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 14), HorizontalAlignment = Enum.HorizontalAlignment.Center }, monedas)
+-- Monedas: columna chica debajo de TIENDA, arriba de los botones G/B (Estilo.client.luau).
+-- Va dentro de la columna izquierda (misma escala, nunca se encima con TIENDA).
+local monedas = Comic.crear("Frame", { LayoutOrder = 99, Size = UDim2.fromOffset(128, 3 * 30 + 2 * 6), BackgroundTransparency = 1 }, grilla)
+Comic.crear("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }, monedas)
+-- Insignias planas (sin emojis): rombo para gemas, moneda para créditos, hexágono para núcleos.
+local function insignia(tipo: string, color: Color3, padre)
+	local caja = Comic.crear("Frame", { Position = UDim2.fromOffset(5, 5), Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1 }, padre)
+	local brillo = ColorSequence.new(color:Lerp(Color3.new(1, 1, 1), 0.45), color)
+	if tipo == "rombo" or tipo == "hexagono" then
+		-- Hexágono: el rombo más un rectángulo vertical encima.
+		local r = Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(14, 14), Rotation = 45, BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0 }, caja)
+		Comic.crear("UICorner", { CornerRadius = UDim.new(0, if tipo == "rombo" then 3 else 2) }, r)
+		Comic.crear("UIGradient", { Rotation = 45, Color = brillo }, r)
+		if tipo == "hexagono" then
+			r.Size = UDim2.fromOffset(13, 13)
+			local c = Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(13, 18), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0 }, caja)
+			Comic.crear("UIGradient", { Rotation = 90, Color = brillo }, c)
+		end
+		Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(5, 5), Rotation = 45, BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.25, BorderSizePixel = 0, ZIndex = 2 }, caja)
+	else
+		local m = Comic.crear("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1) }, caja)
+		Comic.crear("UICorner", { CornerRadius = UDim.new(1, 0) }, m)
+		Comic.crear("UIGradient", { Rotation = 90, Color = brillo }, m)
+		Comic.crear("UIStroke", { Color = color:Lerp(Color3.new(0, 0, 0), 0.35), Thickness = 1.5 }, m)
+		Comic.texto({ Text = "C", TextSize = 12, TextColor3 = color:Lerp(Color3.new(0, 0, 0), 0.55), TextStrokeTransparency = 1, Size = UDim2.fromScale(1, 1) }, m)
+	end
+end
 local etiquetas = {}
-for _, m in { { "Gemas", "💎", Color3.fromRGB(120, 60, 200) }, { "Creditos", "💰", Color3.fromRGB(190, 130, 20) }, { "Nucleos", "🔷", Color3.fromRGB(30, 110, 200) } } do
-	local f = Comic.crear("Frame", { Size = UDim2.fromOffset(160, 38), BackgroundColor3 = Comic.FONDO, BackgroundTransparency = Comic.TRANSPARENCIA }, monedas)
+for i, m in { { "Gemas", "rombo", Color3.fromRGB(185, 110, 255) }, { "Creditos", "moneda", Color3.fromRGB(255, 196, 64) }, { "Nucleos", "hexagono", Color3.fromRGB(70, 170, 255) } } do
+	local f = Comic.crear("Frame", { LayoutOrder = i, Size = UDim2.fromOffset(128, 30), BackgroundColor3 = Comic.FONDO, BackgroundTransparency = Comic.TRANSPARENCIA }, monedas)
 	Comic.borde(f)
-	local trazo = f:FindFirstChildOfClass("UIStroke")
-	trazo.Color, trazo.Transparency = m[3]:Lerp(Color3.new(1, 1, 1), 0.25), 0
-	etiquetas[m[1]] = Comic.texto({ Text = m[2] .. " …", Size = UDim2.new(1, -16, 1, -6), Position = UDim2.fromOffset(8, 3) }, f)
-	etiquetas[m[1]]:SetAttribute("Simbolo", m[2])
+	local franja = Comic.crear("Frame", { Position = UDim2.fromOffset(0, 7), Size = UDim2.new(0, 3, 1, -14), BackgroundColor3 = m[3], BorderSizePixel = 0 }, f)
+	Comic.crear("UICorner", { CornerRadius = UDim.new(1, 0) }, franja)
+	insignia(m[2], m[3], f)
+	etiquetas[m[1]] = Comic.texto({ Text = "…", Position = UDim2.fromOffset(32, 4), Size = UDim2.new(1, -40, 1, -8), TextSize = 17, TextXAlignment = Enum.TextXAlignment.Left }, f)
 end
 
 --------------------------------------------------------------------------------
@@ -1567,13 +1569,10 @@ end
 local function refrescar()
 	for nombre, l in etiquetas do
 		local v = jugador:GetAttribute(nombre)
-		local simbolo = l:GetAttribute("Simbolo")
 		if v then
-			Comic.contar(l, v, function(n)
-				return `{simbolo} {n}`
-			end)
+			Comic.contar(l, v, tostring)
 		else
-			l.Text = `{simbolo} …`
+			l.Text = "…"
 		end
 	end
 	local nivel, xp = jugador:GetAttribute("Nivel") or 1, jugador:GetAttribute("XP") or 0
@@ -1581,24 +1580,7 @@ local function refrescar()
 	textoNivel.Text = `NIVEL {nivel}`
 	textoXP.Text = `{xp} / {meta} XP`
 	game:GetService("TweenService"):Create(relleno, TweenInfo.new(0.5, Enum.EasingStyle.Quad), { Size = UDim2.fromScale(math.clamp(xp / meta, 0, 1), 1) }):Play()
-	-- Retratos: tu mejor unidad en UNIDADES, el Mítico destacado en INVOCAR y tu líder en ¡JUGAR!
-	local e = ultimoEstado
-	if e then
-		local mejor, lider
-		for _, u in e.unidades do
-			local h = Personajes.todos[u.heroId]
-			local rango = h and (ORDEN_RAREZA[h.rarity] or 0) * 1000 + u.level
-			if rango and (not mejor or rango > mejor[1]) then
-				mejor = { rango, u.heroId }
-			end
-			if u.uid == e.escuadron[1] then
-				lider = u.heroId
-			end
-		end
-		ponerRetrato(botones.unidades, mejor and mejor[2])
-		ponerRetrato(jugar, lider)
-	end
-	ponerRetrato(botones.invocar, Banners.destacado(Banners.periodo(workspace:GetServerTimeNow())))
+
 	if ultimoEstado and textoPerfil then
 		local e = ultimoEstado
 		textoPerfil.Text = table.concat({
