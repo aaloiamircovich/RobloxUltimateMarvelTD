@@ -91,6 +91,14 @@ boton("X", { Position = UDim2.new(1, -52, 0, 12), Size = UDim2.fromOffset(36, 36
 end)
 local mensaje = texto({ Position = UDim2.new(0, 24, 1, -40), Size = UDim2.new(1, -48, 0, 28), TextColor3 = Color3.fromRGB(255, 130, 130) }, ventana)
 local cuerpo = crear("Frame", { Position = UDim2.fromOffset(24, 64), Size = UDim2.new(1, -48, 1, -110), BackgroundTransparency = 1 }, ventana)
+Comic.moldear(cuerpo) -- tarjetas oscuras con acento, como el resto de las ventanas
+-- Títulos en mayúsculas, como las ventanas del HUD.
+titulo:GetPropertyChangedSignal("Text"):Connect(function()
+	local may = Comic.mayus(titulo.Text)
+	if titulo.Text ~= may then
+		titulo.Text = may
+	end
+end)
 
 --------------------------------------------------------------------------------
 -- Pantallas
@@ -388,7 +396,7 @@ local function pantallaUnidades()
 		pedir("escuadron", nuevo)
 		mostrar()
 	end)
-	boton(`VENDER 🪙{Unidades.VENTA[h.rarity]}`, { Size = UDim2.new(0.33, -4, 1, 0), TextSize = 11, BackgroundColor3 = Color3.fromRGB(120, 50, 55) }, acciones, function()
+	boton(`VENDER 🟡{Unidades.VENTA[h.rarity]}`, { Size = UDim2.new(0.33, -4, 1, 0), TextSize = 11, BackgroundColor3 = Color3.fromRGB(120, 50, 55) }, acciones, function()
 		if not pedir("vender", u.uid).error then
 			elegida = nil
 		end
@@ -491,7 +499,7 @@ end
 
 function mostrar()
 	vaciar()
-	saldo.Text = `💎 {estado.gemas}   🪙 {estado.oro}`
+	saldo.Text = `💎 {estado.gemas}   🟡 {estado.oro}`
 	if #estado.desbloqueados == 0 then
 		pantallaInicial()
 		return

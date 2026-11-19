@@ -5,7 +5,7 @@ Se aparta del 2D por decisión del usuario. Tres monedas con usos separados:
 | Moneda | Para qué sirve | Cómo se gana |
 | --- | --- | --- |
 | **Gemas** 💎 | Invocar, evolucionar unidades, objetos de la tienda y huevos de mascota | Actos, raids, Infinito, misiones, pase, evento, premios y logros |
-| **Oro** 🪙 | Monturas y bailes (mismos números que antes en gemas) | Al terminar cada partida y vendiendo unidades |
+| **Oro** 🟡 | Monturas y bailes (mismos números que antes en gemas) | Al terminar cada partida y vendiendo unidades |
 | **Créditos** 💰 | Colocar y mejorar unidades **dentro de la partida** (antes «dinero») | En partida, por enemigos y oleadas |
 
 Rasgos y grados siguen con sus fichas de rasgo y cristales.

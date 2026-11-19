@@ -94,6 +94,9 @@ local function botonTecla(tecla: string, simbolo: string, acento: Color3, alClic
 end
 local botonMontar = botonTecla("G", "🛹", Comic.GRIS, montar)
 botonTecla("B", "💃", Comic.ROJO, alternarRueda)
+Comic.ventanas:Connect(function(hay)
+	botones.Visible = not hay
+end)
 -- Montado: la franja de abajo se pone verde.
 local franjaMontar = botonMontar:FindFirstChildWhichIsA("Frame")
 jugador:GetAttributeChangedSignal("Montado"):Connect(function()

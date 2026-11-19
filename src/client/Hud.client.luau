@@ -36,9 +36,13 @@ local gui = Comic.crear("ScreenGui", { Name = "Hud", ResetOnSpawn = false, Ignor
 -- Paneles propios del HUD
 --------------------------------------------------------------------------------
 local paneles = {}
+local coleccionGui -- la ventana de Colección (Unidades, Invocar, Inventario): una ventana a la vez
 local function abrir(nombre)
 	for n, p in paneles do
 		p.Visible = n == nombre and not p.Visible
+	end
+	if paneles[nombre] and paneles[nombre].Visible and coleccionGui then
+		coleccionGui.Enabled = false
 	end
 end
 
@@ -48,7 +52,7 @@ do
 	paneles.jugar = p
 	Comic.crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 16), HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center }, cuerpo)
 	for _, m in { { "HISTORIA", "story", Comic.ROJO }, { "INFINITO", "infinite", Color3.fromRGB(90, 60, 190) }, { "RAIDS", "raids", Color3.fromRGB(150, 30, 90) } } do
-		local b = Comic.boton(m[1], { Name = "Modo_" .. m[2], Size = UDim2.fromOffset(150, 170), BackgroundColor3 = m[3], TextSize = 34 }, cuerpo, function()
+		local b = Comic.boton(m[1], { Name = "Modo_" .. m[2], Size = UDim2.fromOffset(150, 170), BackgroundColor3 = m[3], TextSize = 28 }, cuerpo, function()
 			if m[2] then
 				p.Visible = false
 				usarHud:FireServer(m[2])
@@ -709,7 +713,7 @@ function armarEstilo(res)
 			armarEstilo(res)
 		end)
 	end
-	Comic.texto({ Text = `🪙 {res.oro} de oro   ·   G: montar   ·   B: rueda de bailes`, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 6), Size = UDim2.fromOffset(460, 30), TextSize = 22, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Right }, cuerpoEstilo)
+	Comic.texto({ Text = `🟡 {res.oro} de oro   ·   G: montar   ·   B: rueda de bailes`, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 6), Size = UDim2.fromOffset(460, 30), TextSize = 22, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Right }, cuerpoEstilo)
 	Comic.texto({ Text = res.error or "", Position = UDim2.new(0, 0, 1, -24), Size = UDim2.new(1, 0, 0, 22), TextSize = 16, Font = Comic.TEXTO, TextColor3 = Comic.AMARILLO }, cuerpoEstilo)
 	local area = Comic.crear("Frame", { Position = UDim2.fromOffset(0, 54), Size = UDim2.new(1, 0, 1, -84), BackgroundTransparency = 1 }, cuerpoEstilo)
 	Comic.crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 10), HorizontalAlignment = Enum.HorizontalAlignment.Center }, area)
@@ -725,7 +729,7 @@ function armarEstilo(res)
 		Comic.texto({ Text = if x.velocidad then `Velocidad ×{x.velocidad}` else (if activo then "En la rueda" else ""), Position = UDim2.fromOffset(6, 100), Size = UDim2.new(1, -12, 0, 40), TextSize = 18, Font = Comic.TEXTO, TextWrapped = true }, f)
 		local txt, color
 		if not tiene then
-			txt, color = if x.precio == 0 then "GRATIS" else `🪙 {x.precio}`, if res.oro >= x.precio then Comic.VERDE else Comic.GRIS
+			txt, color = if x.precio == 0 then "GRATIS" else `🟡 {x.precio}`, if res.oro >= x.precio then Comic.VERDE else Comic.GRIS
 		elseif pestanaEstilo == "monturas" then
 			txt, color = if activo then "EQUIPADA" else "EQUIPAR", if activo then Comic.GRIS else Comic.VERDE
 		else
@@ -1489,7 +1493,7 @@ local function cartelMoneda(nombre: string, color: Color3, f: GuiObject)
 	end)
 end
 local etiquetas = {}
-for i, m in { { "Gemas", "💎", Color3.fromRGB(185, 110, 255) }, { "Oro", "🪙", Color3.fromRGB(255, 196, 64) } } do
+for i, m in { { "Gemas", "💎", Color3.fromRGB(185, 110, 255) }, { "Oro", "🟡", Color3.fromRGB(255, 196, 64) } } do
 	local f = Comic.crear("Frame", { LayoutOrder = i, Size = UDim2.fromOffset(128, 30), BackgroundColor3 = Comic.FONDO, BackgroundTransparency = Comic.TRANSPARENCIA }, monedas)
 	Comic.borde(f)
 	local franja = Comic.crear("Frame", { Position = UDim2.fromOffset(0, 7), Size = UDim2.new(0, 3, 1, -14), BackgroundColor3 = m[3], BorderSizePixel = 0 }, f)
@@ -1618,7 +1622,7 @@ local function refrescar()
 			`Nivel de cuenta {nivel} ({xp}/{meta} XP)`,
 			`Casillas del escuadrón: {e.casillas}/6`,
 			`Unidades: {#e.unidades}/100`,
-			`💎 {e.gemas}   🪙 {e.oro}`,
+			`💎 {e.gemas}   🟡 {e.oro}`,
 		}, "\n")
 	end
 end
@@ -1640,6 +1644,15 @@ end
 -- Oculto durante una partida (el servidor fija el atributo Partida del jugador).
 local function visible()
 	gui.Enabled = jugador:GetAttribute("Partida") == nil
+	if not gui.Enabled then
+		-- Al entrar a una partida se cierran las ventanas (si no, el desenfoque quedaría puesto).
+		for _, p in paneles do
+			p.Visible = false
+		end
+		if coleccionGui then
+			coleccionGui.Enabled = false
+		end
+	end
 end
 jugador:GetAttributeChangedSignal("Partida"):Connect(function()
 	visible()
@@ -1652,14 +1665,24 @@ for _, a in { "Gemas", "Oro", "Nivel", "XP" } do
 end
 -- Al cerrar el panel de colección (escuadrón, invocaciones), refrescar las casillas.
 task.spawn(function()
-	local coleccionGui = jugador:WaitForChild("PlayerGui"):WaitForChild("Coleccion")
+	coleccionGui = jugador:WaitForChild("PlayerGui"):WaitForChild("Coleccion")
 	coleccionGui:GetPropertyChangedSignal("Enabled"):Connect(function()
-		abajo.Visible = not coleccionGui.Enabled -- el panel ocupa el centro: no mostrar el escuadrón detrás
-		jugar.Visible = abajo.Visible
-		if not coleccionGui.Enabled then
+		Comic.registrarVentana(coleccionGui, coleccionGui.Enabled)
+		if coleccionGui.Enabled then
+			for _, p in paneles do
+				p.Visible = false
+			end
+		else
 			pedirEstado()
 		end
 	end)
+end)
+
+-- Con una ventana abierta se esconden los botones, la tarjeta, el escuadrón y ¡JUGAR! (el fondo lo desenfoca Comic).
+Comic.ventanas:Connect(function(hay)
+	for _, f in { grilla, colDerecha, tarjeta, abajo, jugar } do
+		f.Visible = not hay
+	end
 end)
 
 visible()

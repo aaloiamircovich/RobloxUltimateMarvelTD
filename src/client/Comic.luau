@@ -283,6 +283,131 @@ function Comic.boton(txt: string, props, padre, alClic)
 	return b
 end
 
+-- Fondo de las ventanas (docs/INTERFAZ.md, 19/11/2026): con cualquier ventana abierta el mundo se desenfoca y se
+-- oscurece, y el HUD de los costados se esconde (lo hace cada script escuchando Comic.ventanas).
+local abiertas = {}
+local eventoVentanas = Instance.new("BindableEvent")
+Comic.ventanas = eventoVentanas.Event -- (hay: boolean)
+local blur, velo
+function Comic.hayVentana(): boolean
+	return next(abiertas) ~= nil
+end
+function Comic.registrarVentana(clave: Instance, abierta: boolean)
+	local antes = Comic.hayVentana()
+	abiertas[clave] = if abierta then true else nil
+	local ahora = Comic.hayVentana()
+	if antes == ahora then
+		return
+	end
+	if not blur then
+		blur = Instance.new("BlurEffect")
+		blur.Name = "BlurVentanas"
+		blur.Size = 0
+		blur.Parent = game:GetService("Lighting")
+		local jugador = game:GetService("Players").LocalPlayer
+		velo = Comic.crear("ScreenGui", { Name = "VeloVentanas", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 0 }, jugador:WaitForChild("PlayerGui"))
+		velo = Comic.crear("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(6, 8, 14), BackgroundTransparency = 1, BorderSizePixel = 0 }, velo)
+	end
+	tween(blur, 0.2, { Size = if ahora then 16 else 0 })
+	tween(velo, 0.2, { BackgroundTransparency = if ahora then 0.45 else 1 })
+	eventoVentanas:Fire(ahora)
+end
+
+-- Molde de tarjetas (docs/INTERFAZ.md, 19/11/2026): dentro de una ventana, todo bloque de color fuerte que sea
+-- una tarjeta (tiene contenido y mide al menos 60×60) pasa a vidrio oscuro con el color en el borde y en una
+-- franja abajo. Los botones de acción chicos, las barras y sus rellenos quedan como están. Se aplica también a lo
+-- que las ventanas arman después (al cambiar de pestaña, reclamar, etc.).
+-- shortcut: decide por color y tamaño; si una tarjeta queda mal, marcala con el atributo SinMolde = true.
+local MIN_TARJETA = 60
+local function fuerte(c: Color3): boolean
+	local _, sat, val = c:ToHSV()
+	return sat > 0.35 and val > 0.3
+end
+local function esTarjeta(o: Instance): boolean
+	if not (o:IsA("Frame") or o:IsA("TextButton") or o:IsA("TextLabel")) or o:GetAttribute("SinMolde") then
+		return false
+	end
+	if o.BackgroundTransparency > 0.6 or not fuerte(o.BackgroundColor3) then
+		return false
+	end
+	local tam = o.AbsoluteSize
+	local w, h = if tam.X > 0 then tam.X else o.Size.X.Offset, if tam.Y > 0 then tam.Y else o.Size.Y.Offset
+	if w < MIN_TARJETA or h < MIN_TARJETA then
+		return false
+	end
+	-- Con contenido: hijos visibles o texto propio (los rellenos de barras no tienen ninguno).
+	if (o:IsA("TextButton") or o:IsA("TextLabel")) and o.Text ~= "" then
+		return true
+	end
+	for _, h2 in o:GetChildren() do
+		if h2:IsA("GuiObject") then
+			return true
+		end
+	end
+	return false
+end
+local function textoClaro(t: Instance, acento: Color3)
+	if (t:IsA("TextLabel") or t:IsA("TextButton")) then
+		local _, _, v = t.TextColor3:ToHSV()
+		if v < 0.4 then
+			t.TextColor3 = acento:Lerp(Color3.new(1, 1, 1), 0.35)
+		end
+	end
+end
+local function moldearUno(o: Instance)
+	if o:GetAttribute("Moldeado") or not esTarjeta(o) then
+		return
+	end
+	local acento = o.BackgroundColor3
+	o:SetAttribute("Moldeado", true)
+	o.BackgroundColor3, o.BackgroundTransparency = Comic.ROJO_OSCURO, 0
+	local g = o:FindFirstChildOfClass("UIGradient")
+	if g then
+		g:Destroy()
+	end
+	local trazo = o:FindFirstChildOfClass("UIStroke") or Comic.crear("UIStroke", { ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, o)
+	trazo.Color, trazo.Transparency, trazo.Thickness = acento, 0.15, 1.5
+	if not o:FindFirstChildOfClass("UICorner") then
+		Comic.crear("UICorner", { CornerRadius = UDim.new(0, 10) }, o)
+	end
+	local franja = Comic.crear("Frame", { Name = "FranjaMolde", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -3), Size = UDim2.new(1, -16, 0, 3), BackgroundColor3 = acento, BorderSizePixel = 0 }, o)
+	Comic.crear("UICorner", { CornerRadius = UDim.new(1, 0) }, franja)
+	textoClaro(o, acento)
+	for _, d in o:GetDescendants() do
+		textoClaro(d, acento)
+	end
+end
+function Comic.moldear(raiz: Instance)
+	local function revisar(d: Instance)
+		if d:IsA("GuiObject") then
+			task.defer(function()
+				if d.Parent then
+					moldearUno(d)
+					-- Texto oscuro agregado dentro de una tarjeta ya moldeada.
+					local madre = d:FindFirstAncestorWhichIsA("GuiObject")
+					while madre and not madre:GetAttribute("Moldeado") do
+						madre = madre.Parent and madre.Parent:IsA("GuiObject") and madre.Parent or nil
+					end
+					if madre and madre ~= d then
+						local trazo = madre:FindFirstChildOfClass("UIStroke")
+						textoClaro(d, if trazo then trazo.Color else Comic.CREMA)
+					end
+				end
+			end)
+		end
+	end
+	raiz.DescendantAdded:Connect(revisar)
+	for _, d in raiz:GetDescendants() do
+		revisar(d)
+	end
+end
+-- Repaso al abrir la ventana: lo creado antes de que la interfaz estuviera en pantalla a veces no se moldea.
+function Comic.repasarMolde(raiz: Instance)
+	for _, d in raiz:GetDescendants() do
+		moldearUno(d)
+	end
+end
+
 -- Panel centrado de vidrio oscuro: título arriba a la izquierda con una línea roja debajo y botón de cierre.
 -- Devuelve (panel, cuerpo). Aparece con un pequeño crecimiento.
 function Comic.panel(gui: Instance, titulo: string, tamano: UDim2)
@@ -308,7 +433,9 @@ function Comic.panel(gui: Instance, titulo: string, tamano: UDim2)
 	camara:GetPropertyChangedSignal("ViewportSize"):Connect(ajustar)
 	ajustar()
 	p:GetPropertyChangedSignal("Visible"):Connect(function()
+		Comic.registrarVentana(p, p.Visible)
 		if p.Visible then
+			Comic.repasarMolde(p)
 			-- Entra subiendo desde un poco más abajo, con un leve rebote.
 			escala.Scale = base * 0.94
 			p.Position = UDim2.new(0.5, 0, 0.5, 28)
@@ -317,6 +444,7 @@ function Comic.panel(gui: Instance, titulo: string, tamano: UDim2)
 		end
 	end)
 	local cuerpo = Comic.crear("Frame", { Position = UDim2.fromOffset(20, 60), Size = UDim2.new(1, -40, 1, -76), BackgroundTransparency = 1 }, p)
+	Comic.moldear(cuerpo)
 	return p, cuerpo
 end
 

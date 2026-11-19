@@ -50,6 +50,18 @@ jugador, movimiento medio y botones agrupados.
   3,5 s (`Comic.brillo`).
 - Referencias: el repositorio `izzyfrm/roblox-ai` no sirvió (maquetas planas y miniaturas promocionales).
 
+## Ventanas del lobby (19/11/2026)
+Decidido: fondo desenfocado y oscuro, tarjetas oscuras con acento, un molde común para todas.
+- **Fondo**: con cualquier ventana abierta (paneles del HUD o Colección) el mundo se desenfoca (`BlurVentanas`, 16) y
+  oscurece (`VeloVentanas`), y se esconden tarjeta de jugador, columnas, escuadrón, ¡JUGAR! y G/B
+  (`Comic.registrarVentana`, evento `Comic.ventanas`). Al entrar a una partida se cierran todas.
+- **Una ventana a la vez**: abrir un panel del HUD cierra Colección y al revés.
+- **Molde** (`Comic.moldear`, aplicado al cuerpo de cada panel y de Colección): todo bloque de color fuerte de
+  60×60 o más con contenido pasa a tarjeta oscura con el color en el borde y una franja abajo; el texto oscuro se
+  aclara. Los botones de acción chicos, las barras y sus rellenos quedan igual. Se repasa al abrir cada ventana. Una
+  pieza que no deba moldearse lleva el atributo `SinMolde`.
+- Los títulos de Colección van en mayúsculas como los demás. El oro se escribe 🟡 (Roblox no dibuja 🪙).
+
 ## HUD de partida (fase B, 18/11/2026)
 - **Panel de unidad** (izquierda, decidido por el usuario): retrato con marco de rareza, nombre, rareza y nivel,
   rasgo y grados; **5 estrellas** de mejora; daño, alcance y ataques/s con **lo que queda tras la próxima mejora en
