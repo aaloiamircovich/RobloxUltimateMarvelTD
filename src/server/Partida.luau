@@ -159,6 +159,25 @@ local function modeloProvisional(config): Model
 	return m
 end
 
+-- Festejo al mejorar (fase E, docs/UNIDADES_VISUAL.md): animación por estilo, prioridad Action.
+local function cargarFestejo(modelo: Model, config): AnimationTrack?
+	local hum = modelo:FindFirstChildOfClass("Humanoid")
+	local animator = hum and hum:FindFirstChildOfClass("Animator")
+	local id = Reposo.festejo(config.id, modelo:GetAttribute("Efecto"))
+	if not animator or not id then
+		return nil
+	end
+	local a = Instance.new("Animation")
+	a.AnimationId = id
+	local ok, pista = pcall(animator.LoadAnimation, animator, a)
+	if not ok then
+		return nil
+	end
+	pista.Priority = Enum.AnimationPriority.Action
+	pista.Looped = false
+	return pista
+end
+
 -- Plantilla de ServerStorage.Plantillas.Heroes/<id> (o la del id base): R15 con atributos AnimacionAtaque y VelocidadAtaque.
 local function crearModelo(config): (Model, BasePart, AnimationTrack?, number)
 	local plantillas = ServerStorage:FindFirstChild("Plantillas")
@@ -516,6 +535,7 @@ function Partida.nueva(op)
 			for _ = 1, Raid.fasesCruzadas(antes / e.vidaMax, ahora / e.vidaMax) do
 				e.config.speed *= Raid.FURIA
 				aviso(`¡{string.upper(e.config.name)} SE ENFURECE! Llegan refuerzos`)
+				e.cuerpo:SetAttribute("FaseJefe", `activa:furia:{os.clock()}`)
 				local ids = {}
 				for id in enemigosDatos.normal do
 					table.insert(ids, id)
@@ -705,6 +725,7 @@ function Partida.nueva(op)
 			velocidadAtaque = velocidadAtaque,
 			kit = Kits.nuevo(base),
 			estilo = base, -- efecto de ataque del cliente (Ataques.client.luau)
+			festejo = cargarFestejo(modelo, config),
 		}
 		u.stats = statsUnidad(u)
 		siguienteUid += 1
@@ -782,6 +803,10 @@ function Partida.nueva(op)
 		u.stats = statsUnidad(u)
 		u.modelo:SetAttribute("Mejora", u.mejora)
 		u.modelo:SetAttribute("Invertido", u.invertido)
+		-- Festejo por estilo (fase E): una vez, encima del reposo; el ataque lo puede tapar.
+		if u.festejo then
+			u.festejo:Play(0.1)
+		end
 		j:SetAttribute("Dinero", dinero - siguiente.costo)
 		evento(j, "mejorar", 1)
 		Analitica.unidad(j, `mejorada a {u.mejora}`, u.config.id, u.config.rarity)
@@ -987,6 +1012,16 @@ function Partida.nueva(op)
 		aviso = function(texto)
 			aviso(texto)
 		end,
+		-- Fases de jefe para los clientes (docs/UNIDADES_VISUAL.md, fase E): "etapa:tipo:n" en el atributo FaseJefe.
+		alFase = function(e, fase, etapa)
+			local tipo = if fase.barrier or fase.armor then "escudo"
+				elseif fase.summonId then "invocar"
+				elseif fase.stealth then "sigilo"
+				elseif fase.heal then "cura"
+				elseif fase.stunHeroes then "aturdir"
+				else "furia"
+			e.cuerpo:SetAttribute("FaseJefe", `{etapa}:{tipo}:{os.clock()}`)
+		end,
 		aturdirHeroes = function(segundos)
 			for _, u in unidades do
 				u.aturdido = segundos
@@ -1009,6 +1044,19 @@ function Partida.nueva(op)
 			end
 			velocidad *= Conductas.actualizar(e, dt, entornoConductas)
 			e.barra.Size = UDim2.fromScale(math.clamp(e.vida / e.vidaMax, 0, 1), 1)
+			-- Estados visibles en los clientes (fase E): lista ordenada, sólo cuando cambia.
+			local lista = {}
+			for tipo, v in e.estados do
+				if (type(v) == "table" and (v.duration or #v > 0)) then
+					table.insert(lista, tipo)
+				end
+			end
+			table.sort(lista)
+			local texto = table.concat(lista, ",")
+			if texto ~= e.estadosVistos then
+				e.estadosVistos = texto
+				e.cuerpo:SetAttribute("Estados", if texto ~= "" then texto else nil)
+			end
 			e.avance += e.config.speed * velocidad * Mapa.ESCALA * dt
 			if e.avance >= largos[e.ruta].total then
 				-- La base pierde la vida restante del enemigo ÷ 10 (mínimo 5); un jefe la destruye.

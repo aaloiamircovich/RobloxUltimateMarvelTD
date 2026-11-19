@@ -57,3 +57,13 @@ arriba) y su entrada; las 27 animaciones se generaron y publicaron.
 
 ## Sin probar
 - La entrada de un único colocado de verdad en partida (el perfil de prueba no tiene Míticos ni Legendarios).
+
+## Fase E: animaciones y ataques (18/11/2026)
+- **Festejo al mejorar**: uno por estilo de reposo (`Reposo.FESTEJOS`), prioridad Action, lo carga `Partida.cargarFestejo`.
+- **Reposo propio** para los 25 únicos + Odin y Knull (`Reposo.PROPIOS`, generados con la IA de Roblox).
+- **Enemigos** (`src/client/EnemigosVisual.client.luau`): destello blanco al perder vida (máx. 18 a la vez);
+  `Estados` → partículas en el cuerpo (lento, quemadura, veneno, aturdido, maldición) e íconos sobre la barra;
+  `FaseJefe` → al preparar, rugido (rbxassetid://76750798382441) y anillo rojo; al activar, escudo, portales de
+  refuerzos, furia/aturdir (tinte rojo + onda), sigilo (humo) o cura (chispas verdes). Sólo visual.
+- **Revisión de ataques**: 41 efectos fotografiados en una pista de prueba. Únicos: bien. Rehechos por flojos:
+  balas (ráfaga de 3), energía, magia, psíquico, golpe, corte (en cruz) y escudo; todos con `remate()` en el blanco.

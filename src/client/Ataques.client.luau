@@ -326,7 +326,7 @@ end
 local function bala(desde: Vector3, hasta: Vector3, color: Color3)
 	destello(desde, c("fff1a6"), 0.9, 0.08)
 	local largo = (hasta - desde).Magnitude
-	local p = pieza(Vector3.new(0.1, 0.1, math.min(4, largo)), CFrame.lookAt(desde, hasta), color)
+	local p = pieza(Vector3.new(0.18, 0.18, math.min(5, largo)), CFrame.lookAt(desde, hasta), color)
 	tween(p, 0.08, { CFrame = CFrame.lookAt(hasta, hasta + (hasta - desde)) }, Enum.EasingStyle.Linear)
 	borrar(p, 0.09)
 	task.delay(0.08, particulas, hasta, color, 6, { velocidad = 10, tam = 0.3, vida = 0.25 })
@@ -391,90 +391,114 @@ end)
 -- ctx: { critico, extra, escala }. Los golpes críticos se dibujan un 50 % más grandes.
 local FAMILIAS = {}
 
+-- Remate común en el blanco: lo que le da peso a los ataques de familia (revisión de ataques, fase E).
+local function remate(p: Vector3, col: Color3, ctx, fuerza: number?)
+	local f = (fuerza or 1) * ctx.escala
+	destello(p, col, 2.8 * f, 0.22)
+	onda(p - Vector3.new(0, 1.1, 0), col, 2.6 * f, 0.3)
+	particulas(p, col, 10, { color2 = BLANCO, velocidad = 14, tam = 0.45, vida = 0.35 })
+end
+
 function FAMILIAS.balas(d, h, col, ctx)
-	bala(d, h, col)
-	if ctx.critico then
-		task.delay(0.06, bala, d + Vector3.new(0, 0.3, 0), h, col)
+	-- Ráfaga de tres (cuatro con crítico) con fogonazo; el último disparo remata.
+	local n = if ctx.critico then 4 else 3
+	for i = 0, n - 1 do
+		local desvio = Vector3.new(math.random(-3, 3), math.random(-2, 2), math.random(-3, 3)) * 0.1
+		task.delay(i * 0.05, bala, d, h + desvio, col)
 	end
+	task.delay(0.05 * n + 0.04, function()
+		destello(h, c("fff1a6"), 1.8 * ctx.escala, 0.15)
+		particulas(h, c("ffcf6b"), 8, { velocidad = 16, tam = 0.35, vida = 0.25, gravedad = -30 })
+	end)
 end
 
 local MODO_HAWKEYE = { explosive = c("ff9d3d"), cryo = c("7ce7ff"), piercing = c("d8f0ff") }
 function FAMILIAS.flecha(d, h, col, ctx)
 	local modo = ctx.extra
 	col = MODO_HAWKEYE[modo] or col
-	proyectil(d, h, col, { forma = "aguja", tam = 0.7 * ctx.escala, tiempo = 0.12, alLlegar = function(p)
+	proyectil(d, h, col, { forma = "aguja", tam = 0.9 * ctx.escala, tiempo = 0.12, largoEstela = 0.22, alLlegar = function(p)
 		if modo == "explosive" then
-			destello(p, c("ffb347"), 3 * ctx.escala, 0.3)
-			particulas(p, c("ff7a1f"), 16, { textura = "fuego", velocidad = 14, tam = 1.2 })
+			destello(p, c("ffb347"), 3.4 * ctx.escala, 0.3)
+			onda(p - Vector3.new(0, 1.1, 0), c("ff7a1f"), 3 * ctx.escala, 0.3)
+			particulas(p, c("ff7a1f"), 18, { textura = "fuego", velocidad = 14, tam = 1.3 })
 		elseif modo == "cryo" then
-			escarcha(p, 1.5)
+			escarcha(p, 1.8)
 		else
-			particulas(p, col, 6, { velocidad = 8, tam = 0.3, vida = 0.3 })
+			destello(p, col, 1.8 * ctx.escala, 0.15)
+			particulas(p, col, 8, { velocidad = 10, tam = 0.35, vida = 0.3 })
 		end
 	end })
 end
 
 function FAMILIAS.energia(d, h, col, ctx)
-	proyectil(d, h, col, { tam = 0.7 * ctx.escala, alLlegar = function(p)
-		destello(p, col, 2.2 * ctx.escala)
-		particulas(p, col, 8, { velocidad = 10, tam = 0.4, vida = 0.35 })
+	proyectil(d, h, col, { tam = 1 * ctx.escala, largoEstela = 0.22, alLlegar = function(p)
+		remate(p, col, ctx)
 	end })
 end
 
 function FAMILIAS.haz(d, h, col, ctx)
-	haz(d, h, col, 0.5 * ctx.escala, 0.2)
-	destello(h, col, 2 * ctx.escala)
+	haz(d, h, col, 0.7 * ctx.escala, 0.22, BLANCO)
+	remate(h, col, ctx)
 end
 
 function FAMILIAS.electrico(d, h, col, ctx)
-	relampago(d, h, col, 0.2 * ctx.escala)
-	particulas(h, col, 10, { velocidad = 14, tam = 0.35, vida = 0.3 })
+	relampago(d, h, col, 0.25 * ctx.escala)
+	destello(h, col, 2 * ctx.escala, 0.15)
+	particulas(h, col, 12, { velocidad = 16, tam = 0.35, vida = 0.3 })
 end
 
 function FAMILIAS.fuego(d, h, col, ctx)
-	proyectil(d, h, col, { tam = 0.9 * ctx.escala, fuego = c("ffd23d"), tiempo = 0.18, alLlegar = function(p)
-		destello(p, c("ff9a2e"), 2.6 * ctx.escala)
-		particulas(p, c("ff7a1f"), 14, { textura = "fuego", color2 = c("ffd23d"), velocidad = 8, tam = 1.4, gravedad = 6 })
+	proyectil(d, h, col, { tam = 1.1 * ctx.escala, fuego = c("ffd23d"), tiempo = 0.18, alLlegar = function(p)
+		destello(p, c("ff9a2e"), 3.2 * ctx.escala)
+		onda(p - Vector3.new(0, 1.1, 0), c("ff7a1f"), 3 * ctx.escala, 0.35)
+		particulas(p, c("ff7a1f"), 16, { textura = "fuego", color2 = c("ffd23d"), velocidad = 9, tam = 1.6, gravedad = 6 })
 	end })
 end
 
 function FAMILIAS.hielo(d, h, col, ctx)
-	haz(d, h, col, 0.4 * ctx.escala, 0.25, c("ffffff"))
-	escarcha(h, 1.6 * ctx.escala)
+	haz(d, h, col, 0.5 * ctx.escala, 0.25, c("ffffff"))
+	escarcha(h, 1.9 * ctx.escala)
 end
 
 function FAMILIAS.magia(d, h, col, ctx)
-	proyectil(d, h, col, { tam = 0.6 * ctx.escala, tiempo = 0.16, alLlegar = function(p)
-		circulo(p, col, 2.2 * ctx.escala, 0.45)
-		particulas(p, col, 12, { velocidad = 6, tam = 0.5, vida = 0.6, gravedad = 6 })
+	proyectil(d, h, col, { tam = 0.9 * ctx.escala, tiempo = 0.16, largoEstela = 0.25, alLlegar = function(p)
+		circulo(p, col, 3 * ctx.escala, 0.5)
+		destello(p, col, 2.4 * ctx.escala, 0.25)
+		particulas(p, col, 14, { velocidad = 7, tam = 0.55, vida = 0.6, gravedad = 6 })
 	end })
 end
 
 function FAMILIAS.psiquico(d, h, col, ctx)
 	local mira = h - d
 	for i = 0, 2 do
-		task.delay(i * 0.05, anillo, d:Lerp(h, 0.2 + i * 0.25), mira, col, 1.2 * ctx.escala, 0.18)
+		task.delay(i * 0.05, anillo, d:Lerp(h, 0.2 + i * 0.25), mira, col, 1.7 * ctx.escala, 0.2)
 	end
-	task.delay(0.12, destello, h, col, 2.2 * ctx.escala)
+	task.delay(0.12, remate, h, col, ctx, 0.9)
 end
 
 function FAMILIAS.golpe(d, h, col, ctx)
 	local mira = (h - d).Unit
-	local p = pieza(Vector3.new(0.5, 0.5, 2.4), CFrame.lookAt(h - mira * 3, h), col)
-	tween(p, 0.08, { CFrame = CFrame.lookAt(h - mira * 0.5, h), Transparency = 0.6 })
+	local p = pieza(Vector3.new(0.9, 0.9, 3), CFrame.lookAt(h - mira * 3.5, h), col)
+	tween(p, 0.08, { CFrame = CFrame.lookAt(h - mira * 0.5, h), Transparency = 0.5 })
 	borrar(p, 0.09)
 	task.delay(0.07, function()
-		destello(h, BLANCO, 2 * ctx.escala, 0.15)
-		onda(h - Vector3.new(0, 1.2, 0), col, 2.5 * ctx.escala, 0.3)
-		particulas(h - Vector3.new(0, 1, 0), c("cbb89a"), 8, { textura = "humo", brillo = 0, velocidad = 6, tam = 1.5, vida = 0.6 })
+		destello(h, BLANCO, 2.6 * ctx.escala, 0.15)
+		onda(h - Vector3.new(0, 1.2, 0), col, 3.4 * ctx.escala, 0.32)
+		anillo(h - mira * 0.5, mira, col, 1.4 * ctx.escala, 0.18)
+		particulas(h - Vector3.new(0, 1, 0), c("cbb89a"), 10, { textura = "humo", brillo = 0, velocidad = 7, tam = 1.8, vida = 0.6 })
+		if ctx.critico then
+			sacudir(0.15, h)
+		end
 	end)
 end
 
 function FAMILIAS.corte(d, h, col, ctx)
-	corte(d, h, col, 2 * ctx.escala)
-	if ctx.critico then
-		task.delay(0.08, corte, d, h, BLANCO, 2.4)
-	end
+	-- Tajo en cruz: el segundo cruza al primero y deja chispas.
+	corte(d, h, col, 2.8 * ctx.escala)
+	task.delay(0.07, function()
+		corte(d, h, if ctx.critico then BLANCO else col, 2.8 * ctx.escala)
+		particulas(h, BLANCO, 8, { velocidad = 14, tam = 0.3, vida = 0.25 })
+	end)
 end
 
 function FAMILIAS.telarana(d, h, col, ctx)
@@ -489,9 +513,9 @@ end
 
 function FAMILIAS.escudo(d, h, col, ctx)
 	-- El escudo va al blanco y vuelve.
-	proyectil(d, h, c("2f5fd0"), { forma = "disco", tam = 0.9, tiempo = 0.14, material = Enum.Material.Metal, alLlegar = function(p)
-		destello(p, BLANCO, 1.8 * ctx.escala, 0.15)
-		proyectil(p, d, c("2f5fd0"), { forma = "disco", tam = 0.9, tiempo = 0.14, material = Enum.Material.Metal })
+	proyectil(d, h, c("2f5fd0"), { forma = "disco", tam = 1.3, tiempo = 0.14, material = Enum.Material.Metal, estela = c("cfe0ff"), alLlegar = function(p)
+		remate(p, c("8fb4ff"), ctx, 0.9)
+		proyectil(p, d, c("2f5fd0"), { forma = "disco", tam = 1.3, tiempo = 0.14, material = Enum.Material.Metal, estela = c("cfe0ff") })
 	end })
 end
 

@@ -76,6 +76,9 @@ local function activarFase(e, fase, entorno)
 		entorno.aturdirHeroes(fase.stunDuration or fase.heroStunDuration or 4)
 	end
 	entorno.aviso(`{e.config.name}: {fase.name}`)
+	if entorno.alFase then
+		entorno.alFase(e, fase, "activa") -- visual del cliente (fase E): escudo, refuerzos, furia…
+	end
 end
 
 local function fasesDeJefe(e, dt, entorno)
@@ -94,6 +97,9 @@ local function fasesDeJefe(e, dt, entorno)
 			c.fasePendiente = fase
 			c.aviso = fase.telegraph or 1.25
 			entorno.aviso(`{e.config.name} prepara {fase.name}`)
+			if entorno.alFase then
+				entorno.alFase(e, fase, "prepara") -- rugido y anillo de aviso en los clientes
+			end
 			return
 		end
 	end

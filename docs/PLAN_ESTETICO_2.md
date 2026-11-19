@@ -78,12 +78,18 @@ comparando con All Star Tower Defense, Anime Adventures, Tower Defense Simulator
 6. **Día y noche**: ciclo de unos 20 minutos, faroles y ventanas que se prenden de noche.
 7. **Puentes y caminos**: más anchos y decorados, que conecten mejor y llenen los huecos entre islas.
 
-## Fase E · Animaciones
+## Fase E · Animaciones ✅
 1. **Festejo al mejorar**: animación corta de pose al subir de mejora.
 2. **Reposo propio para los 25 únicos** (Thor gira el martillo, Strange flota, Magneto levita…).
 3. **Revisión de los 212 ataques**: hoja con capturas en el momento del golpe; rehacer los que no tienen fuerza.
 4. **Enemigos**: reacción al golpe (sacudida y destello), **estados visibles** (hielo, fuego, aturdido, veneno,
    lento) y **jefes con ataques propios** en sus fases (invocar, escudo, furia) con animación y efecto.
+
+Hecho (18/11/2026): festejo por estilo (8) y reposo propio para los 27 únicos (`Reposo.luau`); enemigos con destello
+al golpe, efecto e ícono por estado y rugido + efecto por tipo de fase de jefe (`EnemigosVisual.client.luau`, con los
+atributos `Estados` y `FaseJefe` que publica `Partida.luau`). Revisión de ataques: los 212 usan 14 familias y 27
+únicos; los únicos pasaron, se rehicieron 7 familias flojas (balas, energía, magia, psíquico, golpe, corte, escudo)
+y se reforzaron haz, flecha, fuego e hielo con un remate común en el blanco. Detalle en `docs/UNIDADES_VISUAL.md`.
 
 ## Fase F · Audio (diciembre, cuando haya créditos de ForgeGUI)
 Música de lobby, jefe, victoria y una por cada uno de los 11 mapas; sonido por familia de ataque y por cada único;
