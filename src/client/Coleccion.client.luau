@@ -185,15 +185,14 @@ local function pantallaBanner()
 	finBanner = os.clock() + b.cambiaEn
 	relojBanner = texto({ Position = UDim2.fromOffset(600, 4), Size = UDim2.fromOffset(130, 28), TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = ACENTO, TextSize = 15, Text = string.format("Cambia en %d:%02d", b.cambiaEn // 60, b.cambiaEn % 60) }, cuerpo)
 	-- Destacados: la estrella grande y los dos apoyos, con su probabilidad por tirada.
-	local fila = crear("Frame", { Position = UDim2.fromOffset(0, 46), Size = UDim2.new(1, 0, 0, 150), BackgroundTransparency = 1 }, cuerpo)
+	local fila = crear("Frame", { Position = UDim2.fromOffset(0, 46), Size = UDim2.new(1, 0, 0, 230), BackgroundTransparency = 1 }, cuerpo)
 	crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 14) }, fila)
 	for i, id in { b.destacados.estrella, b.destacados.apoyos[1], b.destacados.apoyos[2] } do
+		-- Altas para que entre la descripción entera de la habilidad (antes se cortaba a los 4 renglones).
 		local t = tarjeta(id, fila, 150)
-		if i == 1 then
-			t.Size = UDim2.fromOffset(250, 150)
-		end
+		t.Size = UDim2.fromOffset(if i == 1 then 250 else t.Size.X.Offset, 230)
 		texto({ Position = UDim2.fromOffset(10, 62), Size = UDim2.new(1, -20, 0, 22), TextSize = 15, Font = Enum.Font.GothamBold, TextColor3 = ACENTO, Text = (if i == 1 then "★ ESTRELLA · " else "Destacado · ") .. porcentaje(b.probDestacados[id] or 0) }, t)
-		texto({ Position = UDim2.fromOffset(10, 88), Size = UDim2.new(1, -20, 0, 54), TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, Text = heroes[id].abilityDesc or "" }, t)
+		texto({ Position = UDim2.fromOffset(10, 88), Size = UDim2.new(1, -20, 0, 134), TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextTruncate = Enum.TextTruncate.AtEnd, Text = heroes[id].abilityDesc or "" }, t)
 	end
 	-- Probabilidades por rareza.
 	local lineas = {}
@@ -203,8 +202,8 @@ local function pantallaBanner()
 			table.insert(lineas, `{r[2]} {porcentaje(p)}`)
 		end
 	end
-	texto({ Position = UDim2.fromOffset(0, 206), Size = UDim2.new(1, 0, 0, 22), TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, Text = table.concat(lineas, "  ·  ") .. (if b.garantia then "  ·  Garantía: la próxima no es común" else "") }, cuerpo)
-	texto({ Position = UDim2.fromOffset(0, 228), Size = UDim2.new(1, 0, 0, 20), TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(180, 185, 200), Text = "Cuando sale la rareza de un destacado, hay 50% de que sea él. Los destacados cambian cada hora." }, cuerpo)
+	texto({ Position = UDim2.fromOffset(0, 286), Size = UDim2.new(1, 0, 0, 22), TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, Text = table.concat(lineas, "  ·  ") .. (if b.garantia then "  ·  Garantía: la próxima no es común" else "") }, cuerpo)
+	texto({ Position = UDim2.fromOffset(0, 308), Size = UDim2.new(1, 0, 0, 20), TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(180, 185, 200), Text = "Cuando sale la rareza de un destacado, hay 50% de que sea él. Los destacados cambian cada hora." }, cuerpo)
 	for i, n in { 1, 10 } do
 		boton(`INVOCAR x{n} · 💎 {b.costo * n}`, { Position = UDim2.new(1, -440 + (i - 1) * 230, 1, -50), Size = UDim2.fromOffset(210, 50), TextSize = 18, BackgroundColor3 = if n == 1 then Color3.fromRGB(170, 120, 30) else Color3.fromRGB(190, 80, 40) }, cuerpo, function()
 			local res = pedir("invocar", n)
@@ -218,7 +217,7 @@ local function pantallaBanner()
 	end
 	-- Resultado de la última invocación.
 	if ultimas then
-		local lista = crear("Frame", { Position = UDim2.fromOffset(0, 256), Size = UDim2.new(1, -460, 1, -256), BackgroundTransparency = 1 }, cuerpo)
+		local lista = crear("Frame", { Position = UDim2.fromOffset(0, 336), Size = UDim2.new(1, -460, 1, -336), BackgroundTransparency = 1 }, cuerpo)
 		crear("UIGridLayout", { CellSize = UDim2.fromOffset(150, 30), CellPadding = UDim2.fromOffset(6, 6) }, lista)
 		local destacado = { [b.destacados.estrella] = true, [b.destacados.apoyos[1]] = true, [b.destacados.apoyos[2]] = true }
 		for _, u in ultimas do

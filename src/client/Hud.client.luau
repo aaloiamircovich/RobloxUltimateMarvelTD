@@ -322,7 +322,7 @@ function armarPase(res)
 			Size = UDim2.fromOffset(104, 140),
 			TextSize = 18,
 			AutoButtonColor = puede,
-			BackgroundColor3 = if reclamado then Color3.fromRGB(60, 50, 55) elseif puede then Comic.VERDE elseif pr.tipo == "unidad" then Color3.fromRGB(150, 90, 20) else Comic.ROJO,
+			BackgroundColor3 = if reclamado then Color3.fromRGB(60, 50, 55) elseif puede then Comic.VERDE elseif pr.tipo == "unidad" then Color3.fromRGB(150, 90, 20) else Comic.GRIS, -- gris: todavía no alcanzado (rojo parecía un error)
 		}, col, function()
 			if puede then
 				pedirTemporada("reclamarPase", nivel)
@@ -332,7 +332,7 @@ function armarPase(res)
 			Comic.resaltar(gratis, Comic.AMARILLO)
 		end
 		-- Fila premium: visible con candado hasta que se decida monetizar (CLAUDE.md).
-		local premium = Comic.texto({ Text = "🔒\nPremium\npróximamente", Position = UDim2.fromOffset(0, 206), Size = UDim2.fromOffset(104, 140), TextSize = 16, Font = Comic.TEXTO, TextColor3 = Color3.fromRGB(200, 190, 170) }, col)
+		local premium = Comic.texto({ Text = "🔒\nPremium\nPróximamente", Position = UDim2.fromOffset(0, 206), Size = UDim2.fromOffset(104, 140), TextSize = 13, TextWrapped = true, Font = Comic.TEXTO, TextColor3 = Color3.fromRGB(200, 190, 170) }, col)
 		premium.BackgroundTransparency = 0
 		premium.BackgroundColor3 = Color3.fromRGB(40, 30, 34)
 		Comic.borde(premium, 3)
