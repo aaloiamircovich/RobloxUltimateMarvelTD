@@ -62,6 +62,16 @@ Decidido: fondo desenfocado y oscuro, tarjetas oscuras con acento, un molde com�
   pieza que no deba moldearse lleva el atributo `SinMolde`.
 - Los títulos de Colección van en mayúsculas como los demás. El oro se escribe 🟡 (Roblox no dibuja 🪙).
 
+## Carteles del mundo (19/11/2026)
+Decidido: placa de vidrio oscuro, aparecen al acercarse con fundido, enemigos con barra fina y nombre sólo en jefes.
+- **Placas** (`Hub.placa`, tipos en `PLACAS`): fondo oscuro, título blanco Gotham Black, línea del color del lugar y
+  subtítulo gris; tamaño fijo en pantalla. Islas (`isla`) se ven de lejos y se apagan al llegar (desde 55, hasta 420
+  studs × ESCALA); puestos y Sanctum (`puesto`) hasta 30; hitos hasta 70; salas hasta 13. El fundido lo hace
+  `Carteles.client.luau` (etiqueta `CartelLobby`, atributos `VerDesde` y `VerHasta`).
+- **Enemigos** (`Partida.cartel`): barra de 56 px, 6 de alto, redondeada; jefes (110 px) y élites (80 px) con nombre.
+- **Ranking** del evento y cartel del hangar sin la letra de cómic (Gotham, vidrio oscuro, línea roja).
+- Wakanda: «Rasgos · Grados · Mascotas» (estaba en inglés).
+
 ## HUD de partida (fase B, 18/11/2026)
 - **Panel de unidad** (izquierda, decidido por el usuario): retrato con marco de rareza, nombre, rareza y nivel,
   rasgo y grados; **5 estrellas** de mejora; daño, alcance y ataques/s con **lo que queda tras la próxima mejora en

@@ -823,7 +823,7 @@ local function porton(nivel, padre: Instance, pos: Vector3, dir: Vector3, ancho:
 	t.BackgroundTransparency = 1
 	t.Text = "HANGAR"
 	t.TextScaled = true
-	t.Font = Enum.Font.Bangers
+	t.Font = Enum.Font.GothamBlack
 	t.TextColor3 = Color3.new(1, 1, 1)
 	t.Parent = gui
 	gui.Parent = frente

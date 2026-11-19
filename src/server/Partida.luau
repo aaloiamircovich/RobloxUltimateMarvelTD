@@ -63,29 +63,40 @@ local COLORES = {
 	["Cósmico"] = Color3.fromRGB(70, 60, 160),
 	["Urbano"] = Color3.fromRGB(170, 60, 60),
 }
-local function cartel(padre: BasePart, texto: string, alto: number): Frame
+-- Vida sobre el enemigo (docs/INTERFAZ.md, 19/11/2026): barra fina y redondeada; el nombre sólo en jefes y élites.
+local function cartel(padre: BasePart, texto: string?, alto: number, ancho: number?): Frame
+	ancho = ancho or 56
 	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.fromOffset(80, 22)
+	gui.Size = UDim2.fromOffset(ancho, if texto then 24 else 6)
 	gui.StudsOffset = Vector3.new(0, alto, 0)
 	gui.AlwaysOnTop = true
-	local nombre = Instance.new("TextLabel")
-	nombre.Size = UDim2.new(1, 0, 0, 12)
-	nombre.BackgroundTransparency = 1
-	nombre.TextScaled = true
-	nombre.TextColor3 = Color3.new(1, 1, 1)
-	nombre.TextStrokeTransparency = 0.3
-	nombre.Text = texto
-	nombre.Parent = gui
+	gui.MaxDistance = 220
+	if texto then
+		local nombre = Instance.new("TextLabel")
+		nombre.Size = UDim2.new(1, 0, 0, 14)
+		nombre.BackgroundTransparency = 1
+		nombre.Font = Enum.Font.GothamBlack
+		nombre.TextScaled = true
+		nombre.TextColor3 = Color3.fromRGB(236, 240, 248)
+		nombre.TextStrokeTransparency = 0.6
+		nombre.Text = texto
+		nombre.Parent = gui
+	end
 	local fondo = Instance.new("Frame")
-	fondo.Position = UDim2.fromOffset(0, 14)
+	fondo.AnchorPoint = Vector2.new(0, 1)
+	fondo.Position = UDim2.fromScale(0, 1)
 	fondo.Size = UDim2.new(1, 0, 0, 6)
-	fondo.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+	fondo.BackgroundColor3 = Color3.fromRGB(16, 18, 26)
+	fondo.BackgroundTransparency = 0.2
+	fondo.BorderSizePixel = 0
 	fondo.Parent = gui
+	Instance.new("UICorner", fondo).CornerRadius = UDim.new(1, 0)
 	local barra = Instance.new("Frame")
 	barra.Size = UDim2.fromScale(1, 1)
-	barra.BackgroundColor3 = Color3.fromRGB(80, 220, 90)
+	barra.BackgroundColor3 = Color3.fromRGB(90, 225, 110)
 	barra.BorderSizePixel = 0
 	barra.Parent = fondo
+	Instance.new("UICorner", barra).CornerRadius = UDim.new(1, 0)
 	gui.Parent = padre
 	return barra
 end
@@ -461,7 +472,8 @@ function Partida.nueva(op)
 		Conductas.preparar(e)
 		e.altura = if config.flying then 4 else tam / 2
 		e.cuerpo = cuerpo
-		e.barra = cartel(cuerpo, config.name, tam / 2 + 1)
+		local destacado = config.isBoss or config.isElite
+		e.barra = cartel(cuerpo, if destacado then config.name else nil, tam / 2 + 1, if config.isBoss then 110 elseif config.isElite then 80 else nil)
 		cuerpo:SetAttribute("Vida", math.ceil(e.vida)) -- el cliente dibuja los números de daño
 		moverEnemigo(e, CFrame.new(puntoEnRuta(e.avance, e.ruta) + Vector3.new(0, e.altura, 0)))
 		if config.isBoss then

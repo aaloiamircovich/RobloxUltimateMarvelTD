@@ -1483,24 +1483,33 @@ local function pintarCartel()
 		return
 	end
 	cartelRanking:ClearAllChildren()
+	-- Estilo limpio (docs/INTERFAZ.md): vidrio oscuro, Gotham, línea roja bajo el título.
 	local marco = Instance.new("Frame")
 	marco.Size = UDim2.fromScale(1, 1)
-	marco.BackgroundTransparency = 1
+	marco.BackgroundColor3 = Color3.fromRGB(16, 18, 26)
+	marco.BackgroundTransparency = 0.05
 	local borde = Instance.new("UIStroke")
-	borde.Thickness = 14
-	borde.Color = Color3.new(0, 0, 0)
+	borde.Thickness = 4
+	borde.Color = Color3.fromRGB(96, 104, 128)
 	borde.Parent = marco
 	marco.Parent = cartelRanking
+	local linea = Instance.new("Frame")
+	linea.AnchorPoint = Vector2.new(0.5, 0)
+	linea.Position = UDim2.new(0.5, 0, 0, 66)
+	linea.Size = UDim2.fromOffset(160, 5)
+	linea.BackgroundColor3 = Color3.fromRGB(226, 38, 52)
+	linea.BorderSizePixel = 0
+	linea.Parent = cartelRanking
 	local d = Evento.desafio(Evento.semana(os.time()))
 	local function columna(x: number, titulo: string, cuerpo: string)
 		local t = Instance.new("TextLabel")
 		t.BackgroundTransparency = 1
 		t.Position = UDim2.new(x, 20, 0, 70)
 		t.Size = UDim2.new(0.5, -40, 0, 50)
-		t.Font = Enum.Font.Bangers
+		t.Font = Enum.Font.GothamBlack
 		t.TextScaled = true
-		t.TextColor3 = Color3.fromRGB(255, 214, 40)
-		t.TextStrokeTransparency = 0
+		t.TextColor3 = Color3.fromRGB(255, 200, 72)
+		t.TextStrokeTransparency = 1
 		t.Text = titulo
 		t.Parent = cartelRanking
 		local l = t:Clone()
@@ -1509,7 +1518,7 @@ local function pintarCartel()
 		l.Font = Enum.Font.GothamBold
 		l.TextScaled = false
 		l.TextSize = 24
-		l.TextColor3 = Color3.fromRGB(255, 244, 222)
+		l.TextColor3 = Color3.fromRGB(236, 240, 248)
 		l.TextXAlignment = Enum.TextXAlignment.Left
 		l.TextYAlignment = Enum.TextYAlignment.Top
 		l.Text = cuerpo
@@ -1518,10 +1527,12 @@ local function pintarCartel()
 	local titulo = Instance.new("TextLabel")
 	titulo.BackgroundTransparency = 1
 	titulo.Size = UDim2.new(1, 0, 0, 64)
-	titulo.Font = Enum.Font.Bangers
+	titulo.Position = UDim2.fromOffset(0, 10)
+	titulo.Size = UDim2.new(1, 0, 0, 50)
+	titulo.Font = Enum.Font.GothamBlack
 	titulo.TextScaled = true
-	titulo.TextColor3 = Color3.fromRGB(255, 244, 222)
-	titulo.TextStrokeTransparency = 0
+	titulo.TextColor3 = Color3.fromRGB(236, 240, 248)
+	titulo.TextStrokeTransparency = 1
 	titulo.Text = `RANKING · DESAFÍO EN {string.upper(niveles[indiceNivel(d.mapa)].name)}`
 	titulo.Parent = cartelRanking
 	columna(0, "DESAFÍO SEMANAL", textoTop("evento", " pts"))

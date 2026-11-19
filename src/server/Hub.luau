@@ -159,6 +159,73 @@ local function disco(padre, color, centro: Vector3, diametro: number, alto: numb
 	return p
 end
 
+-- Placa de vidrio oscuro (docs/INTERFAZ.md, 19/11/2026): tamaño fijo en pantalla, título blanco, línea del color
+-- del lugar y subtítulo chico. Carteles.client.luau la muestra con fundido según la distancia (atributos VerHasta:
+-- se ve de cerca; VerDesde: se ve de lejos y se apaga al llegar).
+local PLACAS = {
+	isla = { ancho = 270, alto = 70, desde = 55, hasta = 420 },
+	hito = { ancho = 200, alto = 50, hasta = 70 },
+	puesto = { ancho = 220, alto = 62, hasta = 30 },
+	sala = { ancho = 170, alto = 52, hasta = 13 },
+}
+local function placa(padre: BasePart, titulo: string, subtitulo: string?, color: Color3, tipo: string)
+	local d = PLACAS[tipo]
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "Placa"
+	gui.Size = UDim2.fromOffset(d.ancho, if subtitulo then d.alto else d.alto - 18)
+	gui.LightInfluence = 0
+	gui.MaxDistance = d.hasta * ESCALA * 1.2
+	gui:SetAttribute("VerHasta", d.hasta * ESCALA)
+	if d.desde then
+		gui:SetAttribute("VerDesde", d.desde * ESCALA)
+	end
+	gui:AddTag("CartelLobby")
+	local f = Instance.new("Frame")
+	f.Size = UDim2.fromScale(1, 1)
+	f.BackgroundColor3 = Color3.fromRGB(16, 18, 26)
+	f.BackgroundTransparency = 0.15
+	f.Parent = gui
+	Instance.new("UICorner", f).CornerRadius = UDim.new(0, 10)
+	local borde = Instance.new("UIStroke")
+	borde.Color, borde.Transparency = Color3.fromRGB(96, 104, 128), 0.35
+	borde.Parent = f
+	local t = Instance.new("TextLabel")
+	t.Name = "Titulo"
+	t.Position = UDim2.fromOffset(10, 6)
+	t.Size = UDim2.new(1, -20, 0, if tipo == "isla" then 30 else 24)
+	t.BackgroundTransparency = 1
+	t.Font = Enum.Font.GothamBlack
+	t.TextScaled = true
+	t.TextColor3 = Color3.fromRGB(236, 240, 248)
+	t.Text = titulo
+	t.Parent = f
+	local linea = Instance.new("Frame")
+	linea.Name = "Linea"
+	linea.AnchorPoint = Vector2.new(0.5, 0)
+	linea.Position = UDim2.new(0.5, 0, 0, t.Size.Y.Offset + 9)
+	linea.Size = UDim2.fromOffset(48, 3)
+	linea.BackgroundColor3 = color
+	linea.BorderSizePixel = 0
+	linea.Parent = f
+	Instance.new("UICorner", linea).CornerRadius = UDim.new(1, 0)
+	if subtitulo then
+		local s = Instance.new("TextLabel")
+		s.Name = "Subtitulo"
+		s.AnchorPoint = Vector2.new(0, 1)
+		s.Position = UDim2.new(0, 10, 1, -6)
+		s.Size = UDim2.new(1, -20, 0, 15)
+		s.BackgroundTransparency = 1
+		s.Font = Enum.Font.GothamBold
+		s.TextScaled = true
+		s.TextColor3 = Color3.fromRGB(170, 178, 198)
+		s.Text = subtitulo
+		s.Parent = f
+	end
+	gui.Parent = padre
+	return gui
+end
+
+-- Texto suelto sin placa (el «4» de la Torre Baxter).
 local function cartel(padre: BasePart, titulo: string, subtitulo: string?, color: Color3, ancho: number)
 	local gui = Instance.new("BillboardGui")
 	-- El BillboardGui no crece con ScaleTo: se arma ya al tamaño final.
@@ -187,10 +254,10 @@ local function cartel(padre: BasePart, titulo: string, subtitulo: string?, color
 	return gui
 end
 
-local function letrero(padre, pos: Vector3, titulo, subtitulo, color: Color3, ancho)
+local function letrero(padre, pos: Vector3, titulo, subtitulo, color: Color3, tipo: string)
 	local ancla = parte(padre, color, CFrame.new(pos), Vector3.new(0.1, 0.1, 0.1))
 	ancla.Transparency, ancla.CanCollide, ancla.CanQuery = 1, false, false
-	return cartel(ancla, titulo, subtitulo, color, ancho)
+	return placa(ancla, titulo, subtitulo, color, tipo)
 end
 
 -- Interiores (decidido por el usuario el 15/11/2026): salas cerradas lejos y arriba de las islas, a las que se
@@ -622,7 +689,7 @@ local function estacion(padre, e, alUsar)
 		local orbe = parte(m, color, cf * CFrame.new(0, 2.7, 0.9) * CFrame.Angles(math.rad(45), 0, math.rad(45)), Vector3.new(0.9, 0.9, 0.9), Enum.Material.Neon)
 		orbe.Name = "Orbe"
 	end
-	letrero(m, (cf * CFrame.new(0, 6.3, 1)).Position, e.nombre, e.subtitulo, color, 8)
+	letrero(m, (cf * CFrame.new(0, 6.3, 1)).Position, e.nombre, e.subtitulo, color, "puesto")
 
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.ActionText = e.nombre
@@ -654,11 +721,9 @@ local function salas(padre, islaId: string, modo: string, anguloCentro: number, 
 		anillo.Material = Enum.Material.Neon
 		anillo.Name = "Anillo"
 		anillo.Parent = base
-		local gui = letrero(padre, pos + Vector3.new(0, 4.5, 0), `SALA {i}`, "Parate acá para jugar", Color3.new(1, 1, 1), 3)
-		-- Las salas están juntas: el cartel se ve sólo de cerca para que no se pisen.
-		gui.MaxDistance = 26 * ESCALA
-		local textos = gui:GetChildren()
-		table.insert(Hub.plataformas, { base = base, anillo = anillo, modo = modo, numero = i, titulo = textos[1], sub = textos[2] })
+		-- Las salas están juntas: la placa se ve sólo de cerca para que no se pisen.
+		local gui = letrero(padre, pos + Vector3.new(0, 4.5, 0), `SALA {i}`, "Parate acá para jugar", if modo == "infinite" then Color3.fromHex("3a7bd5") else Color3.fromHex("c2571a"), "sala")
+		table.insert(Hub.plataformas, { base = base, anillo = anillo, modo = modo, numero = i, titulo = gui:FindFirstChild("Titulo", true), sub = gui:FindFirstChild("Subtitulo", true) })
 	end
 end
 
@@ -693,7 +758,7 @@ local function salonHeroes(padre, c)
 		parte(m, "d9b45a", mira * CFrame.new(0, 0.15, -0.1), Vector3.new(2.7, 0.3, 0.8), Enum.Material.Metal)
 	end
 	ocupar(enIsla(c, Hub.SALON.angulo, Hub.SALON.radio + 3), 9)
-	letrero(m, enIsla(c, Hub.SALON.angulo, Hub.SALON.radio + 3.2) + Vector3.new(0, 8.5, 0), "SALÓN DE HÉROES", "Tus mejores unidades", Color3.fromHex("ffd65a"), 9)
+	letrero(m, enIsla(c, Hub.SALON.angulo, Hub.SALON.radio + 3.2) + Vector3.new(0, 8.5, 0), "SALÓN DE HÉROES", "Tus mejores unidades", Color3.fromHex("ffd65a"), "puesto")
 	m.Parent = padre
 end
 
@@ -731,7 +796,7 @@ local function hito(padre, h)
 	local m = Instance.new("Model")
 	m.Name = "Hito_" .. h.id
 	parte(m, h.color, mira * CFrame.new(0, h.alto * extra / 2, 0), Vector3.new(h.huella * extra, h.alto * extra, h.huella * extra), Enum.Material.Concrete)
-	letrero(m, base + Vector3.new(0, h.alto * extra + 2, 0), (h.id:upper():gsub("_", " ")), nil, Color3.fromHex(h.color), 10)
+	letrero(m, base + Vector3.new(0, h.alto * extra + 2, 0), (h.id:upper():gsub("_", " ")), nil, Color3.fromHex(h.color), "hito")
 	m.Parent = padre
 end
 
@@ -1449,7 +1514,7 @@ function Hub.construir(alUsar: (Player, string) -> ())
 	end
 	portal(hub, ida, c.pos, frente(vuelta, s.pos))
 	portal(hub, vuelta, s.pos, frente(ida, c.pos))
-	letrero(hub, ida + Vector3.new(0, 11.5, 0), "SANCTUM SANCTORUM", "Portal", Color3.fromHex("ff9a2e"), 12)
+	letrero(hub, ida + Vector3.new(0, 11.5, 0), "SANCTUM SANCTORUM", "Portal", Color3.fromHex("ff9a2e"), "puesto")
 
 	for _, h in HITOS do
 		hito(hub, h)
@@ -1464,10 +1529,10 @@ function Hub.construir(alUsar: (Player, string) -> ())
 	salas(hub, "sanctum_interior", "story", 270, alUsar)
 	salonHeroes(hub, c)
 
-	letrero(hub, ISLAS.asgard.pos + Vector3.new(0, 34 * ESCALA_EDIFICIOS / ESCALA, -10), "ASGARD", "Invocaciones", Color3.fromHex("ffcf72"), 14)
-	letrero(hub, ISLAS.wakanda.pos + Vector3.new(0, 22 * ESCALA_EDIFICIOS / ESCALA, 0), "WAKANDA", "Traits · Grades · Pets", Color3.fromHex("b865ff"), 14)
-	letrero(hub, ISLAS.nuevaYork.pos + Vector3.new(0, 26 * ESCALA_EDIFICIOS / ESCALA, 0), "NUEVA YORK", "Raids · Tienda", Color3.fromHex("40c9ff"), 14)
-	letrero(hub, ISLAS.baxter.pos + Vector3.new(0, 36 * ESCALA_EDIFICIOS / ESCALA, 0), "TORRE BAXTER", "Modo infinito", Color3.fromHex("6fb5ff"), 14)
+	letrero(hub, ISLAS.asgard.pos + Vector3.new(0, 34 * ESCALA_EDIFICIOS / ESCALA, -10), "ASGARD", "Invocaciones", Color3.fromHex("ffcf72"), "isla")
+	letrero(hub, ISLAS.wakanda.pos + Vector3.new(0, 22 * ESCALA_EDIFICIOS / ESCALA, 0), "WAKANDA", "Rasgos · Grados · Mascotas", Color3.fromHex("b865ff"), "isla")
+	letrero(hub, ISLAS.nuevaYork.pos + Vector3.new(0, 26 * ESCALA_EDIFICIOS / ESCALA, 0), "NUEVA YORK", "Raids · Tienda", Color3.fromHex("40c9ff"), "isla")
+	letrero(hub, ISLAS.baxter.pos + Vector3.new(0, 36 * ESCALA_EDIFICIOS / ESCALA, 0), "TORRE BAXTER", "Modo infinito", Color3.fromHex("6fb5ff"), "isla")
 
 	-- Árboles: jardín de la isla central y selva de Wakanda.
 	for _, a in { -70, -20, 140, 200 } do
