@@ -28,6 +28,23 @@ Como Anime Vanguards, en todo el juego (también cinemáticas, carteles, transic
   «LLEGA EL JEFE»), fin de partida (VICTORIA en dorado, DERROTA en gris), cartel del mapa, transición (velo oscuro con
   una línea roja) y pantalla de carga (fondo oscuro, título blanco, barra roja fina).
 
+## HUD del lobby con identidad Marvel (18/11/2026)
+Pedido: «se ve genérica» y «le falta movimiento». Decidido: retratos de héroes, cortes en diagonal, tarjeta de
+jugador, movimiento medio y botones agrupados.
+- **Tarjeta de jugador** arriba a la izquierda (avatar, nombre, nivel y XP; al tocarla abre el perfil). La barra de
+  nivel suelta del centro desaparece.
+- **Botones agrupados**: izquierda UNIDADES, INVOCAR, INVENTARIO, TIENDA; derecha VIAJAR, MISIONES, PASE, EVENTO,
+  PREMIOS y **MÁS**, que abre una fila con PERFIL, NOVEDADES, CAMBIAR y AJUSTES.
+- **Retratos 3D**: UNIDADES muestra tu mejor unidad, INVOCAR el Mítico destacado del Banner 2 y ¡JUGAR! el líder del
+  escuadrón.
+- **Corte en diagonal** (`Comic.diagonal`) arriba a la derecha en botones, casillas del escuadrón y ¡JUGAR!, con la
+  esquina del color de acento (al pasar el mouse se pinta todo el borde). Sólo piezas casi cuadradas: en las anchas
+  el degradado girado de Roblox se come un tercio; para eso haría falta una imagen 9-slice (ForgeGUI, diciembre).
+- **Movimiento**: botones crecen 7 % y el ícono sube al pasar el mouse; las ventanas entran subiendo con rebote;
+  las monedas suben contando (`Comic.contar`); la XP se llena animada; ¡JUGAR! tiene un brillo que lo cruza cada
+  3,5 s (`Comic.brillo`).
+- Referencias: el repositorio `izzyfrm/roblox-ai` no sirvió (maquetas planas y miniaturas promocionales).
+
 ## HUD de partida (fase B, 18/11/2026)
 - **Panel de unidad** (izquierda, decidido por el usuario): retrato con marco de rareza, nombre, rareza y nivel,
   rasgo y grados; **5 estrellas** de mejora; daño, alcance y ataques/s con **lo que queda tras la próxima mejora en

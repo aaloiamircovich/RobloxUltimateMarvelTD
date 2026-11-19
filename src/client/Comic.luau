@@ -68,6 +68,101 @@ function Comic.resaltar(objeto: GuiObject, color: Color3)
 	trazo.Color, trazo.Transparency, trazo.Thickness = color, 0, 2
 end
 
+-- Corte en diagonal (identidad Marvel, docs/INTERFAZ.md): la esquina pedida se recorta en diagonal y el borde
+-- toma el color de acento justo en el corte. Se hace con degradados (fondo y borde), sin imágenes.
+-- `esquina`: "arriba" (arriba a la derecha) o "abajo" (abajo a la izquierda). `corte`: fracción de la diagonal.
+local ROTACION_CORTE = { arriba = -45, abajo = 135 }
+function Comic.diagonal(objeto: GuiObject, acento: Color3?, esquina: string?, corte: number?)
+	-- Los degradados girados de Roblox no respetan la proporción: en piezas anchas el corte se come un tercio.
+	-- shortcut: sólo piezas casi cuadradas; para anchas haría falta una imagen 9-slice (ForgeGUI, diciembre).
+	local w, h = objeto.Size.X.Offset, objeto.Size.Y.Offset
+	if w <= 0 or h <= 0 or math.max(w / h, h / w) > 1.7 then
+		return nil
+	end
+	local fin = 1 - (corte or 0.12)
+	local recorte = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0),
+		NumberSequenceKeypoint.new(fin, 0),
+		NumberSequenceKeypoint.new(math.min(fin + 0.005, 0.999), 1),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	local rot = ROTACION_CORTE[esquina or "arriba"]
+	-- El objeto puede traer su propio degradado (botón principal): se le suma el recorte.
+	local g = objeto:FindFirstChildOfClass("UIGradient") or Comic.crear("UIGradient", {}, objeto)
+	g.Rotation, g.Transparency = rot, recorte
+	local trazo = objeto:FindFirstChildOfClass("UIStroke")
+	if trazo then
+		trazo.Color = Color3.new(1, 1, 1)
+		trazo.Transparency = math.min(trazo.Transparency, 0.2)
+		local gt = trazo:FindFirstChildOfClass("UIGradient") or Comic.crear("UIGradient", {}, trazo)
+		gt.Rotation, gt.Transparency = rot, recorte
+		Comic.acentoDiagonal(objeto, acento or Comic.ROJO, false)
+	end
+	return g
+end
+-- Color del borde con corte: tenue con la esquina del acento, o todo del acento (al pasar el mouse).
+function Comic.acentoDiagonal(objeto: GuiObject, acento: Color3, lleno: boolean)
+	local trazo = objeto:FindFirstChildOfClass("UIStroke")
+	local gt = trazo and trazo:FindFirstChildOfClass("UIGradient")
+	if not gt then
+		return
+	end
+	local base = if lleno then acento else Comic.BORDE
+	gt.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, base),
+		ColorSequenceKeypoint.new(0.62, base),
+		ColorSequenceKeypoint.new(0.8, acento),
+		ColorSequenceKeypoint.new(1, acento),
+	})
+end
+
+-- Brillo que cruza el objeto cada tanto (botón principal).
+function Comic.brillo(objeto: GuiObject, cada: number?)
+	local capa = Comic.crear("Frame", { Name = "Brillo", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.55, BorderSizePixel = 0, ZIndex = (objeto.ZIndex or 1) + 1 }, objeto)
+	Comic.crear("UICorner", { CornerRadius = UDim.new(0, 10) }, capa)
+	local g = Comic.crear("UIGradient", {
+		Rotation = 20,
+		Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1),
+			NumberSequenceKeypoint.new(0.42, 1),
+			NumberSequenceKeypoint.new(0.5, 0.2),
+			NumberSequenceKeypoint.new(0.58, 1),
+			NumberSequenceKeypoint.new(1, 1),
+		}),
+		Offset = Vector2.new(-1, 0),
+	}, capa)
+	task.spawn(function()
+		while capa.Parent do
+			g.Offset = Vector2.new(-1, 0)
+			TweenService:Create(g, TweenInfo.new(0.9, Enum.EasingStyle.Sine), { Offset = Vector2.new(1, 0) }):Play()
+			task.wait(cada or 3.5)
+		end
+	end)
+	return capa
+end
+
+-- Número que sube (o baja) contando hasta el valor nuevo en `t` segundos. `formato` arma el texto.
+local contando = setmetatable({}, { __mode = "k" })
+function Comic.contar(etiqueta: TextLabel, hasta: number, formato: (number) -> string, t: number?)
+	local desde = contando[etiqueta] or hasta
+	contando[etiqueta] = hasta
+	if desde == hasta then
+		etiqueta.Text = formato(hasta)
+		return
+	end
+	local valor = Instance.new("NumberValue")
+	valor.Value = desde
+	valor.Changed:Connect(function(v)
+		etiqueta.Text = formato(math.floor(v + 0.5))
+	end)
+	local tw = TweenService:Create(valor, TweenInfo.new(t or 0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Value = hasta })
+	tw.Completed:Once(function()
+		etiqueta.Text = formato(hasta)
+		valor:Destroy()
+	end)
+	tw:Play()
+end
+
 -- Marca Shiny (docs/SHINY.md) en una tarjeta: borde dorado con un brillo que lo recorre y la etiqueta «★ SHINY».
 Comic.DORADO_SHINY = Color3.fromRGB(255, 214, 90)
 function Comic.marcoShiny(objeto: GuiObject)
@@ -101,7 +196,7 @@ end
 local function animarBoton(b: GuiButton, alPasar: (boolean) -> ()?)
 	local escala = Comic.crear("UIScale", {}, b)
 	b.MouseEnter:Connect(function()
-		tween(escala, 0.12, { Scale = 1.04 })
+		tween(escala, 0.12, { Scale = 1.07 })
 		if alPasar then
 			alPasar(true)
 		end
@@ -116,7 +211,7 @@ local function animarBoton(b: GuiButton, alPasar: (boolean) -> ()?)
 		tween(escala, 0.06, { Scale = 0.95 })
 	end)
 	b.MouseButton1Up:Connect(function()
-		tween(escala, 0.1, { Scale = 1.04 })
+		tween(escala, 0.1, { Scale = 1.07 })
 	end)
 end
 
@@ -133,7 +228,8 @@ function Comic.botonIcono(nombre: string, icono: string, props, padre, alClic)
 	local trazo = b:FindFirstChildOfClass("UIStroke")
 	local franja = Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -3), Size = UDim2.new(1, -16, 0, 3), BackgroundColor3 = acento, BorderSizePixel = 0 }, b)
 	Comic.crear("UICorner", { CornerRadius = UDim.new(1, 0) }, franja)
-	Comic.crear("ImageLabel", {
+	local imagen = Comic.crear("ImageLabel", {
+		Name = "Icono",
 		BackgroundTransparency = 1,
 		Image = icono,
 		ScaleType = Enum.ScaleType.Fit,
@@ -141,13 +237,22 @@ function Comic.botonIcono(nombre: string, icono: string, props, padre, alClic)
 		Position = UDim2.new(0.5, 0, 0, 4),
 		Size = UDim2.new(1, -16, 0.64, 0),
 	}, b)
+	Comic.diagonal(b, acento)
 	Comic.texto({ Text = Comic.mayus(nombre), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -8), Size = UDim2.new(1, -8, 0.2, 0) }, b)
 	b.Activated:Connect(function()
 		Sonido.efecto("clic")
 		alClic()
 	end)
 	animarBoton(b, function(encima)
-		tween(trazo, 0.12, { Color = if encima then acento else Comic.BORDE, Transparency = if encima then 0 else 0.35 })
+		-- Borde del acento y el ícono sube un poco (también el retrato que lo reemplace).
+		Comic.acentoDiagonal(b, acento, encima)
+		tween(trazo, 0.12, { Transparency = if encima then 0 else 0.2 })
+		local y = UDim2.new(0.5, 0, 0, if encima then 0 else 4)
+		tween(imagen, 0.15, { Position = y, Rotation = if encima then -4 else 0 })
+		local retrato = b:FindFirstChild("Retrato")
+		if retrato then
+			tween(retrato, 0.15, { Position = y })
+		end
 	end)
 	return b
 end
@@ -204,8 +309,11 @@ function Comic.panel(gui: Instance, titulo: string, tamano: UDim2)
 	ajustar()
 	p:GetPropertyChangedSignal("Visible"):Connect(function()
 		if p.Visible then
+			-- Entra subiendo desde un poco más abajo, con un leve rebote.
 			escala.Scale = base * 0.94
-			tween(escala, 0.14, { Scale = base })
+			p.Position = UDim2.new(0.5, 0, 0.5, 28)
+			TweenService:Create(escala, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = base }):Play()
+			TweenService:Create(p, TweenInfo.new(0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Position = UDim2.fromScale(0.5, 0.5) }):Play()
 		end
 	end)
 	local cuerpo = Comic.crear("Frame", { Position = UDim2.fromOffset(20, 60), Size = UDim2.new(1, -40, 1, -76), BackgroundTransparency = 1 }, p)
