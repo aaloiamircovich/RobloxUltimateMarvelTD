@@ -305,11 +305,13 @@ end
 -- Puente entre dos puntos del borde de las islas, con barandas invisibles para no caerse.
 -- Con plantilla "tramo_<estilo>", el piso es invisible y los tramos generados lo cubren.
 local ARCOIRIS = { "ff4d4d", "ff9f40", "ffe14d", "5cff7a", "4dc3ff", "6b6bff", "c46bff" }
+local COLOR_FAROL = { bifrost = "bfe3ff", selva = "ffcf7a", telarana = "e6f2ff", baxter = "7fbfff" }
 local function puente(padre, a: Vector3, b: Vector3, estilo: string)
 	local m = Instance.new("Model")
 	m.Name = "Puente_" .. estilo
 	local largo = (b - a).Magnitude
-	local ancho = if estilo == "bifrost" then 7 else 6
+	-- Más anchos desde la fase D (docs/LOBBY.md): antes 7 y 6.
+	local ancho = if estilo == "bifrost" then 9 else 8
 	local paso = 2
 	local n = math.ceil(largo / paso)
 	local tramo = plantilla("tramo_" .. estilo)
@@ -401,8 +403,40 @@ local function puente(padre, a: Vector3, b: Vector3, estilo: string)
 			local baranda = parte(m, "ffffff", cf * CFrame.new(lado * (ancho / 2 + 0.5), 2, 0), Vector3.new(0.4, 4, paso + 0.05))
 			baranda.Transparency, baranda.CanQuery = 1, false
 		end
+		-- Faroles a los dos lados cada ~12 studs, del color del puente (de noche se encienden más: VidaLobby).
+		if i % 6 == 3 then
+			local luzColor = Color3.fromHex(COLOR_FAROL[estilo] or "ffe2aa")
+			for _, lado in { -1, 1 } do
+				local poste = parte(m, "2a2f3d", cf * CFrame.new(lado * (ancho / 2 + 0.3), 2.2, 0), Vector3.new(0.35, 4.4, 0.35), Enum.Material.Metal)
+				poste.CanQuery = false
+				local farol = parte(m, luzColor, cf * CFrame.new(lado * (ancho / 2 + 0.3), 4.6, 0), Vector3.new(0.8, 0.8, 0.8), Enum.Material.Neon)
+				farol.Shape, farol.CanQuery = Enum.PartType.Ball, false
+				local luz = Instance.new("PointLight")
+				luz.Color, luz.Range, luz.Brightness = luzColor, 12, 0.9
+				luz.Parent = farol
+			end
+		end
 	end
 	m.Parent = padre
+end
+
+-- Camino de piedra de la salida de un puente hacia la plaza de la Torre (fase D): losas sobre el pasto.
+local function camino(padre, desde: Vector3, hasta: Vector3, ancho: number)
+	local largo = ((hasta - desde) * Vector3.new(1, 0, 1)).Magnitude
+	local paso = 2.2
+	for i = 0, math.floor(largo / paso) - 1 do
+		local t = (i + 0.5) * paso / largo
+		local p = desde:Lerp(hasta, t)
+		local cf = CFrame.lookAt(p, p + (hasta - desde) * Vector3.new(1, 0, 1)) * CFrame.Angles(0, math.rad((i % 3 - 1) * 3), 0)
+		local losa = parte(padre, if i % 2 == 0 then "b9b2a6" else "a8a196", cf + Vector3.new(0, 0.12, 0), Vector3.new(ancho, 0.25, paso - 0.15), Enum.Material.Slate)
+		losa.CanQuery = false
+		ocupar(p, ancho / 2 + 0.5) -- sin decorado encima
+		-- Borde dorado fino a los costados, como el resto del lobby.
+		for _, lado in { -1, 1 } do
+			local filo = parte(padre, "d9b45a", cf * CFrame.new(lado * (ancho / 2 + 0.15), 0.14, 0), Vector3.new(0.25, 0.22, paso), Enum.Material.Metal)
+			filo.CanQuery = false
+		end
+	end
 end
 
 -- Punto del borde de la isla `de` en dirección a la isla `a`.
@@ -524,6 +558,7 @@ local function encargado(padre, id: string, cf: CFrame)
 	end
 	local m = t:Clone()
 	m.Name = "Encargado"
+	m:SetAttribute("Heroe", id) -- para los diálogos (Encargados.client.luau)
 	local raiz = m:FindFirstChild("HumanoidRootPart") :: BasePart?
 	local hum = m:FindFirstChildOfClass("Humanoid")
 	if not (raiz and hum) then
@@ -625,6 +660,41 @@ local function salas(padre, islaId: string, modo: string, anguloCentro: number, 
 		local textos = gui:GetChildren()
 		table.insert(Hub.plataformas, { base = base, anillo = anillo, modo = modo, numero = i, titulo = textos[1], sub = textos[2] })
 	end
+end
+
+-- Salón de héroes (docs/LOBBY.md, fase D): arco de 5 pedestales en la isla central, entre el portal del Sanctum
+-- y Misiones, con una pared de piedra y molduras doradas detrás. Cada cliente pone en los pedestales SUS 5 mejores
+-- unidades (Vitrina.client.luau). Los pedestales miran al centro de la isla.
+Hub.SALON = { angulo = 86, radio = 30 }
+local function salonHeroes(padre, c)
+	local m = Instance.new("Model")
+	m.Name = "SalonHeroes"
+	for i = 1, 5 do
+		local a = Hub.SALON.angulo + (i - 3) * 7
+		local pos = enIsla(c, a, Hub.SALON.radio)
+		ocupar(pos, 2.5)
+		local base = disco(m, "1b1f2b", pos + Vector3.new(0, 0.9, 0), 2.8, 1.8, Enum.Material.Marble)
+		base.Name = "Base_" .. i
+		local tapa = disco(m, "d9b45a", pos + Vector3.new(0, 1.85, 0), 3, 0.12, Enum.Material.Neon)
+		tapa.Name = "Pedestal_" .. i
+		-- Hacia dónde mira la estatua: al centro de la isla.
+		local mira = CFrame.lookAt(pos, Vector3.new(c.pos.X, pos.Y, c.pos.Z))
+		local marca = parte(m, "ffffff", mira + Vector3.new(0, 1.9, 0), Vector3.new(0.2, 0.2, 0.2))
+		marca.Name = "Mira_" .. i
+		marca.Transparency, marca.CanCollide, marca.CanQuery, marca.CanTouch = 1, false, false, false
+	end
+	-- Pared en arco detrás de los pedestales.
+	for k = -4, 4 do
+		local a = Hub.SALON.angulo + k * 4.5
+		local pos = enIsla(c, a, Hub.SALON.radio + 3.2)
+		local mira = CFrame.lookAt(pos, Vector3.new(c.pos.X, pos.Y, c.pos.Z))
+		parte(m, "2a2f3d", mira * CFrame.new(0, 3, 0), Vector3.new(2.7, 6, 0.6), Enum.Material.Slate)
+		parte(m, "d9b45a", mira * CFrame.new(0, 6.1, -0.1), Vector3.new(2.7, 0.25, 0.8), Enum.Material.Neon)
+		parte(m, "d9b45a", mira * CFrame.new(0, 0.15, -0.1), Vector3.new(2.7, 0.3, 0.8), Enum.Material.Metal)
+	end
+	ocupar(enIsla(c, Hub.SALON.angulo, Hub.SALON.radio + 3), 9)
+	letrero(m, enIsla(c, Hub.SALON.angulo, Hub.SALON.radio + 3.2) + Vector3.new(0, 8.5, 0), "SALÓN DE HÉROES", "Tus mejores unidades", Color3.fromHex("ffd65a"), 9)
+	m.Parent = padre
 end
 
 -- Edificio: el modelo de ServerStorage.Plantillas.Hub/<id> escalado al alto pedido, o una caja provisoria.
@@ -1357,6 +1427,16 @@ function Hub.construir(alUsar: (Player, string) -> ())
 	puente(hub, borde(c, ISLAS.wakanda), borde(ISLAS.wakanda, c), "selva")
 	puente(hub, borde(c, ISLAS.nuevaYork), borde(ISLAS.nuevaYork, c), "telarana")
 	puente(hub, borde(c, ISLAS.baxter), borde(ISLAS.baxter, c), "baxter")
+	-- Caminos de piedra de cada puente (y del portal del Sanctum) hacia la plaza de la Torre.
+	local caminos = Instance.new("Model")
+	caminos.Name = "Caminos"
+	for _, otra in { ISLAS.asgard, ISLAS.wakanda, ISLAS.nuevaYork, ISLAS.baxter } do
+		local salida = borde(c, otra)
+		camino(caminos, salida, c.pos + (salida - c.pos).Unit * 13, 6)
+	end
+	local haciaPortal = enIsla(c, 52, 30)
+	camino(caminos, haciaPortal, c.pos + (haciaPortal - c.pos).Unit * 13, 5)
+	caminos.Parent = hub
 
 	-- Portal al Sanctum y de vuelta: cada uno deja al jugador frente al otro.
 	local s = ISLAS.sanctum
@@ -1382,6 +1462,7 @@ function Hub.construir(alUsar: (Player, string) -> ())
 	end
 	salas(hub, "baxter_interior", "infinite", 270, alUsar)
 	salas(hub, "sanctum_interior", "story", 270, alUsar)
+	salonHeroes(hub, c)
 
 	letrero(hub, ISLAS.asgard.pos + Vector3.new(0, 34 * ESCALA_EDIFICIOS / ESCALA, -10), "ASGARD", "Invocaciones", Color3.fromHex("ffcf72"), 14)
 	letrero(hub, ISLAS.wakanda.pos + Vector3.new(0, 22 * ESCALA_EDIFICIOS / ESCALA, 0), "WAKANDA", "Traits · Grades · Pets", Color3.fromHex("b865ff"), 14)
@@ -1455,6 +1536,11 @@ function Hub.construir(alUsar: (Player, string) -> ())
 	-- Agrandar todo y rellenar el pasto de terreno a la medida nueva (borrando el de antes).
 	hub.WorldPivot = CFrame.new(PIVOTE)
 	hub:ScaleTo(ESCALA)
+	-- Centro de cada isla ya agrandada, para los eventos del lobby de los clientes (VidaLobby.client.luau).
+	for nombre, datos in ISLAS do
+		hub:SetAttribute("Isla_" .. nombre, PIVOTE + (datos.pos - PIVOTE) * ESCALA)
+		hub:SetAttribute("Radio_" .. nombre, datos.radio * ESCALA)
+	end
 	for id in INTERIORES do
 		local interior = hub:FindFirstChild("Interior_" .. id)
 		Hub.llegadas[id] = interior and interior:FindFirstChild("Llegada")
@@ -1502,12 +1588,19 @@ end
 
 -- Punto de llegada del teletransporte del HUD: borde de la isla mirando a su centro; nil si no existe.
 function Hub.llegada(nombre: string): CFrame?
-	local datos = ISLAS[nombre]
+	local datos = ISLAS[nombre] or (if nombre == "salon" then ISLAS.central else nil)
 	if not datos then
 		return nil
 	end
 	if nombre == "central" then
 		return Hub.aparicion.CFrame + Vector3.new(0, 3, 0)
+	end
+	if nombre == "salon" then
+		-- Frente al Salón de héroes, mirándolo.
+		local c = ISLAS.central
+		local frente = PIVOTE + (enIsla(c, Hub.SALON.angulo, Hub.SALON.radio - 9) - PIVOTE) * ESCALA + Vector3.new(0, 3, 0)
+		local salon = PIVOTE + (enIsla(c, Hub.SALON.angulo, Hub.SALON.radio) - PIVOTE) * ESCALA
+		return CFrame.lookAt(frente, Vector3.new(salon.X, frente.Y, salon.Z))
 	end
 	-- Posiciones de la tabla llevadas a la medida agrandada.
 	local function final(v: Vector3): Vector3

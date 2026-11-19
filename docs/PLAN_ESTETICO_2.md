@@ -66,7 +66,7 @@ comparando con All Star Tower Defense, Anime Adventures, Tower Defense Simulator
   Toca perfil, invocación, intercambio y combate: necesita sus pruebas.
 - Visual: brillo dorado y partículas en el modelo, marco especial en la tarjeta, revelación propia al invocar.
 
-## Fase D · Lobby
+## Fase D · Lobby — ✅ 18/11/2026, `docs/LOBBY.md`
 1. **Salas físicas**: plataformas con portal en el Sanctum y la Torre Baxter (y una sala rápida en la isla
    central), cartel 3D con el mapa y acto elegidos, cuenta regresiva, los jugadores parados encima. El botón
    ¡JUGAR! sigue para ir rápido.

@@ -72,6 +72,7 @@ do
 		{ "nuevaYork", "Nueva York" },
 		{ "baxter", "Torre Baxter" },
 		{ "sanctum", "Sanctum" },
+		{ "salon", "Salón de héroes" },
 	} do
 		Comic.boton(isla[2], { TextSize = 22 }, cuerpo, function()
 			teletransportar:FireServer(isla[1])
@@ -92,7 +93,12 @@ do
 	Comic.borde(tarjeta)
 	local lado = Comic.crear("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = UDim2.new(0, 214, 1, 0), BackgroundTransparency = 1 }, cuerpo)
 	Comic.texto({ Text = "EN ESTE SERVIDOR", TextSize = 13, TextColor3 = Comic.TENUE, Size = UDim2.new(1, 0, 0, 18), TextXAlignment = Enum.TextXAlignment.Left }, lado)
-	local lista = Comic.crear("ScrollingFrame", { Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 1, -24), BackgroundTransparency = 1, ScrollBarThickness = 4, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new() }, lado)
+	local lista = Comic.crear("ScrollingFrame", { Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 1, -76), BackgroundTransparency = 1, ScrollBarThickness = 4, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new() }, lado)
+	-- Ir al Salón de héroes (docs/LOBBY.md).
+	Comic.boton("IR AL SALÓN DE HÉROES", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, 0, 0, 44), TextSize = 14, BackgroundColor3 = Color3.fromRGB(190, 145, 40) }, lado, function()
+		teletransportar:FireServer("salon")
+		p.Visible = false
+	end)
 	Comic.crear("UIListLayout", { Padding = UDim.new(0, 6) }, lista)
 
 	local function fila(padre, y: number, nombre: string, valor: string)

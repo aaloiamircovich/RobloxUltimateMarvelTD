@@ -114,7 +114,24 @@ con sólo pararse (respeta «Sólo amigos»); bajarse más de 1 s es salir (si e
 `Main.server.luau` (bucle cada 0,25 s). Verificado en Play: el panel se abre al pararse, el cartel cuenta y la
 partida empieza sola. Sin probar: sumarse con un segundo jugador y bajarse de la plataforma.
 
-## Pendiente de la fase D
-- Escuadrón que te sigue: el servidor ya publica el atributo `Seguidores` ("heroId:shiny,…", las 3 primeras); falta
-  el script del cliente que las dibuja a media escala.
-- Salón de héroes, encargados que hablan, eventos del lobby, día y noche, puentes y caminos.
+## Resto de la fase D (18/11/2026)
+- **Escuadrón que te sigue** (`Seguidores.client.luau`): las 3 primeras del escuadrón (atributo `Seguidores` que
+  publica `publicarSaldo`) caminan a los costados y detrás de cada jugador a ×0,7 (más chicas las tapa el pasto 3D),
+  apoyadas en el piso, con reposo y caminata; las Shiny con contorno dorado. Hasta 12 jugadores cercanos; en partida
+  se esconden.
+- **Salón de héroes** (`Hub.salonHeroes`, en la isla central entre el portal del Sanctum y Misiones): 5 pedestales en
+  arco con pared de piedra, molduras doradas y el cartel «SALÓN DE HÉROES». Cada cliente pone ahí sus 5 mejores
+  unidades (rareza, nivel; `Vitrina.client.luau`) con nombre, rareza, nivel y luz del color de la rareza. Se llega
+  caminando, con VIAJAR → «Salón de héroes» o con el botón del perfil.
+- **Encargados que hablan** (`Encargados.client.luau`): al acercarte (24 studs) saludan con la mano (animación de la IA
+  de Roblox) y muestran un globo con su frase y un dato útil: Nick Fury las misiones listas o pendientes, Heimdall el
+  destacado del Banner 1, Wong el próximo acto que te falta, Rocket tus gemas.
+- **Día y noche** y **eventos** (`AgendaLobby.luau`, sincronizados con la hora del servidor): un día cada 20 min; de
+  noche baja la luz, cielo de estrellas y se refuerzan faroles y braseros (`VidaLobby.client.luau`). Cada 2,5 min un
+  evento: el Quinjet aterriza en la azotea de la Torre de los Vengadores (`CieloHub.client.luau`), un rayo arcoíris del
+  Bifrost cae sobre Asgard o se abre un portal de Strange sobre la isla del Sanctum.
+- **Puentes y caminos**: puentes más anchos (9 el Bifrost, 8 los demás) con faroles cada ~12 studs del color de cada
+  puente, y caminos de losas con filo dorado desde cada puente y desde el portal hasta la plaza de la Torre.
+- Verificado en Play: los 3 seguidores, el salón con 4 unidades, el diálogo de Nick Fury con su dato y la noche con
+  estrellas. 23 pruebas pasan (nueva: `AgendaLobby.spec`). Sin verlo en pantalla: los tres eventos (pasan en momentos
+  fijos) y un segundo jugador viendo los seguidores de otro.
