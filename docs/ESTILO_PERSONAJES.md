@@ -17,8 +17,9 @@ base). **Todos** los héroes nuevos usan esa misma escala; nunca escalar por el 
    Pintar el cuerpo entero con cabeza sale peor (cara pobre y textura girada); pintar la cabeza sola falla.
 2. **Cabeza:** `generate_mesh` (`segmentation: none`, ~4000 triángulos) «a single blocky square Roblox-style head with
    an anime face: <ojos, piel>, <pelo, máscara, casco>, no neck, no body» → `ApplyMesh` sobre `Head`, ancho = ancho de
-   la cabeza base × 1,15, alto según su proporción, y se corre el `NeckRigAttachment` para que la base de la cabeza
-   quede donde estaba. La piel a veces no respeta el color pedido (Nick Fury salió claro).
+   la cabeza base × **1,8** (atributo `FactorCabeza` del cuerpo base; elegido entre ×1,15, ×1,5, ×1,8 y ×2,1 el
+   20/11/2026: con ×1,15 quedaba muy chica), alto según su proporción, y se corre el `NeckRigAttachment` para que la
+   base de la cabeza quede donde estaba. La piel a veces no respeta el color pedido (Nick Fury salió claro).
 3. **Accesorios** (arco, porras, pistola…): `generate_mesh` aparte, escalado por su lado mayor y soldado
    (`WeldConstraint`, `Massless`) a la mano.
 4. Copiar los atributos de la plantilla vieja (`AnimacionAtaque`, `VelocidadAtaque`, `Efecto`), atributo
