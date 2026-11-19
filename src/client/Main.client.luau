@@ -78,7 +78,7 @@ local function circulo(lado: number, acento: Color3): (Frame, TextLabel, TextLab
 	local grande = texto({ TextSize = 30, TextColor3 = Comic.CREMA, Position = UDim2.fromOffset(0, 30), Size = UDim2.new(1, 0, 0, 36) }, c)
 	return c, arribaTxt, grande
 end
-local _, rotuloOleada, textoOleada = circulo(0, Comic.ROJO)
+local circuloOleada, rotuloOleada, textoOleada = circulo(0, Comic.ROJO)
 rotuloOleada.Text = "OLEADA"
 local circuloReloj, rotuloReloj, textoReloj = circulo(1, Comic.GRIS)
 rotuloReloj.Text = "TIEMPO"
@@ -253,9 +253,14 @@ local function refrescar()
 		return
 	end
 	local plata = jugador:GetAttribute("Dinero") or 0
-	Comic.contar(dinero, plata, function(n)
-		return `💰 {miles(n)}`
-	end, 0.35)
+	local entrenando = estado and estado:GetAttribute("Acto") == "Entrenamiento"
+	if entrenando then
+		dinero.Text = "💰 ∞" -- créditos infinitos (docs/ENTRENAMIENTO.md)
+	else
+		Comic.contar(dinero, plata, function(n)
+			return `💰 {miles(n)}`
+		end, 0.35)
+	end
 
 	-- Panel de la unidad elegida.
 	local seleccion = modo and modo.uid and unidadDe(modo.uid)
@@ -337,11 +342,12 @@ local function refrescar()
 	local oleada = estado:GetAttribute("Oleada")
 	local base, baseMax = estado:GetAttribute("Base"), estado:GetAttribute("BaseMax")
 	local acto = estado:GetAttribute("Acto")
-	titulo.Text = Comic.mayus(`{estado:GetAttribute("NombreNivel")} · {if acto == "Infinito" or acto == "Evento" or acto == "Raid" then acto else "Acto " .. acto}{if estado:GetAttribute("Pesadilla") then " · Pesadilla" else ""}`)
+	titulo.Text = Comic.mayus(`{estado:GetAttribute("NombreNivel")} · {if acto == "Infinito" or acto == "Evento" or acto == "Raid" or acto == "Entrenamiento" then acto else "Acto " .. acto}{if estado:GetAttribute("Pesadilla") then " · Pesadilla" else ""}`)
 	barraVida.Size = UDim2.fromScale(math.clamp(base / baseMax, 0, 1), 1)
 	textoVida.Text = `🛡 {base} / {baseMax}`
 	textoOleada.Text = if total == 0 then tostring(oleada) else `{oleada}/{total}`
-	circuloReloj.Visible = fase ~= "fin"
+	circuloReloj.Visible = fase ~= "fin" and fase ~= "entrenamiento"
+	circuloOleada.Visible = fase ~= "entrenamiento" -- en el entrenamiento no hay oleadas ni tiempo
 	textoReloj.Text = reloj()
 	-- Barra de oleadas (Infinito no tiene total: sólo el texto).
 	segmentos.Visible = total > 0 and fase ~= "fin"
@@ -370,7 +376,8 @@ local function refrescar()
 	botonVelocidad.Visible = estado:GetAttribute("Anfitrion") == jugador.UserId
 	botonVelocidad.Text = `VELOCIDAD x{estado:GetAttribute("Velocidad")}`
 	botonVolver.Visible = fase ~= "fin"
-	abajo.Visible, lateral.Visible = fase ~= "fin", fase ~= "fin"
+	-- En el entrenamiento, velocidad y salir están en su panel (Entrenamiento.client.luau).
+	abajo.Visible, lateral.Visible = fase ~= "fin", fase ~= "fin" and estado:GetAttribute("Acto") ~= "Entrenamiento"
 end
 
 local function pedir(nombre: string, a: any?): string?
@@ -779,6 +786,10 @@ local function cambiarPartida()
 			if n.id == estado:GetAttribute("Nivel") then
 				NIVEL, rutaPx = n, Mapa.rutasPixeles(n)
 			end
+		end
+		local Entrenamiento = require(Shared.Entrenamiento)
+		if estado:GetAttribute("Nivel") == Entrenamiento.NIVEL.id then
+			NIVEL, rutaPx = Entrenamiento.NIVEL, Mapa.rutasPixeles(Entrenamiento.NIVEL) -- campo de pruebas
 		end
 		-- Ajuste «Juego automático al empezar».
 		if Ajustes.valores.autoSaltar and not jugador:GetAttribute("Auto") then

@@ -32,6 +32,11 @@ end
 -- agua: { color, olas, velocidad } · fuego/humo: nombres de piezas del kit · luces: calidas | neon | emergencia
 -- cielo3d: pajaros | quinjet | nave | dragon | pterodactilo
 local AMBIENTES = {
+	-- Campo de pruebas (docs/ENTRENAMIENTO.md): mediodía neutro, sin niebla ni tinte, para mirar animaciones.
+	entrenamiento = {
+		hora = 13, luz = 3, amb = "8a8f9c", ext = "b4bccc", tinte = "ffffff", sat = 0, contraste = 0.04, bloom = 0.3, rayos = 0,
+		niebla = { 0.1, "dfe6f2", "c4cede", 0.2, 0 }, cielo = "hub",
+	},
 	level_1 = { -- Base de los Vengadores: día de sol
 		hora = 14, luz = 3, amb = "7d8698", ext = "a8b3c8", tinte = "fff8ee", sat = 0.12, contraste = 0.08, bloom = 0.5, rayos = 0.06,
 		niebla = { 0.22, "cfe0ff", "9fb6dc", 0.6, 0.1 }, cielo = "hub", luces = "neon", cielo3d = { "quinjet", "pajaros" },
@@ -523,6 +528,9 @@ local function aplicar()
 	local nivelId = estado:GetAttribute("Nivel")
 	local a = AMBIENTES[nivelId]
 	local nivel = nivelDe(nivelId)
+	if nivelId == "entrenamiento" then
+		nivel = require(Shared.Entrenamiento).NIVEL -- no está en levels.json
+	end
 	if not a or not nivel then
 		return
 	end

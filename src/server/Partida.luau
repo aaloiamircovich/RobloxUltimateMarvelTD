@@ -29,6 +29,7 @@ local Evento = require(Shared.Evento)
 local Raid = require(Shared.Raid)
 local Rasgos = require(Shared.Rasgos)
 local Mascotas = require(Shared.Mascotas)
+local Entrenamiento = require(Shared.Entrenamiento)
 local Perfiles = require(script.Parent.Perfiles)
 local Ranking = require(script.Parent.Ranking)
 
@@ -259,7 +260,10 @@ end
 -- op: { id, indice (mapa en levels.json), acto (1–5, "infinito", "evento" o "raid"), pesadilla, jugadores, anfitrion, origen, aviso, alSalir }
 function Partida.nueva(op)
 	local p = {}
-	local NIVEL, INDICE_NIVEL = niveles[op.indice], op.indice - 1
+	-- Entrenamiento (docs/ENTRENAMIENTO.md): campo de pruebas propio, sin oleadas ni premios.
+	local entrenando = op.acto == Entrenamiento.ACTO
+	local NIVEL = if entrenando then Entrenamiento.NIVEL else niveles[op.indice]
+	local INDICE_NIVEL = if entrenando then 0 else op.indice - 1
 	local infinito = op.acto == "infinito"
 	-- Desafío semanal (docs/EVENTO.md): oleadas sin fin hasta Evento.OLEADAS con los modificadores de la semana.
 	local esEvento = op.acto == "evento"
@@ -281,7 +285,7 @@ function Partida.nueva(op)
 	local celdasRotas = {} -- The Raft: [índice de celda] = true si ya liberó su prisionero en esta oleada
 	local danoJefe = {} -- [Player] = daño hecho al jefe
 	local function nombreActo(): string
-		return if infinito then "Infinito" elseif esEvento then "Evento" elseif esRaid then "Raid" else tostring(op.acto)
+		return if entrenando then "Entrenamiento" elseif infinito then "Infinito" elseif esEvento then "Evento" elseif esRaid then "Raid" else tostring(op.acto)
 	end
 	local origen: Vector3 = op.origen
 	local terminada = false
@@ -323,7 +327,7 @@ function Partida.nueva(op)
 	fijar("Base", BASE)
 	fijar("BaseMax", BASE)
 	fijar("Oleada", 0)
-	fijar("OleadasTotal", if infinito then 0 elseif esEvento then Evento.OLEADAS elseif esRaid then Raid.OLEADAS_ESBIRROS + 1 else Actos.OLEADAS)
+	fijar("OleadasTotal", if infinito or entrenando then 0 elseif esEvento then Evento.OLEADAS elseif esRaid then Raid.OLEADAS_ESBIRROS + 1 else Actos.OLEADAS)
 	fijar("Fase", "listo")
 	fijar("Mensaje", "")
 	fijar("Velocidad", 1)
@@ -348,10 +352,19 @@ function Partida.nueva(op)
 	local function agregar(j: Player)
 		local perfil = Perfiles.de(j)
 		local esc, texto = escuadronDe(perfil)
+		if entrenando then
+			-- Empieza con su escuadrón (y sus objetos); después cada casilla se cambia por cualquier héroe.
+			for _, e in esc do
+				e.limite = Entrenamiento.LIMITE
+				local obj = perfil and Objetos.de(perfil, e.heroId)
+				e.objeto = obj and obj.id
+			end
+			texto = Entrenamiento.texto(esc)
+		end
 		-- Bonos de las mascotas equipadas, fijos durante la partida (docs/MASCOTAS.md).
 		p.jugadores[j] = { escuadron = esc, listo = false, saltar = false, auto = false, bonos = if perfil then Mascotas.bonos(perfil) else Mascotas.bonos({ mascotas = Mascotas.nuevo() }) }
 		j:SetAttribute("Partida", op.id)
-		j:SetAttribute("Dinero", if esRaid then Raid.DINERO else math.floor(Mejoras.DINERO_INICIAL * efectos.dinero))
+		j:SetAttribute("Dinero", if entrenando then Entrenamiento.DINERO elseif esRaid then Raid.DINERO else math.floor(Mejoras.DINERO_INICIAL * efectos.dinero))
 		j:SetAttribute("Escuadron", texto)
 		j:SetAttribute("Listo", false)
 		j:SetAttribute("Auto", false)
@@ -367,6 +380,9 @@ function Partida.nueva(op)
 	end
 	-- Avance de misiones y XP de pase (docs/TEMPORADA.md).
 	local function evento(j: Player?, nombre: string, n: number, xpPase: number?)
+		if entrenando then
+			return -- el entrenamiento no cuenta para misiones, logros ni pase
+		end
 		local perfil = j and Perfiles.de(j)
 		if perfil then
 			Temporada.registrar(perfil, nombre, n, os.time())
@@ -474,6 +490,21 @@ function Partida.nueva(op)
 		e.cuerpo = cuerpo
 		local destacado = config.isBoss or config.isElite
 		e.barra = cartel(cuerpo, if destacado then config.name else nil, tam / 2 + 1, if config.isBoss then 110 elseif config.isElite then 80 else nil)
+		if entrenando then
+			-- Detalle del golpe (panel del entrenamiento): nombre, categoría, vida máxima, armadura y resistencias.
+			local res = {}
+			for tipo, v in config.resistances or {} do
+				table.insert(res, `{tipo} {math.floor(v * 100 + 0.5)}%`)
+			end
+			for tipo, v in config.statusResistances or {} do
+				table.insert(res, `{tipo} {math.floor(v * 100 + 0.5)}%`)
+			end
+			cuerpo:SetAttribute("Nombre", config.name)
+			cuerpo:SetAttribute("Categoria", config.category)
+			cuerpo:SetAttribute("VidaMax", math.ceil(config.hp))
+			cuerpo:SetAttribute("Armadura", math.floor((config.armor or 0) * 100 + 0.5))
+			cuerpo:SetAttribute("Resistencias", table.concat(res, " · "))
+		end
 		cuerpo:SetAttribute("Vida", math.ceil(e.vida)) -- el cliente dibuja los números de daño
 		moverEnemigo(e, CFrame.new(puntoEnRuta(e.avance, e.ruta) + Vector3.new(0, e.altura, 0)))
 		if config.isBoss then
@@ -617,9 +648,23 @@ function Partida.nueva(op)
 		s.damage *= (1 + m.dano) * Unidades.bonoDano(u.nivelUnidad) * Unidades.bonoShiny(u) -- Shiny: +5 % (docs/SHINY.md)
 		s.range *= 1 + m.alcance
 		s.fireRate *= 1 + m.cadencia
+		local antesRasgo = if entrenando then { s.damage, s.range, s.fireRate } else nil
 		Rasgos.aplicar(s, u) -- rasgo y grados (docs/RASGOS.md)
 		local d = p.jugadores[u.dueno]
 		s.damage *= 1 + (if d then d.bonos.dano else 0) -- mascotas
+		if entrenando then
+			-- Desglose para el panel del entrenamiento: de dónde sale cada stat.
+			local function x(v: number): string
+				return "×" .. string.gsub(string.format("%.2f", v), "%.", ",")
+			end
+			local base = Progresion.stats(u.config, 1, nil, vidasEquivalentes(), true)
+			local conObjeto = Progresion.stats(u.config, 1, u.objeto, vidasEquivalentes(), true)
+			u.modelo:SetAttribute("Desglose", table.concat({
+				`Daño {math.floor(base.damage + 0.5)} · objeto {x(conObjeto.damage / base.damage)} · mejora {x(1 + m.dano)} · nivel {x(Unidades.bonoDano(u.nivelUnidad))} · Shiny {x(Unidades.bonoShiny(u))} · rasgo y grados {x(s.damage / (1 + (if d then d.bonos.dano else 0)) / antesRasgo[1])} · mascotas {x(1 + (if d then d.bonos.dano else 0))} = {math.floor(s.damage + 0.5)}`,
+				`Alcance {math.floor(base.range * Mapa.ESCALA + 0.5)} · objeto {x(conObjeto.range / base.range)} · mejora {x(1 + m.alcance)} · rasgo y grados {x(s.range / antesRasgo[2])} = {math.floor(s.range * Mapa.ESCALA + 0.5)}`,
+				`Cadencia {string.format("%.2f", base.fireRate)} · objeto {x(conObjeto.fireRate / base.fireRate)} · mejora {x(1 + m.cadencia)} · rasgo y grados {x(s.fireRate / antesRasgo[3])} = {string.format("%.2f", s.fireRate)} · crítico {math.floor(s.critChance or 0)}%`,
+			}, "\n"))
+		end
 		u.kit.activa = m.habilidad
 		u.kit.potencia = m.potencia
 		-- Lo que muestra el panel de la unidad (alcance en studs).
@@ -705,7 +750,7 @@ function Partida.nueva(op)
 			return `Faltan {costo - dinero} 💰 para colocar {config.name}`
 		end
 		local perfil = Perfiles.de(j)
-		local objeto = perfil and Objetos.de(perfil, e.heroId)
+		local objeto = if entrenando then (e.objeto and items[e.objeto]) else (perfil and Objetos.de(perfil, e.heroId))
 		local err, cx, cy = Despliegue.error(Progresion.paraDespliegue(config, 1, objeto), x, y, NIVEL, rutaPx, listaUnidades(), nil, true, true)
 		if err then
 			return err
@@ -758,6 +803,14 @@ function Partida.nueva(op)
 		modelo.Parent = carpetaUnidades
 		task.delay(if modelo:GetAttribute("Entrada") then 3 else 1, apoyarPies, u)
 		table.insert(unidades, u)
+		if entrenando then
+			-- Mejora elegida en el panel, ya comprada al colocar (créditos infinitos).
+			u.mejora = e.mejora or 0
+			modelo:SetAttribute("Mejora", u.mejora)
+			u.stats = statsUnidad(u)
+			u.estad = { dano = 0, golpes = 0, criticos = 0, estados = {} }
+			return nil
+		end
 		evento(j, "colocar", 1)
 		Analitica.unidad(j, "colocada", e.heroId, config.rarity)
 		return nil
@@ -870,8 +923,94 @@ function Partida.nueva(op)
 		if j ~= op.anfitrion then
 			return "Sólo el anfitrión cambia la velocidad"
 		end
-		fijar("Velocidad", if estado:GetAttribute("Velocidad") == 1 then 2 else 1)
+		fijar("Velocidad", if entrenando then Entrenamiento.siguienteVelocidad(estado:GetAttribute("Velocidad")) elseif estado:GetAttribute("Velocidad") == 1 then 2 else 1)
 		return nil
+	end
+
+	-- Acciones del entrenamiento (docs/ENTRENAMIENTO.md); en los demás modos no existen.
+	local tiempoEstad = 0 -- segundos de juego (con la velocidad) desde que se reiniciaron el daño y el DPS
+	local function entrenamientoAcciones()
+		local A = {}
+		-- Cambia la casilla `ranura` por un héroe configurado. Las unidades ya colocadas de esa casilla se quitan.
+		function A.configurar(j: Player, ranura: number, cfg)
+			local e, err = Entrenamiento.validarHeroe(ranura, cfg)
+			if not e then
+				return err
+			end
+			for i = #unidades, 1, -1 do
+				local u = unidades[i]
+				if u.dueno == j and u.ranura == ranura then
+					table.remove(unidades, i)
+					u.modelo:SetAttribute("Vendida", true) -- se desvanece en humo como al vender
+					task.delay(0.7, u.modelo.Destroy, u.modelo)
+				end
+			end
+			local esc = p.jugadores[j].escuadron
+			local lugar = nil
+			for i, x in esc do
+				if x.uid == ranura then
+					lugar = i
+				end
+			end
+			if lugar then
+				esc[lugar] = e
+			else
+				table.insert(esc, e)
+				table.sort(esc, function(a, b)
+					return a.uid < b.uid
+				end)
+			end
+			j:SetAttribute("Escuadron", Entrenamiento.texto(esc))
+			return nil
+		end
+		-- Suelta una tanda de enemigos por el camino.
+		function A.enemigos(_j: Player, cfg)
+			local t, err = Entrenamiento.validarEnemigos(cfg, enemigosDatos)
+			if not t then
+				return err
+			end
+			task.spawn(function()
+				for i = 1, t.cantidad do
+					if terminada then
+						return
+					end
+					local config = table.clone(if t.jefe then enemigosDatos.bosses[t.id] else enemigosDatos.normal[t.id])
+					config.hp = t.vida or config.hp
+					config.speed = (config.speed or 50) * t.velocidad
+					config.reward = 0
+					crearEnemigo(config)
+					if i < t.cantidad then
+						task.wait(t.intervalo / math.max(estado:GetAttribute("Velocidad"), 0.25))
+					end
+				end
+			end)
+			return nil
+		end
+		function A.limpiar(_j: Player)
+			for i = #enemigos, 1, -1 do
+				quitarEnemigo(enemigos[i])
+			end
+			return nil
+		end
+		function A.inmortal(_j: Player)
+			fijar("BaseInmortal", not estado:GetAttribute("BaseInmortal"))
+			fijar("Base", BASE)
+			return nil
+		end
+		function A.reiniciarStats(_j: Player)
+			tiempoEstad = 0
+			for _, u in unidades do
+				u.estad = { dano = 0, golpes = 0, criticos = 0, estados = {} }
+			end
+			return nil
+		end
+		return A
+	end
+	if entrenando then
+		for nombre, f in entrenamientoAcciones() do
+			ACCIONES[nombre] = f
+		end
+		fijar("BaseInmortal", true)
 	end
 
 	-- Frontera de confianza: tipos validados en Main; aquí, que la partida siga en juego.
@@ -952,6 +1091,11 @@ function Partida.nueva(op)
 			u.ataque:Play(0.05, 1, u.velocidadAtaque)
 		end
 		local critico = math.random() * 100 < u.stats.critChance
+		if u.estad then
+			u.estad.golpes += 1
+			u.estad.criticos += if critico then 1 else 0
+			u.ultimoCritico = critico
+		end
 		local distancia = math.sqrt((objetivo.x - u.x) ^ 2 + (objetivo.y - u.y) ^ 2)
 		local golpe = Kits.golpe(u.kit, u.config, objetivo.e, if critico then u.stats.damage * u.stats.critDamage else u.stats.damage, u.stats, u.objeto, distancia)
 		efecto(u.estilo, pos + Vector3.new(0, 1, 0), destino, critico, u.kit.modo or u.modelo:GetAttribute("Efecto"))
@@ -992,7 +1136,69 @@ function Partida.nueva(op)
 		for _, e in tocados do
 			e.ultimoAtacante = u.dueno
 			e.ultimaUnidad = u
+			if u.estad then
+				for tipo, v in e.estados do
+					if type(v) == "table" and (v.duration or #v > 0) then
+						u.estad.estados[tipo] = true
+					end
+				end
+			end
 			revisar(e)
+		end
+	end
+
+	-- Entrenamiento: el daño de cada unidad se mide por la vida que les quita a los enemigos en su turno (golpe,
+	-- pisotón y efectos al atacar). Los daños en el tiempo (veneno, quemadura) se suman en p.paso a la última
+	-- unidad que golpeó al enemigo.
+	local actualizarUnidadSinMedir = actualizarUnidad
+	local function medirDano(u, e, quito: number)
+		if quito <= 0 or not u or not u.estad then
+			return
+		end
+		u.estad.dano += quito
+		if entrenando then
+			e.cuerpo:SetAttribute("UltimoGolpe", `{u.config.name}: {math.floor(quito + 0.5)}{if u.ultimoCritico then " (crítico)" else ""}`)
+		end
+	end
+	-- Créditos infinitos y estadísticas en atributos (cada medio segundo) para el panel del entrenamiento.
+	local acumEstad = 0
+	local function publicarEstad(dt: number)
+		for j in p.jugadores do
+			if j:GetAttribute("Dinero") ~= Entrenamiento.DINERO then
+				j:SetAttribute("Dinero", Entrenamiento.DINERO)
+			end
+		end
+		tiempoEstad += dt
+		acumEstad += dt
+		if acumEstad < 0.5 then
+			return
+		end
+		acumEstad = 0
+		fijar("EstSegundos", tiempoEstad)
+		for _, u in unidades do
+			if u.estad then
+				local est = {}
+				for tipo in u.estad.estados do
+					table.insert(est, tipo)
+				end
+				table.sort(est)
+				u.modelo:SetAttribute("EstDano", math.floor(u.estad.dano + 0.5))
+				u.modelo:SetAttribute("EstGolpes", u.estad.golpes)
+				u.modelo:SetAttribute("EstCriticos", u.estad.criticos)
+				u.modelo:SetAttribute("EstEstados", table.concat(est, ","))
+			end
+		end
+	end
+	if entrenando then
+		function actualizarUnidad(u, dt)
+			local vidas = {}
+			for _, e in enemigos do
+				vidas[e] = e.vida
+			end
+			actualizarUnidadSinMedir(u, dt)
+			for e, antes in vidas do
+				medirDano(u, e, antes - math.max(e.vida, 0))
+			end
 		end
 	end
 
@@ -1047,9 +1253,16 @@ function Partida.nueva(op)
 			return
 		end
 		dt *= estado:GetAttribute("Velocidad")
+		if entrenando then
+			publicarEstad(dt)
+		end
 		for i = #enemigos, 1, -1 do
 			local e = enemigos[i]
+			local vidaAntes = e.vida
 			local velocidad, murio = Combate.actualizar(e, dt)
+			if entrenando then
+				medirDano(e.ultimaUnidad, e, vidaAntes - math.max(e.vida, 0)) -- veneno, quemadura, sangrado
+			end
 			if murio then
 				revisar(e)
 				continue
@@ -1074,7 +1287,14 @@ function Partida.nueva(op)
 				-- La base pierde la vida restante del enemigo ÷ 10 (mínimo 5); un jefe la destruye.
 				local base = estado:GetAttribute("Base")
 				local perdida = if e.config.isBoss then base else math.max(5, math.ceil(e.vida / 10))
+				if entrenando and estado:GetAttribute("BaseInmortal") then
+					perdida = 0
+				end
 				fijar("Base", math.max(0, base - perdida))
+				if entrenando and base - perdida <= 0 then
+					fijar("Base", BASE) -- en el entrenamiento la base cae y se repone: nunca termina
+					aviso("La base cayó; se repuso")
+				end
 				quitarEnemigo(e)
 			else
 				local aqui = puntoEnRuta(e.avance, e.ruta)
@@ -1363,6 +1583,12 @@ function Partida.nueva(op)
 	end
 
 	local function bucle()
+		if entrenando then
+			fijar("Fase", "entrenamiento")
+			fijar("FinTemporizador", 0)
+			fijar("Mensaje", "")
+			return -- sin oleadas: los enemigos los suelta el jugador desde el panel
+		end
 		for j in p.jugadores do
 			Analitica.partidaEmpieza(j, NIVEL.id, op.acto) -- también al repetir o pasar de acto en el mismo mapa
 		end

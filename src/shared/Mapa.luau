@@ -212,6 +212,22 @@ local TEMAS = {
 	},
 }
 
+-- Campo de pruebas del entrenamiento (docs/ENTRENAMIENTO.md): neutro y despejado para mirar a las unidades.
+TEMAS.entrenamiento = {
+	aspecto = {
+		[CAMINO] = { color = Color3.fromRGB(196, 200, 210), alto = 1, material = Enum.Material.Concrete },
+		[MONTANA] = { color = Color3.fromRGB(150, 156, 170), alto = 9, material = Enum.Material.Concrete, techoColor = Color3.fromRGB(120, 126, 140) },
+		-- Pasto plano (sin el pasto 3D del terreno): no tapa los pies de las unidades.
+		[PASTO] = { color = Color3.fromRGB(104, 160, 88), alto = 1.4, material = Enum.Material.Grass },
+	},
+	orilla = "peligro",
+	banda = Color3.fromRGB(226, 38, 52),
+	bancos = false,
+	arboles = false,
+	sueltos = {},
+	kit = "avengers", -- base, portón y bordes de la Base de los Vengadores (sin kit saldrían bloques de neón)
+}
+
 local function tema(nivel)
 	return TEMAS[nivel.theme and nivel.theme.id or ""] or TEMAS.avengers
 end
@@ -484,7 +500,8 @@ local function kits(nivel, prefijo: string): { Model }
 	end
 	local p = game:GetService("ServerStorage"):FindFirstChild("Plantillas")
 	local mapas = p and p:FindFirstChild("Mapas")
-	local tema = mapas and mapas:FindFirstChild(nivel.theme and nivel.theme.id or "")
+	local idTema = nivel.theme and nivel.theme.id or ""
+	local tema = mapas and mapas:FindFirstChild((TEMAS[idTema] and TEMAS[idTema].kit) or idTema)
 	local r = {}
 	for _, m in if tema then tema:GetChildren() else {} do
 		if m:IsA("Model") and (m.Name == prefijo or m.Name:sub(1, #prefijo + 1) == prefijo .. "_") then

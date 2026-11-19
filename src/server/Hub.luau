@@ -97,6 +97,8 @@ Hub.ESTACIONES = {
 	{ id = "bailes", nombre = "BAILES", subtitulo = "Rueda de bailes", color = "ff8fd8", isla = "central", angulo = -135, r = 27, personaje = "star_lord", puesto = "puesto_bailes" },
 	{ id = "evento", nombre = "EVENTO", subtitulo = "Desafío semanal", color = "ffb347", isla = "central", angulo = -45, r = 27, personaje = "korg", puesto = "puesto_evento" },
 	{ id = "ranking", nombre = "RANKING", subtitulo = "Top 10", color = "ffe066", isla = "central", angulo = 20, r = 26, personaje = "valkyrie", puesto = "puesto_ranking" },
+	-- Entrenamiento (docs/ENTRENAMIENTO.md): campo de pruebas para cualquier héroe.
+	{ id = "entrenamiento", nombre = "ENTRENAMIENTO", subtitulo = "Probá cualquier héroe", color = "e22634", isla = "central", angulo = 55, r = 26, personaje = "black_widow" },
 	{ id = "monturas", nombre = "MONTURAS", subtitulo = "Moverse rápido", color = "9be37a", isla = "central", angulo = 160, r = 26, personaje = "ghost_rider", puesto = "puesto_monturas" },
 	{ id = "summon", nombre = "BANNER 1", subtitulo = "Invocaciones", color = "ffcf72", isla = "asgard", angulo = 120, r = 16, personaje = "heimdall" },
 	{ id = "banner_2", nombre = "BANNER 2", subtitulo = "Fichas de raid", color = "ffcf72", isla = "asgard", angulo = 90, r = 18 },

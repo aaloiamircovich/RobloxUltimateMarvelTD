@@ -380,6 +380,12 @@ local FIRMAS = {
 	saltar = {},
 	auto = {},
 	velocidad = {},
+	-- Entrenamiento (docs/ENTRENAMIENTO.md): Partida rechaza estas acciones fuera del campo de pruebas.
+	configurar = { "number", "table" },
+	enemigos = { "table" },
+	limpiar = {},
+	inmortal = {},
+	reiniciarStats = {},
 }
 accion.OnServerInvoke = function(jugador, nombre, a, b, c)
 	if nombre == "volver" then
@@ -636,7 +642,13 @@ local function usarEstacion(jugador: Player, estacion: string)
 	if partidaDe[jugador] then
 		return
 	end
-	if estacion == "story" or estacion == "sala_story" then
+	if estacion == "entrenamiento" then
+		-- Siempre en este servidor (es individual y no da premios): sin teletransporte.
+		local problema = iniciarPartidaAqui({ jugador }, jugador, "entrenamiento", "entrenamiento", false)
+		if problema then
+			aviso:FireClient(jugador, problema)
+		end
+	elseif estacion == "story" or estacion == "sala_story" then
 		abrirPanel:FireClient(jugador, "historia", { infinito = false })
 	elseif estacion == "infinite" or estacion == "sala_infinite" then
 		abrirPanel:FireClient(jugador, "historia", { infinito = true })
@@ -750,7 +762,7 @@ do
 end
 
 -- Botones del HUD del lobby: abren los mismos paneles que las estaciones, sin caminar hasta ellas.
-local PANELES_HUD = { story = true, infinite = true, summon = true, tienda = true, raids = true, unidades = "unidades", inventario = "objetos" }
+local PANELES_HUD = { entrenamiento = true, story = true, infinite = true, summon = true, tienda = true, raids = true, unidades = "unidades", inventario = "objetos" }
 usarHud.OnServerEvent:Connect(function(jugador, nombre)
 	local destino = type(nombre) == "string" and PANELES_HUD[nombre]
 	if not destino or partidaDe[jugador] then

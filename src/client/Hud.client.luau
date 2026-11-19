@@ -48,11 +48,11 @@ end
 
 -- Jugar: submenú de modos.
 do
-	local p, cuerpo = Comic.panel(gui, "¡A JUGAR!", UDim2.fromOffset(560, 300))
+	local p, cuerpo = Comic.panel(gui, "¡A JUGAR!", UDim2.fromOffset(720, 300))
 	paneles.jugar = p
-	Comic.crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 16), HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center }, cuerpo)
-	for _, m in { { "HISTORIA", "story", Comic.ROJO }, { "INFINITO", "infinite", Color3.fromRGB(90, 60, 190) }, { "RAIDS", "raids", Color3.fromRGB(150, 30, 90) } } do
-		local b = Comic.boton(m[1], { Name = "Modo_" .. m[2], Size = UDim2.fromOffset(150, 170), BackgroundColor3 = m[3], TextSize = 28 }, cuerpo, function()
+	Comic.crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 16), HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder }, cuerpo)
+	for orden, m in { { "HISTORIA", "story", Comic.ROJO }, { "INFINITO", "infinite", Color3.fromRGB(90, 60, 190) }, { "RAIDS", "raids", Color3.fromRGB(150, 30, 90) }, { "ENTRENA-\nMIENTO", "entrenamiento", Color3.fromRGB(40, 150, 120) } } do
+		local b = Comic.boton(m[1], { Name = "Modo_" .. m[2], LayoutOrder = orden, Size = UDim2.fromOffset(150, 170), BackgroundColor3 = m[3], TextSize = 28 }, cuerpo, function()
 			if m[2] then
 				p.Visible = false
 				usarHud:FireServer(m[2])

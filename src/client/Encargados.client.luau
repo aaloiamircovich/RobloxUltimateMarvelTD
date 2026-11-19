@@ -92,6 +92,7 @@ local FRASES = {
 	doctor_strange = "Vi 14.000.605 futuros. En uno de ellos, ganás.",
 	invisible_woman = "Bienvenido al laboratorio. No toques nada que brille.",
 	human_torch = "¡Llamas a la orden!",
+	black_widow = "El campo de pruebas está abierto: probá cualquier héroe con créditos infinitos.",
 }
 
 -- Globo de diálogo sobre la cabeza.
