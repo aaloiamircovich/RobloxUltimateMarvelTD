@@ -24,5 +24,5 @@ Rasgos y grados siguen con sus fichas de rasgo y cristales.
 Al cargar un perfil viejo, los créditos guardados pasan a oro (1 a 1) y cada núcleo a 50 gemas; los campos `credits`
 y `cores` dejan de guardarse. Los perfiles nuevos empiezan con 500 gemas y 0 de oro.
 
-## Pendiente
-- La pantalla de fin de partida todavía no muestra el oro ganado (el atributo `OroPartida` ya está).
+## Pantalla de fin
+El oro ganado aparece como premio en la pantalla de fin (`OroPartida`, 20/11/2026).

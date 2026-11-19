@@ -72,6 +72,16 @@ Decidido: placa de vidrio oscuro, aparecen al acercarse con fundido, enemigos co
 - **Ranking** del evento y cartel del hangar sin la letra de cómic (Gotham, vidrio oscuro, línea roja).
 - Wakanda: «Rasgos · Grados · Mascotas» (estaba en inglés).
 
+## HUD de partida con el estilo del lobby (20/11/2026)
+- **Arriba**: oleada y tiempo en baldosas de vidrio con corte en diagonal (rojo y gris) en lugar de círculos.
+- **Créditos** (la moneda de partida): ficha de vidrio con franja dorada, rótulo «CRÉDITOS» y número que cuenta.
+- **Tarjetas para colocar**: como las casillas del escuadrón del lobby; esquina del color de rareza, costo en dorado
+  si alcanza y en gris (tarjeta apagada) si no; la elegida se agranda con el borde dorado entero.
+- **Pantalla de fin**: debajo del mensaje, «N oleadas superadas · N enemigos derrotados» (atributo `Resumen` de la
+  partida) y el oro ganado como premio (`OroPartida`, también en la derrota si hubo oleadas).
+- En partida se esconden los botones G/B y las placas del lobby.
+- Pendiente: daño por unidad en el resumen (el servidor todavía no lo cuenta).
+
 ## HUD de partida (fase B, 18/11/2026)
 - **Panel de unidad** (izquierda, decidido por el usuario): retrato con marco de rareza, nombre, rareza y nivel,
   rasgo y grados; **5 estrellas** de mejora; daño, alcance y ataques/s con **lo que queda tras la próxima mejora en

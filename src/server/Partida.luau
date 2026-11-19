@@ -1239,19 +1239,21 @@ function Partida.nueva(op)
 			j:SetAttribute("Subidas", if #texto > 0 then table.concat(texto, ",") else nil)
 			d.subidas = nil
 		end
-		fijar("Resultado", if gano then "victoria" else "derrota")
-		-- Oro por las oleadas superadas (docs/ECONOMIA.md); lo muestra la pantalla de fin.
+		-- Oro por las oleadas superadas (docs/ECONOMIA.md) y el resumen: se fijan antes del Resultado porque la
+		-- pantalla de fin los lee apenas cambia.
 		local oro = Cuenta.oroPartida(superadas or 0, gano, Oleadas.dificultad(NIVEL) == "hard", pesadilla == true)
 		for j in p.jugadores do
 			local perfil = Perfiles.de(j)
+			j:SetAttribute("OroPartida", if perfil and oro > 0 then oro else nil)
 			if perfil and oro > 0 then
 				perfil.oro += oro
 				Perfiles.marcar(j)
 				j:SetAttribute("Oro", perfil.oro)
-				j:SetAttribute("OroPartida", oro)
 				Analitica.saldo(j, perfil, "partida")
 			end
 		end
+		fijar("Resumen", `{superadas or 0}:{derrotados or 0}`)
+		fijar("Resultado", if gano then "victoria" else "derrota")
 		for j in p.jugadores do
 			Analitica.partidaTermina(j, NIVEL.id, op.acto, gano, estado:GetAttribute("Oleada") or 0)
 		end
@@ -1636,7 +1638,7 @@ function Partida.nueva(op)
 			end
 		end
 		p.jugadores[j] = nil
-		for _, a in { "Partida", "Dinero", "Escuadron", "Listo", "Auto", "PremioActo", "Subidas", "Voto" } do
+		for _, a in { "Partida", "Dinero", "Escuadron", "Listo", "Auto", "PremioActo", "Subidas", "Voto", "OroPartida" } do
 			j:SetAttribute(a, nil)
 		end
 		task.spawn(Perfiles.guardar, j)

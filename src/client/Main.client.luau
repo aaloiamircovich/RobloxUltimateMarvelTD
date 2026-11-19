@@ -67,18 +67,21 @@ crear("UICorner", { CornerRadius = UDim.new(0, 6) }, barraVida)
 crear("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(150, 150, 150)) }, barraVida)
 local textoVida = texto({ Size = UDim2.fromScale(1, 1), TextSize = 24 }, fondoVida)
 
-local function circulo(lado: number): (Frame, TextLabel, TextLabel)
+-- Baldosas de oleada y reloj a los costados, como los botones del lobby: vidrio oscuro con corte en diagonal.
+local function circulo(lado: number, acento: Color3): (Frame, TextLabel, TextLabel)
 	local c = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(lado, lado == 0 and -54 or 54, 0.5, 0), Size = UDim2.fromOffset(84, 84), BackgroundColor3 = Comic.FONDO, BackgroundTransparency = Comic.TRANSPARENCIA }, arriba)
-	crear("UIStroke", { Thickness = 2, Color = Comic.ROJO }, c)
-	crear("UICorner", { CornerRadius = UDim.new(1, 0) }, c)
-	local arribaTxt = texto({ TextSize = 16, Font = Comic.TEXTO, Position = UDim2.fromOffset(0, 16), Size = UDim2.new(1, 0, 0, 16) }, c)
-	local grande = texto({ TextSize = 32, TextColor3 = Comic.AMARILLO, Position = UDim2.fromOffset(0, 34), Size = UDim2.new(1, 0, 0, 36) }, c)
+	Comic.borde(c)
+	Comic.diagonal(c, acento)
+	local franja = crear("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -3), Size = UDim2.new(1, -16, 0, 3), BackgroundColor3 = acento, BorderSizePixel = 0 }, c)
+	crear("UICorner", { CornerRadius = UDim.new(1, 0) }, franja)
+	local arribaTxt = texto({ TextSize = 13, Font = Comic.TITULO, TextColor3 = Comic.TENUE, Position = UDim2.fromOffset(0, 12), Size = UDim2.new(1, 0, 0, 14) }, c)
+	local grande = texto({ TextSize = 30, TextColor3 = Comic.CREMA, Position = UDim2.fromOffset(0, 30), Size = UDim2.new(1, 0, 0, 36) }, c)
 	return c, arribaTxt, grande
 end
-local _, rotuloOleada, textoOleada = circulo(0)
+local _, rotuloOleada, textoOleada = circulo(0, Comic.ROJO)
 rotuloOleada.Text = "OLEADA"
-local circuloReloj, rotuloReloj, textoReloj = circulo(1)
-rotuloReloj.Text = "⏱"
+local circuloReloj, rotuloReloj, textoReloj = circulo(1, Comic.GRIS)
+rotuloReloj.Text = "TIEMPO"
 
 -- Barra de oleadas (fase B): un segmento por oleada (las pasadas en gris claro, la actual roja, el jefe al final) y
 -- debajo quiénes vienen ahora y en la próxima (atributos Composicion y Proxima de la partida).
@@ -140,10 +143,13 @@ crear("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 1
 
 -- Abajo: dinero de partida y escuadrón en tarjetas con retrato.
 local abajo = crear("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12), Size = UDim2.fromOffset(800, 186), BackgroundTransparency = 1 }, gui)
-local dinero = texto({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0), Size = UDim2.fromOffset(220, 46), TextSize = 34, TextColor3 = Comic.AMARILLO }, abajo)
-dinero.BackgroundTransparency = Comic.TRANSPARENCIA
-dinero.BackgroundColor3 = Comic.FONDO
-Comic.borde(dinero)
+-- Créditos de partida: ficha de vidrio con franja dorada y rótulo, como las monedas del lobby; el número cuenta.
+local fichaCreditos = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0), Size = UDim2.fromOffset(220, 50), BackgroundColor3 = Comic.FONDO, BackgroundTransparency = Comic.TRANSPARENCIA }, abajo)
+Comic.borde(fichaCreditos)
+local franjaCreditos = crear("Frame", { Position = UDim2.fromOffset(0, 10), Size = UDim2.new(0, 4, 1, -20), BackgroundColor3 = Comic.AMARILLO, BorderSizePixel = 0 }, fichaCreditos)
+crear("UICorner", { CornerRadius = UDim.new(1, 0) }, franjaCreditos)
+texto({ Text = "CRÉDITOS", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 5), Size = UDim2.new(1, -20, 0, 12), TextSize = 11, TextColor3 = Comic.TENUE }, fichaCreditos)
+local dinero = texto({ AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4), Size = UDim2.new(1, -20, 0, 30), TextSize = 28, TextColor3 = Comic.AMARILLO }, fichaCreditos)
 local tarjetas = crear("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, 0, 0, 126), BackgroundTransparency = 1 }, abajo)
 crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Bottom, Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }, tarjetas)
 
@@ -247,7 +253,9 @@ local function refrescar()
 		return
 	end
 	local plata = jugador:GetAttribute("Dinero") or 0
-	dinero.Text = `💰 {miles(plata)}`
+	Comic.contar(dinero, plata, function(n)
+		return `💰 {miles(n)}`
+	end, 0.35)
 
 	-- Panel de la unidad elegida.
 	local seleccion = modo and modo.uid and unidadDe(modo.uid)
@@ -316,8 +324,10 @@ local function refrescar()
 		local elegida = modo and modo.tipo == "colocar" and modo.ranura == ranura
 		local alcanza = plata >= t:GetAttribute("Costo") and puestas < t:GetAttribute("Limite")
 		t.UIScale.Scale = if elegida then 1.1 else 1
-		t.UIStroke.Color = if elegida then Comic.AMARILLO else t:GetAttribute("ColorRareza")
-		t.Costo.BackgroundColor3 = if alcanza then Comic.VERDE else Comic.GRIS
+		-- Elegida: todo el borde dorado. Si no alcanza, el costo en gris y la tarjeta apagada.
+		Comic.acentoDiagonal(t, if elegida then Comic.AMARILLO else t:GetAttribute("ColorRareza"), elegida)
+		t.Costo.TextColor3 = if alcanza then Comic.AMARILLO else Comic.TENUE
+		t.BackgroundTransparency = if alcanza or elegida then 0 else 0.35
 		t.Puestas.Text = `{puestas}/{t:GetAttribute("Limite")}`
 	end
 
@@ -379,11 +389,12 @@ end
 local function tarjeta(i: number, ranura: number, id: string, nivel: number, limite: number, shiny: boolean?)
 	local config = heroes[id]
 	local color = Comic.RAREZA[config.rarity] or Comic.CREMA
-	local t = crear("TextButton", { Name = "Tarjeta" .. i, Text = "", Size = UDim2.fromOffset(106, 120), BackgroundColor3 = Comic.FONDO, AutoButtonColor = true, LayoutOrder = i }, tarjetas)
+	-- Como las casillas del escuadrón del lobby: vidrio oscuro, corte en diagonal con la esquina del color de rareza.
+	local t = crear("TextButton", { Name = "Tarjeta" .. i, Text = "", Size = UDim2.fromOffset(106, 120), BackgroundColor3 = Comic.ROJO_OSCURO, AutoButtonColor = false, LayoutOrder = i }, tarjetas)
 	crear("UIStroke", { Color = color, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, t)
-	crear("UICorner", { CornerRadius = UDim.new(0, 8) }, t)
+	crear("UICorner", { CornerRadius = UDim.new(0, 10) }, t)
 	crear("UIScale", {}, t)
-	crear("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), color:Lerp(Color3.new(1, 1, 1), 0.2)), Transparency = NumberSequence.new(0, 0) }, t)
+	Comic.diagonal(t, color)
 	-- Degradado del color de la rareza abajo, como las tarjetas del lobby.
 	local pie = crear("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, 0, 0.55, 0), BackgroundColor3 = color, BackgroundTransparency = 0.5, BorderSizePixel = 0 }, t)
 	crear("UIGradient", { Rotation = 90, Transparency = NumberSequence.new(1, 0.2) }, pie)
@@ -394,9 +405,9 @@ local function tarjeta(i: number, ranura: number, id: string, nivel: number, lim
 	texto({ Text = `Nv {nivel}`, Position = UDim2.fromOffset(6, 4), Size = UDim2.fromOffset(50, 16), TextSize = 15, TextXAlignment = Enum.TextXAlignment.Left }, t)
 	texto({ Name = "Puestas", Position = UDim2.new(1, -46, 0, 4), Size = UDim2.fromOffset(40, 16), TextSize = 15, TextXAlignment = Enum.TextXAlignment.Right }, t)
 	local costo = Mejoras.costoColocar(config)
-	local barra = texto({ Name = "Costo", Text = `💰 {miles(costo)}`, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4), Size = UDim2.new(1, -8, 0, 26), TextSize = 20, TextColor3 = Comic.CREMA }, t)
-	barra.BackgroundTransparency = 0
-	Comic.borde(barra, 2)
+	local barra = texto({ Name = "Costo", Text = `💰 {miles(costo)}`, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4), Size = UDim2.new(1, -8, 0, 24), TextSize = 19, TextColor3 = Comic.AMARILLO }, t)
+	barra.BackgroundTransparency, barra.BackgroundColor3 = 0.2, Comic.FONDO
+	crear("UICorner", { CornerRadius = UDim.new(0, 6) }, barra)
 	-- Tecla del atajo: círculo oscuro chico arriba a la izquierda.
 	local tecla = texto({ Text = tostring(i), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 2, 0, 2), Size = UDim2.fromOffset(22, 22), TextSize = 13 }, t)
 	tecla.BackgroundTransparency = 0
@@ -535,7 +546,7 @@ table.insert(escalas, escalaFin)
 -- Título grande arriba del panel, sin caja, con una línea del color del resultado debajo.
 local tituloFin = texto({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 10), Size = UDim2.fromOffset(460, 50), TextColor3 = Comic.AMARILLO, ZIndex = 22 }, panelFin)
 local lineaFin = crear("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 62), Size = UDim2.fromOffset(110, 3), BackgroundColor3 = Comic.AMARILLO, BorderSizePixel = 0, ZIndex = 22 }, panelFin)
-local detalleFin = texto({ Position = UDim2.fromOffset(24, 66), Size = UDim2.new(1, -48, 0, 44), TextSize = 19, Font = Comic.TEXTO, TextWrapped = true, ZIndex = 21 }, panelFin)
+local detalleFin = texto({ Position = UDim2.fromOffset(24, 68), Size = UDim2.new(1, -48, 0, 42), TextSize = 17, Font = Comic.TEXTO, TextWrapped = true, ZIndex = 21 }, panelFin)
 -- Escuadrón en 3D (posando o abatido), premios que caen de a uno y subidas de nivel (docs/PANTALLAS.md).
 local escuadronFin = crear("Frame", { Position = UDim2.fromOffset(20, 112), Size = UDim2.new(1, -40, 0, 160), BackgroundTransparency = 1, ZIndex = 21 }, panelFin)
 crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 6) }, escuadronFin)
@@ -646,8 +657,19 @@ local function mostrarResultado()
 	tituloFin.Text = if gano then "VICTORIA" else "DERROTA"
 	tituloFin.TextColor3 = if gano then Comic.AMARILLO else Comic.TENUE
 	lineaFin.BackgroundColor3 = if gano then Comic.AMARILLO else Comic.ROJO
-	detalleFin.Text = estado:GetAttribute("Mensaje")
-	armarPremios(jugador:GetAttribute("PremioActo"), gano)
+	-- Resumen (atributo Resumen = "oleadas:enemigos", lo fija Partida.terminar) y el oro ganado.
+	local resumen = string.split(estado:GetAttribute("Resumen") or "", ":")
+	local oleadas, enemigos = tonumber(resumen[1]), tonumber(resumen[2])
+	detalleFin.Text = (estado:GetAttribute("Mensaje") or "") .. (if oleadas then `\n{oleadas} oleadas superadas · {miles(enemigos or 0)} enemigos derrotados` else "")
+	local premio = jugador:GetAttribute("PremioActo")
+	if not gano then
+		premio = nil -- en la derrota no hay premio del acto: se muestra un consejo (y el oro, si hubo)
+	end
+	local oro = jugador:GetAttribute("OroPartida") or 0
+	if oro > 0 then
+		premio = (if premio and premio ~= "" then premio .. " · " else "") .. `+{miles(oro)} oro`
+	end
+	armarPremios(premio, gano or oro > 0)
 	armarEscuadronFin(gano)
 	vaciar(subidasFin)
 	Cinematica.subidas(subidasFin, jugador:GetAttribute("Subidas"))

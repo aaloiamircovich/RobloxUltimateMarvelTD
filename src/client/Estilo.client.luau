@@ -94,9 +94,13 @@ local function botonTecla(tecla: string, simbolo: string, acento: Color3, alClic
 end
 local botonMontar = botonTecla("G", "🛹", Comic.GRIS, montar)
 botonTecla("B", "💃", Comic.ROJO, alternarRueda)
-Comic.ventanas:Connect(function(hay)
-	botones.Visible = not hay
-end)
+-- Se esconden con una ventana abierta y durante la partida (son cosas del lobby).
+local function mostrarBotones()
+	botones.Visible = not Comic.hayVentana() and jugador:GetAttribute("Partida") == nil
+end
+Comic.ventanas:Connect(mostrarBotones)
+jugador:GetAttributeChangedSignal("Partida"):Connect(mostrarBotones)
+mostrarBotones()
 -- Montado: la franja de abajo se pone verde.
 local franjaMontar = botonMontar:FindFirstChildWhichIsA("Frame")
 jugador:GetAttributeChangedSignal("Montado"):Connect(function()

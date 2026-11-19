@@ -1,7 +1,9 @@
 -- Placas del lobby (docs/INTERFAZ.md, 19/11/2026): aparecen y desaparecen con fundido según la distancia a la
 -- cámara. VerHasta: se ve de cerca (puestos, salas, hitos). VerDesde: se ve de lejos y se apaga al llegar (islas).
 local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local jugador = Players.LocalPlayer
 
 local placas = {} -- [BillboardGui] = { [objeto] = { propiedad = transparencia base } }
 
@@ -48,7 +50,12 @@ RunService.Heartbeat:Connect(function(dt)
 	end
 	acumulado = 0
 	local camara = workspace.CurrentCamera.CFrame.Position
+	local enPartida = jugador:GetAttribute("Partida") ~= nil -- las placas del lobby no se ven desde los mapas
 	for gui, base in placas do
+		if enPartida then
+			gui.Enabled = false
+			continue
+		end
 		local ancla = gui.Adornee or gui.Parent
 		if not (ancla and ancla:IsA("BasePart")) then
 			continue
