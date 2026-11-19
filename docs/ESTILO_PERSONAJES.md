@@ -1,6 +1,34 @@
 # Estilo de personajes
 
-Elegido: **variante A** (cuerpo cuadrado tipo Roblox, cara anime). Referencia en Studio: `Arquero_A_autosetup`.
+## Cuerpo base común (decidido el 20/11/2026, reemplaza a la «variante A» por héroe)
+Pedido: todos los personajes con el mismo esqueleto y la misma forma de cuerpo; cambian el traje, la cabeza y los
+accesorios. Proporciones: **Roblox clásico** (R15 de bloques estándar). Conservan cuerpo propio los **gigantes y
+fuertes** (Groot, Hulk, She-Hulk, Korg, Devil Dinosaur, Beast, Venom), los **animales** (Rocket, Cosmo, Jeff,
+Howard, Tigra) y los **robots y cósmicos** (Vision, Silver Surfer, Beta Ray Bill, Knull, Sentry).
+
+**Cuerpo base:** `ServerStorage.Plantillas.CuerpoBase` (`Players:CreateHumanoidModelFromDescription` vacío, R15,
+gris claro). Escala de juego común en su atributo `EscalaJuego` (0,727: 3,97 studs de pies a cabeza con la cabeza
+base). **Todos** los héroes nuevos usan esa misma escala; nunca escalar por el alto con la cabeza nueva.
+
+**Proceso por héroe** (piloto: Hawkeye, Black Widow, Nick Fury; los viejos en `ServerStorage.HeroesViejos`):
+1. **Traje:** copia del cuerpo base **sin cabeza** → `generate_texture` (`Quality`) con el traje y sus colores. La IA
+   devuelve mallas nuevas con un `SurfaceAppearance` (y cambia el armado): se copia a una copia del cuerpo base con
+   `MeshPart:ApplyMesh(pintada)` pieza por pieza más el `SurfaceAppearance`, así el esqueleto R15 queda el original.
+   Pintar el cuerpo entero con cabeza sale peor (cara pobre y textura girada); pintar la cabeza sola falla.
+2. **Cabeza:** `generate_mesh` (`segmentation: none`, ~4000 triángulos) «a single blocky square Roblox-style head with
+   an anime face: <ojos, piel>, <pelo, máscara, casco>, no neck, no body» → `ApplyMesh` sobre `Head`, ancho = ancho de
+   la cabeza base × 1,15, alto según su proporción, y se corre el `NeckRigAttachment` para que la base de la cabeza
+   quede donde estaba. La piel a veces no respeta el color pedido (Nick Fury salió claro).
+3. **Accesorios** (arco, porras, pistola…): `generate_mesh` aparte, escalado por su lado mayor y soldado
+   (`WeldConstraint`, `Massless`) a la mano.
+4. Copiar los atributos de la plantilla vieja (`AnimacionAtaque`, `VelocidadAtaque`, `Efecto`), atributo
+   `CuerpoBase = true`, `ScaleTo(EscalaJuego)`, raíz anclada, y reemplazar `Plantillas.Heroes/<id>` (los retratos se
+   copian solos al arrancar). Las animaciones de ataque y reposo funcionan sobre el R15 clásico.
+5. Revisar en el **Entrenamiento** (docs/ENTRENAMIENTO.md).
+
+## Anterior (variante A, un modelo entero por héroe)
+
+Elegido antes: **variante A** (cuerpo cuadrado tipo Roblox, cara anime). Referencia en Studio: `Arquero_A_autosetup`.
 
 ## Proceso por héroe (gratis, IA de Roblox vía MCP de Studio)
 
