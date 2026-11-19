@@ -1436,36 +1436,69 @@ end)
 -- Va dentro de la columna izquierda (misma escala, nunca se encima con TIENDA).
 local monedas = Comic.crear("Frame", { LayoutOrder = 99, Size = UDim2.fromOffset(128, 3 * 30 + 2 * 6), BackgroundTransparency = 1 }, grilla)
 Comic.crear("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }, monedas)
--- Insignias planas (sin emojis): rombo para gemas, moneda para créditos, hexágono para núcleos.
-local function insignia(tipo: string, color: Color3, padre)
-	local caja = Comic.crear("Frame", { Position = UDim2.fromOffset(5, 5), Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1 }, padre)
-	local brillo = ColorSequence.new(color:Lerp(Color3.new(1, 1, 1), 0.45), color)
-	if tipo == "rombo" or tipo == "hexagono" then
-		-- Hexágono: el rombo más un rectángulo vertical encima.
-		local r = Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(14, 14), Rotation = 45, BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0 }, caja)
-		Comic.crear("UICorner", { CornerRadius = UDim.new(0, if tipo == "rombo" then 3 else 2) }, r)
-		Comic.crear("UIGradient", { Rotation = 45, Color = brillo }, r)
-		if tipo == "hexagono" then
-			r.Size = UDim2.fromOffset(13, 13)
-			local c = Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(13, 18), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0 }, caja)
-			Comic.crear("UIGradient", { Rotation = 90, Color = brillo }, c)
-		end
-		Comic.crear("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(5, 5), Rotation = 45, BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.25, BorderSizePixel = 0, ZIndex = 2 }, caja)
-	else
-		local m = Comic.crear("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1) }, caja)
-		Comic.crear("UICorner", { CornerRadius = UDim.new(1, 0) }, m)
-		Comic.crear("UIGradient", { Rotation = 90, Color = brillo }, m)
-		Comic.crear("UIStroke", { Color = color:Lerp(Color3.new(0, 0, 0), 0.35), Thickness = 1.5 }, m)
-		Comic.texto({ Text = "C", TextSize = 12, TextColor3 = color:Lerp(Color3.new(0, 0, 0), 0.55), TextStrokeTransparency = 1, Size = UDim2.fromScale(1, 1) }, m)
+-- Ícono 3D de cada moneda (modelos generados con la IA de Roblox en ReplicatedStorage.IconosMonedas), que se
+-- balancea despacio. Si el modelo no está, queda el emoji de antes.
+local iconosMonedas = ReplicatedStorage:FindFirstChild("IconosMonedas")
+local girando = {}
+local function iconoMoneda(nombre: string, emoji: string, padre)
+	local modelo = iconosMonedas and iconosMonedas:FindFirstChild(nombre)
+	if not modelo then
+		Comic.texto({ Text = emoji, Position = UDim2.fromOffset(4, 3), Size = UDim2.fromOffset(24, 24) }, padre)
+		return
 	end
+	local vista = Comic.crear("ViewportFrame", { Position = UDim2.fromOffset(2, 0), Size = UDim2.fromOffset(30, 30), BackgroundTransparency = 1, Ambient = Color3.fromRGB(255, 255, 255), LightColor = Color3.fromRGB(255, 250, 235), LightDirection = Vector3.new(-0.5, -1, -1) }, padre)
+	local m = modelo:Clone()
+	m.Parent = vista
+	local cf, tam = m:GetBoundingBox()
+	local camara = Comic.crear("Camera", { FieldOfView = 30 }, vista)
+	camara.CFrame = CFrame.lookAt(cf.Position + Vector3.new(0, 0, math.max(tam.X, tam.Y, tam.Z) * 2.4), cf.Position)
+	vista.CurrentCamera = camara
+	table.insert(girando, { m, m:GetPivot() })
+end
+game:GetService("RunService").RenderStepped:Connect(function()
+	if not gui.Enabled then
+		return
+	end
+	-- Se balancean (±35°) en vez de girar entero: la moneda nunca queda de canto.
+	local a = math.sin(os.clock() * 1.6) * math.rad(35)
+	for _, g in girando do
+		g[1]:PivotTo(g[2] * CFrame.Angles(0, a, 0))
+	end
+end)
+
+-- Cartel al pasar el mouse: qué es, para qué sirve y dónde se consigue.
+local AYUDA_MONEDAS = {
+	Gemas = { "GEMAS", "Sirven para invocar héroes y comprar monturas, bailes y huevos de mascota.", "Se ganan en actos, raids, el modo Infinito, misiones, eventos y premios." },
+	Creditos = { "CRÉDITOS", "Sirven para comprar objetos en la tienda.", "Empezás con un saldo inicial." },
+	Nucleos = { "NÚCLEOS", "Sirven para evolucionar unidades, juntando copias del mismo héroe.", "Se ganan en actos, raids, eventos y cada tantas oleadas del modo Infinito." },
+}
+local function cartelMoneda(nombre: string, color: Color3, f: GuiObject)
+	local d = AYUDA_MONEDAS[nombre]
+	local c = Comic.crear("Frame", { Position = UDim2.new(1, 10, 0, -4), Size = UDim2.fromOffset(260, 124), BackgroundColor3 = Comic.FONDO, BackgroundTransparency = 0.05, Visible = false, ZIndex = 20 }, f)
+	Comic.borde(c)
+	c.UIStroke.Color, c.UIStroke.Transparency = color, 0
+	Comic.crear("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) }, c)
+	Comic.crear("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }, c)
+	Comic.texto({ Text = d[1], LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 20), TextSize = 17, TextColor3 = color, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 21 }, c)
+	for i = 2, 3 do
+		-- shortcut: alto fijo de dos renglones; un texto más largo se cortaría.
+		Comic.texto({ Text = d[i], LayoutOrder = i, Size = UDim2.new(1, 0, 0, 38), TextSize = 14, TextYAlignment = Enum.TextYAlignment.Top, Font = Comic.TEXTO, TextWrapped = true, TextColor3 = if i == 2 then Comic.CREMA else Comic.TENUE, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 21 }, c)
+	end
+	f.MouseEnter:Connect(function()
+		c.Visible = true
+	end)
+	f.MouseLeave:Connect(function()
+		c.Visible = false
+	end)
 end
 local etiquetas = {}
-for i, m in { { "Gemas", "rombo", Color3.fromRGB(185, 110, 255) }, { "Creditos", "moneda", Color3.fromRGB(255, 196, 64) }, { "Nucleos", "hexagono", Color3.fromRGB(70, 170, 255) } } do
+for i, m in { { "Gemas", "💎", Color3.fromRGB(185, 110, 255) }, { "Creditos", "💰", Color3.fromRGB(255, 196, 64) }, { "Nucleos", "🔷", Color3.fromRGB(70, 170, 255) } } do
 	local f = Comic.crear("Frame", { LayoutOrder = i, Size = UDim2.fromOffset(128, 30), BackgroundColor3 = Comic.FONDO, BackgroundTransparency = Comic.TRANSPARENCIA }, monedas)
 	Comic.borde(f)
 	local franja = Comic.crear("Frame", { Position = UDim2.fromOffset(0, 7), Size = UDim2.new(0, 3, 1, -14), BackgroundColor3 = m[3], BorderSizePixel = 0 }, f)
 	Comic.crear("UICorner", { CornerRadius = UDim.new(1, 0) }, franja)
-	insignia(m[2], m[3], f)
+	iconoMoneda(m[1], m[2], f)
+	cartelMoneda(m[1], m[3], f)
 	etiquetas[m[1]] = Comic.texto({ Text = "…", Position = UDim2.fromOffset(32, 4), Size = UDim2.new(1, -40, 1, -8), TextSize = 17, TextXAlignment = Enum.TextXAlignment.Left }, f)
 end
 
