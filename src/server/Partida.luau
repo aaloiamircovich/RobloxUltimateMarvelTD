@@ -46,7 +46,7 @@ Partida.MAX_JUGADORES = 4
 Partida.BONO_SALTAR = 0.10
 Partida.REEMBOLSO = 0.5
 local XP_OLEADA = 10 -- XP de unidad por oleada superada
-local GEMAS_INFINITO, NUCLEO_INFINITO = 15, 10 -- cada 5 oleadas / cada 10 oleadas
+local GEMAS_INFINITO, GEMAS_EXTRA_INFINITO = 15, 50 -- cada 5 oleadas / +50 cada 10 (antes 1 núcleo)
 Partida.PRIORIDADES = { "primero", "ultimo", "fuerte", "debil" }
 
 local carpetaEstados = ReplicatedStorage:FindFirstChild("Partidas") or Instance.new("Folder")
@@ -1228,6 +1228,18 @@ function Partida.nueva(op)
 			d.subidas = nil
 		end
 		fijar("Resultado", if gano then "victoria" else "derrota")
+		-- Oro por las oleadas superadas (docs/ECONOMIA.md); lo muestra la pantalla de fin.
+		local oro = Cuenta.oroPartida(superadas or 0, gano, Oleadas.dificultad(NIVEL) == "hard", pesadilla == true)
+		for j in p.jugadores do
+			local perfil = Perfiles.de(j)
+			if perfil and oro > 0 then
+				perfil.oro += oro
+				Perfiles.marcar(j)
+				j:SetAttribute("Oro", perfil.oro)
+				j:SetAttribute("OroPartida", oro)
+				Analitica.saldo(j, perfil, "partida")
+			end
+		end
 		for j in p.jugadores do
 			Analitica.partidaTermina(j, NIVEL.id, op.acto, gano, estado:GetAttribute("Oleada") or 0)
 		end
@@ -1241,11 +1253,10 @@ function Partida.nueva(op)
 					premio.gemas += extra
 					Perfiles.marcar(j)
 					j:SetAttribute("Gemas", perfil.gems)
-					j:SetAttribute("Nucleos", perfil.cores)
 					Analitica.saldo(j, perfil, "raid")
 					local partes = { `Daño al jefe: {math.floor(danoJefe[j] or 0)}` }
 					if premio.gemas > 0 then
-						table.insert(partes, `+{premio.gemas} gemas · +{premio.nucleos} núcleos`)
+						table.insert(partes, `+{premio.gemas} gemas`)
 					end
 					table.insert(partes, `+{premio.fragmentos} fragmentos · +{premio.fichasRaid} fichas de raid`)
 					if premio.objeto then
@@ -1284,7 +1295,7 @@ function Partida.nueva(op)
 		end
 	end
 
-	-- Premios de cada oleada superada: XP de unidades y de cuenta; en Infinito, gemas y núcleos.
+	-- Premios de cada oleada superada: XP de unidades y de cuenta; en Infinito, gemas.
 	local function premiarOleada(n: number)
 		superadas = n
 		for j, d in p.jugadores do
@@ -1320,16 +1331,15 @@ function Partida.nueva(op)
 						perfil.gems += gemas
 						table.insert(premios, `+{gemas} gemas`)
 					end
-					if n % NUCLEO_INFINITO == 0 then
-						perfil.cores += 1
-						table.insert(premios, "+1 núcleo")
+					if n % 10 == 0 then
+						perfil.gems += GEMAS_EXTRA_INFINITO
+						table.insert(premios, `+{GEMAS_EXTRA_INFINITO} gemas`)
 					end
 				end
 				Perfiles.marcar(j)
 				j:SetAttribute("Nivel", perfil.level)
 				j:SetAttribute("XP", perfil.xp)
 				j:SetAttribute("Gemas", perfil.gems)
-				j:SetAttribute("Nucleos", perfil.cores)
 				Analitica.saldo(j, perfil, "infinito")
 				if #premios > 0 then
 					aviso(table.concat(premios, " · "), j)
@@ -1509,11 +1519,10 @@ function Partida.nueva(op)
 				Cuenta.ganarXP(perfil, Cuenta.XP_MAPA)
 				Perfiles.marcar(j)
 				j:SetAttribute("Gemas", perfil.gems)
-				j:SetAttribute("Nucleos", perfil.cores)
 				Analitica.saldo(j, perfil, "acto")
 				j:SetAttribute("Nivel", perfil.level)
 				j:SetAttribute("XP", perfil.xp)
-				j:SetAttribute("PremioActo", `+{premio.gemas} gemas` .. (if premio.nucleos > 0 then ` · +{premio.nucleos} núcleo` else "") .. (if premio.primera then " (primera vez)" else "") .. ` · +{Cuenta.XP_MAPA} XP`)
+				j:SetAttribute("PremioActo", `+{premio.gemas} gemas` .. (if premio.primera then " (primera vez)" else "") .. ` · +{Cuenta.XP_MAPA} XP`)
 			end
 		end
 		terminar(`¡Victoria! {NIVEL.name} · Acto {op.acto}` .. (if pesadilla then " · Pesadilla" else ""))

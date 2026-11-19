@@ -16,7 +16,7 @@ Evento.FICHAS_SEMANA = 300 -- tope semanal de fichas ganadas
 Evento.MODIFICADORES = {
 	rapidos = { nombre = "Enemigos veloces", texto = "Los enemigos son 25 % más rápidos", velocidad = 1.25 },
 	blindados = { nombre = "Blindados", texto = "Los enemigos tienen 50 % más de vida", vida = 1.5 },
-	presupuesto = { nombre = "Presupuesto ajustado", texto = "Empezás con 40 % menos dinero", dinero = 0.6 },
+	presupuesto = { nombre = "Presupuesto ajustado", texto = "Empezás con 40 % menos créditos", dinero = 0.6 },
 	base_fragil = { nombre = "Base frágil", texto = "La base tiene la mitad de vida", base = 0.5 },
 	sin_vender = { nombre = "Sin retirada", texto = "No se pueden vender unidades", sinVender = true },
 }
@@ -25,7 +25,7 @@ local ORDEN_MODS = { "rapidos", "blindados", "presupuesto", "base_fragil", "sin_
 -- Tienda: precio en fichas y cuántas veces por semana.
 Evento.TIENDA = {
 	{ id = "gemas", nombre = "100 gemas", precio = 40, limite = 5, gemas = 100 },
-	{ id = "nucleo", nombre = "1 núcleo", precio = 120, limite = 2, nucleos = 1 },
+	{ id = "gemas50", nombre = "50 gemas", precio = 120, limite = 2, gemas = 50 }, -- antes 1 núcleo
 	{ id = "xp", nombre = "300 XP de pase", precio = 50, limite = 4, xpPase = 300 },
 	{ id = "objeto", nombre = "Objeto épico", precio = 150, limite = 1, objeto = "Epic" },
 	{ id = "fichas", nombre = "2 fichas de rasgo", precio = 60, limite = 3, fichasRasgo = 2 },
@@ -149,7 +149,6 @@ function Evento.comprar(perfil, id: string, t: number): string?
 		table.insert(perfil.ownedItemIds, obj)
 	end
 	perfil.gems += p.gemas or 0
-	perfil.cores += p.nucleos or 0
 	perfil.fichasRasgo = (perfil.fichasRasgo or 0) + (p.fichasRasgo or 0)
 	perfil.cristales = (perfil.cristales or 0) + (p.cristales or 0)
 	if p.xpPase then

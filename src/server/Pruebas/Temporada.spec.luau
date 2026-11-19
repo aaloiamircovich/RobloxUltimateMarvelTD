@@ -54,7 +54,7 @@ return function()
 	local obj = Temporada.premio(1, 5)
 	assert(obj.tipo == "objeto" and obj.id, "nivel 5: objeto")
 	assert(Temporada.reclamarPase(p, 5, T) == nil and table.find(p.ownedItemIds, obj.id), "objeto entregado")
-	assert(Temporada.premio(1, 10).tipo == "nucleos" and Temporada.premio(1, 40).cantidad == 4, "núcleos cada 10")
+	assert(Temporada.premio(1, 10).tipo == "gemas" and Temporada.premio(1, 40).cantidad == 200, "50 gemas por cada 10 niveles (antes núcleos)")
 	Temporada.ganarXP(p, 1e6, T)
 	assert(Temporada.nivel(p) == Temporada.NIVELES, "tope en 50")
 	local antes = #p.units
@@ -69,5 +69,9 @@ return function()
 	assert(copia.temporada.numero == 2 and #copia.temporada.diarias == 3, "persistencia")
 	local rota = Perfiles.normalizar({ temporada = { xp = "x", diarias = { { id = "hackear" } }, reclamados = { 999 } } })
 	assert(rota.temporada.xp == 0 and #rota.temporada.diarias == 0 and #rota.temporada.reclamados == 0, "datos rotos")
+	-- Oro al terminar una partida: 10 por oleada, ×1,5 si gana, ×1,5 Difícil, ×2 Pesadilla.
+	local Cuenta = require(game:GetService("ReplicatedStorage").Shared.Cuenta)
+	assert(Cuenta.oroPartida(10, false, false, false) == 100 and Cuenta.oroPartida(10, true, false, false) == 150, "oro base y victoria")
+	assert(Cuenta.oroPartida(10, true, true, false) == 225 and Cuenta.oroPartida(10, true, true, true) == 300 and Cuenta.oroPartida(-3, true, false, false) == 0, "dificultad y oleadas negativas")
 	return "OK: temporada"
 end

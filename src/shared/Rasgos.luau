@@ -178,7 +178,7 @@ function Rasgos.descripcion(id: string?): string
 		table.insert(partes, `+{r.critico}% crítico`)
 	end
 	if r.dinero then
-		table.insert(partes, `+{math.floor(r.dinero * 100 + 0.5)}% dinero al derrotar`)
+		table.insert(partes, `+{math.floor(r.dinero * 100 + 0.5)}% créditos al derrotar`)
 	end
 	return table.concat(partes, ", ")
 end

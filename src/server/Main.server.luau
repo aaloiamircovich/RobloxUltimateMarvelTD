@@ -784,9 +784,8 @@ end)
 local function publicarSaldo(jugador: Player, perfil, motivo: string?)
 	jugador:SetAttribute("Nivel", perfil.level)
 	jugador:SetAttribute("XP", perfil.xp)
-	jugador:SetAttribute("Creditos", perfil.credits)
 	jugador:SetAttribute("Gemas", perfil.gems)
-	jugador:SetAttribute("Nucleos", perfil.cores)
+	jugador:SetAttribute("Oro", perfil.oro)
 	-- Las 3 primeras del escuadrón te siguen en chico por el lobby (Seguidores.client.luau): "heroId:shiny,…".
 	local seguidores = {}
 	for i = 1, math.min(3, #perfil.squad) do
@@ -1021,7 +1020,7 @@ estiloRemoto.OnServerInvoke = function(jugador, nombre, a)
 		publicarSaldo(jugador, perfil, "estilo")
 		jugador:SetAttribute("Rueda", table.concat(perfil.estilo.rueda, ","))
 	end
-	return { error = err, estilo = perfil.estilo, gemas = perfil.gems, monturas = Estilo.MONTURAS, bailes = Estilo.BAILES, rueda = Estilo.RUEDA }
+	return { error = err, estilo = perfil.estilo, oro = perfil.oro, monturas = Estilo.MONTURAS, bailes = Estilo.BAILES, rueda = Estilo.RUEDA }
 end
 
 --------------------------------------------------------------------------------
@@ -1597,12 +1596,11 @@ local function resumen(perfil)
 	local garantia = perfil.shop.heroPity >= Banner.GARANTIA
 	local porRareza, porDestacado = Banner.probabilidades(destacados, garantia)
 	return {
-		creditos = perfil.credits,
 		gemas = perfil.gems,
 		nivel = perfil.level,
 		xp = perfil.xp,
 		casillas = Cuenta.casillas(perfil.level),
-		nucleos = perfil.cores,
+		oro = perfil.oro,
 		unidades = perfil.units,
 		escuadron = perfil.squad,
 		desbloqueados = perfil.unlockedHeroIds,
@@ -1643,9 +1641,9 @@ coleccion.OnServerInvoke = function(jugador, nombre, arg)
 	elseif nombre == "escuadron" and type(arg) == "table" then
 		res.error = Unidades.fijarEscuadron(perfil, arg)
 	elseif nombre == "vender" and type(arg) == "number" then
-		local gemas, err = Unidades.vender(perfil, arg)
+		local oro, err = Unidades.vender(perfil, arg)
 		res.error = err
-		res.gemas = gemas
+		res.oro = oro
 	elseif nombre == "evolucionar" and type(arg) == "table" then
 		local nueva, err = Unidades.evolucionar(perfil, arg)
 		res.error = err

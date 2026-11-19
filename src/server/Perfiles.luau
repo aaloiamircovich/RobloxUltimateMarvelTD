@@ -1,6 +1,6 @@
 -- Perfil persistente por jugador (DataStore). Parte del estado de ProgressionManager del 2D (credits,
 -- mapProgress, shop, modeRecords, ownedItemIds, equippedItems) más el sistema de unidades propio
--- (docs/INVOCACIONES.md): gems, cores, units, nextUnitUid y squad. unlockedHeroIds se deriva de units.
+-- (docs/INVOCACIONES.md): gems, oro, units, nextUnitUid y squad. Créditos y núcleos ya no se guardan (19/11/2026). unlockedHeroIds se deriva de units.
 local DataStoreService = game:GetService("DataStoreService")
 local Shared = game:GetService("ReplicatedStorage").Shared
 local Personajes = require(Shared.Personajes)
@@ -18,8 +18,7 @@ local items = require(Shared.Data.items)
 
 local Perfiles = {}
 
-Perfiles.VERSION = 2
-Perfiles.CREDITOS_INICIALES = 1200 -- createDefaultState del 2D
+Perfiles.VERSION = 3
 Perfiles.GEMAS_INICIALES = 500
 local MAX_OLEADAS = 100
 
@@ -44,9 +43,8 @@ function Perfiles.normalizar(crudo)
 		logros = rec.logros,
 		estadisticas = rec.estadisticas,
 		version = Perfiles.VERSION,
-		credits = Perfiles.CREDITOS_INICIALES,
 		gems = entero(datos.gems, 0, 1e9, Perfiles.GEMAS_INICIALES),
-		cores = entero(datos.cores, 0, 1e6, 0),
+		oro = entero(datos.oro, 0, 1e9, 0), -- bailes y monturas; se gana en partida y vendiendo unidades
 		level = entero(datos.level, 1, 10000, 1), -- nivel de cuenta
 		xp = entero(datos.xp, 0, 1e9, 0),
 		units = {},
@@ -72,10 +70,9 @@ function Perfiles.normalizar(crudo)
 		-- Las cuentas que ya jugaban antes del tutorial no lo ven (ni cobran su premio).
 		tutorial = Preferencias.normalizarTutorial(datos.tutorial or (if type(datos.units) == "table" and next(datos.units) ~= nil then { terminado = true, premiado = true, paso = Preferencias.PASOS } else nil)),
 	}
-	local c = tonumber(datos.credits)
-	if c and c == c and c >= 0 and c < math.huge then
-		p.credits = math.floor(c)
-	end
+	-- Perfiles anteriores a la versión 3: los créditos pasan a oro (1 a 1) y cada núcleo a 50 gemas.
+	p.oro += entero(datos.credits, 0, 1e9, 0)
+	p.gems = math.min(1e9, p.gems + entero(datos.cores, 0, 1e6, 0) * Unidades.GEMAS_POR_NUCLEO)
 	if type(datos.mapProgress) == "table" then
 		for id, v in datos.mapProgress do
 			if type(id) == "string" and type(v) == "table" then

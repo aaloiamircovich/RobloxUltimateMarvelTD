@@ -62,6 +62,11 @@ function Objetos.vitrina(perfil): { any }
 	return r
 end
 
+-- Precio en gemas: el del 2D (en créditos) dividido 40 (19/11/2026: los créditos sólo existen en partida).
+function Objetos.precio(it): number
+	return math.max(1, math.floor(it.price / 40 + 0.5))
+end
+
 function Objetos.comprar(perfil, id: string): string?
 	local it = items[id]
 	local visible = false
@@ -71,10 +76,11 @@ function Objetos.comprar(perfil, id: string): string?
 	if not it or not visible or Objetos.tiene(perfil, id) then
 		return "Objeto no disponible"
 	end
-	if perfil.credits < it.price then
-		return "Créditos insuficientes"
+	local precio = Objetos.precio(it)
+	if perfil.gems < precio then
+		return `Faltan {precio - perfil.gems} gemas`
 	end
-	perfil.credits -= it.price
+	perfil.gems -= precio
 	table.insert(perfil.ownedItemIds, id)
 	return nil
 end

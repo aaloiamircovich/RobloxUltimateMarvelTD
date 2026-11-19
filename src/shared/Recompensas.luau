@@ -10,11 +10,10 @@ local function diaDe(t: number): number
 end
 
 --------------------------------------------------------------------------------
--- Premios: { gemas, nucleos, fichasRasgo, cristales }
+-- Premios: { gemas, fichasRasgo, cristales } (los núcleos pasaron a gemas el 19/11/2026: 1 = 50)
 --------------------------------------------------------------------------------
 function Recompensas.dar(perfil, premio)
 	perfil.gems += premio.gemas or 0
-	perfil.cores += premio.nucleos or 0
 	perfil.fichasRasgo += premio.fichasRasgo or 0
 	perfil.cristales += premio.cristales or 0
 end
@@ -23,9 +22,6 @@ function Recompensas.texto(premio): string
 	local partes = {}
 	if premio.gemas then
 		table.insert(partes, `{premio.gemas} 💎`)
-	end
-	if premio.nucleos then
-		table.insert(partes, `{premio.nucleos} 🔷`)
 	end
 	if premio.fichasRasgo then
 		table.insert(partes, `{premio.fichasRasgo} 🎫`)
@@ -43,10 +39,10 @@ Recompensas.DIARIO = {
 	{ gemas = 30 },
 	{ fichasRasgo = 1, cristales = 2 },
 	{ gemas = 50 },
-	{ nucleos = 1 },
+	{ gemas = 50 },
 	{ gemas = 80, fichasRasgo = 2 },
-	{ nucleos = 2, cristales = 4 },
-	{ gemas = 200, nucleos = 3, fichasRasgo = 2 },
+	{ gemas = 100, cristales = 4 },
+	{ gemas = 350, fichasRasgo = 2 },
 }
 
 -- Qué día de la racha toca hoy y si ya se reclamó.
@@ -159,10 +155,10 @@ end
 Recompensas.LOGROS = {
 	L("acto_1", "Historia", "Ganá tu primer acto", 1, { gemas = 50 }, actosGanados),
 	L("actos_10", "Historia", "Ganá 10 actos", 10, { gemas = 150 }, actosGanados),
-	L("mapa_1", "Historia", "Completá un mapa (5 actos)", 1, { gemas = 100, nucleos = 1 }, mapasCompletos),
-	L("mapas_4", "Historia", "Completá 4 mapas", 4, { gemas = 300, nucleos = 3 }, mapasCompletos),
+	L("mapa_1", "Historia", "Completá un mapa (5 actos)", 1, { gemas = 150 }, mapasCompletos),
+	L("mapas_4", "Historia", "Completá 4 mapas", 4, { gemas = 450 }, mapasCompletos),
 	L("pesadilla_1", "Historia", "Ganá un acto en Pesadilla", 1, { gemas = 150 }, actosPesadilla),
-	L("pesadilla_10", "Historia", "Ganá 10 actos en Pesadilla", 10, { gemas = 400, nucleos = 2 }, actosPesadilla),
+	L("pesadilla_10", "Historia", "Ganá 10 actos en Pesadilla", 10, { gemas = 500 }, actosPesadilla),
 	L("unidades_10", "Colección", "Juntá 10 unidades", 10, { gemas = 100 }, function(p)
 		return #p.units
 	end),
@@ -175,14 +171,14 @@ Recompensas.LOGROS = {
 	L("mitico", "Colección", "Conseguí un Mítico", 1, { gemas = 300 }, function(p)
 		return unidadesDe(p, "Mythic")
 	end),
-	L("evolucion", "Colección", "Evolucioná una unidad", 1, { nucleos = 2 }, evoluciones),
+	L("evolucion", "Colección", "Evolucioná una unidad", 1, { gemas = 100 }, evoluciones),
 	L("enemigos_500", "Combate", "Derrotá 500 enemigos", 500, { gemas = 100 }, function(p)
 		return p.estadisticas.enemigos
 	end),
 	L("enemigos_5000", "Combate", "Derrotá 5.000 enemigos", 5000, { gemas = 300 }, function(p)
 		return p.estadisticas.enemigos
 	end),
-	L("enemigos_25000", "Combate", "Derrotá 25.000 enemigos", 25000, { gemas = 500, nucleos = 3 }, function(p)
+	L("enemigos_25000", "Combate", "Derrotá 25.000 enemigos", 25000, { gemas = 650 }, function(p)
 		return p.estadisticas.enemigos
 	end),
 	L("jefes_10", "Combate", "Derrotá 10 jefes", 10, { gemas = 150 }, function(p)

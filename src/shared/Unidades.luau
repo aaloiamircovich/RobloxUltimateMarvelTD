@@ -11,8 +11,10 @@ Unidades.MAX_ESCUADRON = 6 -- tope absoluto; las casillas abiertas dependen del 
 Unidades.NIVEL_MAXIMO = 50
 Unidades.COPIAS_EVOLUCION = 3
 Unidades.LIMITE_COLOCACION = { Common = 4, Rare = 3, Epic = 3, Legendary = 2, Mythic = 1, Secret = 1 }
-Unidades.VENTA = { Common = 2, Rare = 5, Epic = 10, Legendary = 25, Mythic = 50, Secret = 100 }
-Unidades.NUCLEOS = { Rare = 1, Epic = 3, Legendary = 8, Mythic = 20, Secret = 50 } -- según la rareza de destino
+-- Economía (19/11/2026, se aparta del 2D): vender da oro; evolucionar cuesta gemas (antes núcleos, 1 = 50 gemas).
+Unidades.VENTA = { Common = 20, Rare = 50, Epic = 100, Legendary = 250, Mythic = 500, Secret = 1000 } -- oro
+Unidades.GEMAS_POR_NUCLEO = 50 -- conversión de los núcleos viejos (perfiles y premios)
+Unidades.COSTO_EVOLUCION = { Rare = 50, Epic = 150, Legendary = 400, Mythic = 1000, Secret = 2500 } -- gemas, según la rareza de destino
 
 -- XP para pasar del nivel n al n+1.
 function Unidades.xpParaSubir(n: number): number
@@ -121,14 +123,14 @@ function Unidades.vender(perfil, uid: number): (number?, string?)
 		return nil, "Sacala del escuadrón antes de venderla"
 	end
 	local c = Personajes.de(u.heroId)
-	local gemas = Unidades.VENTA[c.rarity] or 0
+	local oro = Unidades.VENTA[c.rarity] or 0
 	table.remove(perfil.units, i)
-	perfil.gems += gemas
+	perfil.oro += oro
 	Unidades.sincronizar(perfil)
-	return gemas, nil
+	return oro, nil
 end
 
--- Evolución: 3 unidades distintas del mismo personaje + núcleos según la rareza de destino.
+-- Evolución: 3 unidades distintas del mismo personaje + gemas según la rareza de destino.
 -- El resultado hereda el nivel más alto y ocupa el lugar en el escuadrón de la primera que estuviera.
 function Unidades.evolucionar(perfil, uids): (any?, string?)
 	if type(uids) ~= "table" or #uids ~= Unidades.COPIAS_EVOLUCION then
@@ -150,9 +152,9 @@ function Unidades.evolucionar(perfil, uids): (any?, string?)
 	if not destino then
 		return nil, "Este personaje no evoluciona"
 	end
-	local costo = Unidades.NUCLEOS[Personajes.de(destino).rarity] or 0
-	if perfil.cores < costo then
-		return nil, `Faltan {costo - perfil.cores} núcleos`
+	local costo = Unidades.COSTO_EVOLUCION[Personajes.de(destino).rarity] or 0
+	if perfil.gems < costo then
+		return nil, `Faltan {costo - perfil.gems} gemas`
 	end
 	local nivel, lugar, shiny = 1, nil, false
 	for _, u in elegidas do
@@ -165,7 +167,7 @@ function Unidades.evolucionar(perfil, uids): (any?, string?)
 		end
 		table.remove(perfil.units, select(2, Unidades.buscar(perfil, u.uid)))
 	end
-	perfil.cores -= costo
+	perfil.gems -= costo
 	-- Shiny si alguna de las copias lo era.
 	local nueva = { uid = perfil.nextUnitUid, heroId = destino, level = nivel, xp = 0, shiny = if shiny then true else nil }
 	-- La evolución hereda el rasgo y los grados de la copia con el mejor rasgo.

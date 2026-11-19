@@ -29,12 +29,12 @@ return function()
 	assert(p.raid.fragmentos == 3 * Raid.FRAGMENTOS_DERROTA, "consuelo por derrota")
 	assert(Raid.llaves(p, T + Temporada.DIA) == 3, "nuevo día")
 
-	-- Victoria: gemas, núcleos, fragmentos y objeto con suerte.
-	local g, c = p.gems, p.cores
+	-- Victoria: gemas, fragmentos y objeto con suerte.
+	local g = p.gems
 	local premio = Raid.terminar(p, true, 50000, T + Temporada.DIA, function()
 		return 0.01
 	end)
-	assert(p.gems == g + 150 and p.cores == c + 2 and premio.fragmentos == 10, "premio de victoria")
+	assert(p.gems == g + 250 and premio.fragmentos == 10, "premio de victoria (150 + 100 de los núcleos de antes)")
 	assert(premio.objeto and require(Shared.Data.items)[premio.objeto].rarity == "Mythic" and table.find(p.ownedItemIds, premio.objeto), "objeto mítico")
 
 	-- Misiones de raid: jugar 5 (llevamos 4), daño acumulado.

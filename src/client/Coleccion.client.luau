@@ -8,6 +8,7 @@ local UserInputService = game:GetService("UserInputService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Personajes = require(Shared.Personajes)
 local Unidades = require(Shared.Unidades)
+local Objetos = require(Shared.Objetos)
 local heroes = Personajes.todos
 local items = require(ReplicatedStorage.Shared.Data.items)
 local coleccion = ReplicatedStorage:WaitForChild("Coleccion")
@@ -346,7 +347,7 @@ local function pantallaUnidades()
 		end
 	end
 	if not u then
-		texto({ Position = UDim2.fromOffset(16, 16), Size = UDim2.new(1, -32, 1, -32), TextSize = 14, TextColor3 = Comic.TENUE, TextYAlignment = Enum.TextYAlignment.Top, Text = `Elegí una unidad para ver su ficha, sumarla o sacarla del escuadrón (hasta {Unidades.MAX_ESCUADRON}), venderla o evolucionarla.\n\nNúcleos: {estado.nucleos}` }, der)
+		texto({ Position = UDim2.fromOffset(16, 16), Size = UDim2.new(1, -32, 1, -32), TextSize = 14, TextColor3 = Comic.TENUE, TextYAlignment = Enum.TextYAlignment.Top, Text = `Elegí una unidad para ver su ficha, sumarla o sacarla del escuadrón (hasta {Unidades.MAX_ESCUADRON}), venderla por oro o evolucionarla con gemas.` }, der)
 		return
 	end
 	local h = heroes[u.heroId]
@@ -387,7 +388,7 @@ local function pantallaUnidades()
 		pedir("escuadron", nuevo)
 		mostrar()
 	end)
-	boton(`VENDER 💎{Unidades.VENTA[h.rarity]}`, { Size = UDim2.new(0.33, -4, 1, 0), TextSize = 11, BackgroundColor3 = Color3.fromRGB(120, 50, 55) }, acciones, function()
+	boton(`VENDER 🪙{Unidades.VENTA[h.rarity]}`, { Size = UDim2.new(0.33, -4, 1, 0), TextSize = 11, BackgroundColor3 = Color3.fromRGB(120, 50, 55) }, acciones, function()
 		if not pedir("vender", u.uid).error then
 			elegida = nil
 		end
@@ -403,9 +404,9 @@ local function pantallaUnidades()
 			end
 		end
 		local d = heroes[destino]
-		local nucleos = Unidades.NUCLEOS[d.rarity]
-		local listo = #copias == Unidades.COPIAS_EVOLUCION and estado.nucleos >= nucleos
-		texto({ AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 12, 1, -48), Size = UDim2.new(1, -24, 0, 14), TextSize = 11, TextColor3 = Comic.TENUE, TextXAlignment = Enum.TextXAlignment.Left, Text = `Evoluciona en {d.name}: copias {#copias}/{Unidades.COPIAS_EVOLUCION} · núcleos {estado.nucleos}/{nucleos}` }, der)
+		local costo = Unidades.COSTO_EVOLUCION[d.rarity]
+		local listo = #copias == Unidades.COPIAS_EVOLUCION and estado.gemas >= costo
+		texto({ AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 12, 1, -48), Size = UDim2.new(1, -24, 0, 14), TextSize = 11, TextColor3 = Comic.TENUE, TextXAlignment = Enum.TextXAlignment.Left, Text = `Evoluciona en {d.name}: copias {#copias}/{Unidades.COPIAS_EVOLUCION} · 💎 {estado.gemas}/{costo}` }, der)
 		boton("EVOLUCIONAR", { Size = UDim2.new(0.33, -4, 1, 0), TextSize = 11, BackgroundColor3 = if listo then Color3.fromRGB(150, 70, 200) else Comic.GRIS }, acciones, function()
 			local res = pedir("evolucionar", copias)
 			if res.nueva then
@@ -434,7 +435,7 @@ local function pantallaTienda()
 		texto({ Position = UDim2.fromOffset(10, 8), Size = UDim2.new(1, -20, 0, 40), Font = Enum.Font.GothamBold, TextSize = 17, Text = it.name }, f)
 		texto({ Position = UDim2.fromOffset(10, 50), Size = UDim2.new(1, -20, 0, 18), TextSize = 13, TextColor3 = ACENTO, Text = `{NOMBRE_RANURA[it.slot] or it.slot} · nivel {it.tier}` }, f)
 		texto({ Position = UDim2.fromOffset(10, 74), Size = UDim2.new(1, -20, 0, 130), TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, Text = it.desc or "" }, f)
-		boton(`Comprar · 💰 {it.price}`, { Position = UDim2.new(0, 10, 1, -48), Size = UDim2.new(1, -20, 0, 38), BackgroundColor3 = Color3.fromRGB(170, 120, 30) }, f, function()
+		boton(`Comprar · 💎 {Objetos.precio(it)}`, { Position = UDim2.new(0, 10, 1, -48), Size = UDim2.new(1, -20, 0, 38), BackgroundColor3 = Color3.fromRGB(170, 120, 30) }, f, function()
 			if not pedir("comprar", id).error then
 				mensaje.Text = `Compraste {it.name}. Equipalo en la pestaña Objetos.`
 			end
@@ -490,7 +491,7 @@ end
 
 function mostrar()
 	vaciar()
-	saldo.Text = `💰 {estado.creditos}   💎 {estado.gemas}   🔷 {estado.nucleos}`
+	saldo.Text = `💎 {estado.gemas}   🪙 {estado.oro}`
 	if #estado.desbloqueados == 0 then
 		pantallaInicial()
 		return

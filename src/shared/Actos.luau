@@ -7,7 +7,7 @@ Actos.OLEADAS = 10
 Actos.MAPAS = { "level_1", "level_2", "level_3", "level_4", "level_5", "level_6", "level_7", "level_8", "level_9", "level_10", "level_11" } -- orden de desbloqueo (Mapa.JUGABLES)
 Actos.GEMAS_PRIMERA = 50 -- × número de acto
 Actos.GEMAS_REPETIR = 10
-Actos.NUCLEOS_PRIMERA = 1
+Actos.GEMAS_EXTRA_PRIMERA = 50 -- antes 1 núcleo (19/11/2026: 1 núcleo = 50 gemas)
 Actos.PESADILLA = { vida = 1.5, velocidad = 1.1, premios = 2 }
 
 -- Progreso de un mapa: { normal = último acto ganado (0–5), pesadilla = último acto ganado en Pesadilla }.
@@ -49,15 +49,15 @@ function Actos.oleada2D(acto: number, n: number): number
 	return (acto - 1) * Actos.OLEADAS + n
 end
 
--- Premios de ganar el acto (sin aplicarlos): { gemas, nucleos, primera }.
+-- Premios de ganar el acto (sin aplicarlos): { gemas, primera }.
 function Actos.premios(perfil, mapaId: string, acto: number, pesadilla: boolean?)
 	local p = Actos.progreso(perfil, mapaId)
 	local primera = acto > (if pesadilla then p.pesadilla else p.normal)
 	local mult = if pesadilla then Actos.PESADILLA.premios else 1
 	if primera then
-		return { gemas = Actos.GEMAS_PRIMERA * acto * mult, nucleos = Actos.NUCLEOS_PRIMERA * mult, primera = true }
+		return { gemas = (Actos.GEMAS_PRIMERA * acto + Actos.GEMAS_EXTRA_PRIMERA) * mult, primera = true }
 	end
-	return { gemas = Actos.GEMAS_REPETIR * mult, nucleos = 0, primera = false }
+	return { gemas = Actos.GEMAS_REPETIR * mult, primera = false }
 end
 
 -- Aplica la victoria: premios al perfil y progreso. Devuelve los premios dados.
@@ -71,7 +71,6 @@ function Actos.ganar(perfil, mapaId: string, acto: number, pesadilla: boolean?)
 	end
 	perfil.acts[mapaId] = p
 	perfil.gems += premio.gemas
-	perfil.cores += premio.nucleos
 	return premio
 end
 

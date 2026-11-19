@@ -22,7 +22,7 @@ return function()
 
 	-- Inicial.
 	local p = Perfiles.normalizar(nil)
-	assert(p.gems == 500 and p.cores == 0 and #p.units == 0, "perfil nuevo: 500 gemas")
+	assert(p.gems == 500 and p.oro == 0 and #p.units == 0, "perfil nuevo: 500 gemas")
 	assert(select(2, Banner.invocar(p, 1, 0, math.random)) == "Elegí tu héroe inicial primero.", "sin inicial no se invoca")
 	assert(Reclutamiento.elegirInicial(p, "thor") == "Ese no es un héroe inicial", "sólo los tres iniciales")
 	assert(Reclutamiento.elegirInicial(p, "korg") == nil and p.units[1].heroId == "korg" and p.squad[1] == p.units[1].uid, "elegir inicial")
@@ -99,7 +99,7 @@ return function()
 	end
 	assert(math.abs(cuentaShiny / 20000 - 0.015) < 0.004, `1,5 % de Shiny ({cuentaShiny}/20000)`)
 	assert(Unidades.bonoShiny({ shiny = true }) == 1.05 and Unidades.bonoShiny({}) == 1, "+5 % de daño")
-	local pe = { gems = 0, cores = 1e6, units = {}, nextUnitUid = 1, squad = {}, unlockedHeroIds = {}, equippedItems = {}, ownedItemIds = {}, level = 1 }
+	local pe = { gems = 1e6, oro = 0, units = {}, nextUnitUid = 1, squad = {}, unlockedHeroIds = {}, equippedItems = {}, ownedItemIds = {}, level = 1 }
 	local c1 = Unidades.agregar(pe, "hawkeye", 1, true)
 	local c2 = Unidades.agregar(pe, "hawkeye")
 	local c3 = Unidades.agregar(pe, "hawkeye")
@@ -108,7 +108,7 @@ return function()
 	local d1, d2, d3 = Unidades.agregar(pe, "hawkeye"), Unidades.agregar(pe, "hawkeye"), Unidades.agregar(pe, "hawkeye")
 	assert(Unidades.evolucionar(pe, { d1.uid, d2.uid, d3.uid }).shiny == nil, "sin copias Shiny, no es Shiny")
 
-	-- Venta: no las del escuadrón; devuelve gemas por rareza.
+	-- Venta: no las del escuadrón; da oro por rareza.
 	assert(select(2, Unidades.vender(p, p.squad[1])) ~= nil, "no se vende una del escuadrón")
 	local fuera
 	for _, u in p.units do
@@ -117,9 +117,9 @@ return function()
 			break
 		end
 	end
-	local antes = p.gems
-	local gemas = Unidades.vender(p, fuera.uid)
-	assert(gemas == Unidades.VENTA[Personajes.de(fuera.heroId).rarity] and p.gems == antes + gemas and not Unidades.buscar(p, fuera.uid), "venta")
+	local antes = p.oro
+	local oro = Unidades.vender(p, fuera.uid)
+	assert(oro == Unidades.VENTA[Personajes.de(fuera.heroId).rarity] and p.oro == antes + oro and not Unidades.buscar(p, fuera.uid), "venta por oro")
 
 	-- XP: 50×N por nivel, tope 50.
 	local u = { level = 1, xp = 0 }
@@ -129,15 +129,15 @@ return function()
 	assert(u.level == 50 and u.xp == 0, "tope 50")
 	assert(Unidades.bonoDano(50) == 1.49, "+1 % por nivel")
 
-	-- Evolución: 3 copias + núcleos, hereda el mayor nivel y el lugar en el escuadrón.
-	local q = Perfiles.normalizar({ gems = 0, cores = 0, units = { { uid = 1, heroId = "hawkeye", level = 3 }, { uid = 2, heroId = "hawkeye", level = 9 }, { uid = 5, heroId = "hawkeye" }, { uid = 7, heroId = "korg" } }, squad = { 7, 2 } })
-	local costo = Unidades.NUCLEOS[ronin.rarity]
+	-- Evolución: 3 copias + gemas, hereda el mayor nivel y el lugar en el escuadrón.
+	local q = Perfiles.normalizar({ gems = 0, units = { { uid = 1, heroId = "hawkeye", level = 3 }, { uid = 2, heroId = "hawkeye", level = 9 }, { uid = 5, heroId = "hawkeye" }, { uid = 7, heroId = "korg" } }, squad = { 7, 2 } })
+	local costo = Unidades.COSTO_EVOLUCION[ronin.rarity]
 	assert(select(2, Unidades.evolucionar(q, { 1, 2 })) ~= nil, "pide 3 copias")
 	assert(select(2, Unidades.evolucionar(q, { 1, 2, 7 })) == "Las copias tienen que ser del mismo personaje", "mismo personaje")
-	assert(select(2, Unidades.evolucionar(q, { 1, 2, 5 })) == `Faltan {costo} núcleos`, "pide núcleos")
-	q.cores = costo + 1
+	assert(select(2, Unidades.evolucionar(q, { 1, 2, 5 })) == `Faltan {costo} gemas`, "pide gemas")
+	q.gems = costo + 1
 	local nueva = Unidades.evolucionar(q, { 1, 2, 5 })
-	assert(nueva.heroId == ronin.id and nueva.level == 9 and q.cores == 1 and #q.units == 2, "evoluciona en Ronin con nivel 9")
+	assert(nueva.heroId == ronin.id and nueva.level == 9 and q.gems == 1 and #q.units == 2, "evoluciona en Ronin con nivel 9")
 	assert(q.squad[1] == 7 and q.squad[2] == nueva.uid, "ocupa el lugar en el escuadrón")
 	assert(table.find(q.unlockedHeroIds, ronin.id) and not table.find(q.unlockedHeroIds, "hawkeye"), "lista de personajes al día")
 

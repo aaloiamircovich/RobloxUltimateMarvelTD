@@ -132,7 +132,7 @@ local PASOS = {
 		local e = estadoPartida()
 		return e ~= nil and e:GetAttribute("Fase") == "fin"
 	end },
-	[6] = { texto = "¡Aguantá las 10 oleadas! Colocá más héroes si te alcanza el dinero.", listo = function()
+	[6] = { texto = "¡Aguantá las 10 oleadas! Colocá más héroes si te alcanzan los créditos.", listo = function()
 		local e = estadoPartida()
 		if e and e:GetAttribute("Fase") == "fin" then
 			if e:GetAttribute("Resultado") == "victoria" then

@@ -196,7 +196,7 @@ end
 function Mascotas.descripcion(id: string, dorada: boolean?): string
 	local d = MASCOTA[id]
 	local f = if dorada then Mascotas.FACTOR_DORADA else 1
-	local nombres = { dinero = "dinero", xp = "XP", gemas = "gemas", dano = "daño" }
+	local nombres = { dinero = "créditos", xp = "XP", gemas = "gemas", dano = "daño" }
 	local partes = {}
 	for _, k in Mascotas.BONOS do
 		if d[k] then

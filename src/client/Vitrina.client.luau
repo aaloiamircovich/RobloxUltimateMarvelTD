@@ -151,7 +151,7 @@ task.spawn(function()
 		armar()
 	end
 end)
-for _, a in { "Seguidores", "Gemas", "Nucleos" } do
+for _, a in { "Seguidores", "Gemas", "Oro" } do
 	jugador:GetAttributeChangedSignal(a):Connect(function()
 		task.delay(0.5, armar)
 	end)

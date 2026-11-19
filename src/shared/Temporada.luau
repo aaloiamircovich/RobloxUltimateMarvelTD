@@ -165,7 +165,7 @@ function Temporada.premio(numero: number, nivel: number)
 	if nivel == Temporada.NIVELES then
 		return { tipo = "unidad", id = Temporada.EXCLUSIVA }
 	elseif nivel % 10 == 0 then
-		return { tipo = "nucleos", cantidad = nivel // 10 }
+		return { tipo = "gemas", cantidad = (nivel // 10) * 50 } -- antes núcleos (1 = 50 gemas)
 	elseif nivel % 10 == 3 then
 		return { tipo = "fichas", cantidad = 1 + nivel // 20 }
 	elseif nivel % 10 == 7 then
@@ -205,8 +205,6 @@ function Temporada.reclamarPase(perfil, nivel: number, t: number): string?
 			return "Inventario de unidades lleno"
 		end
 		Unidades.agregar(perfil, p.id)
-	elseif p.tipo == "nucleos" then
-		perfil.cores += p.cantidad
 	elseif p.tipo == "fichas" then
 		perfil.fichasRasgo = (perfil.fichasRasgo or 0) + p.cantidad
 	elseif p.tipo == "cristales" then

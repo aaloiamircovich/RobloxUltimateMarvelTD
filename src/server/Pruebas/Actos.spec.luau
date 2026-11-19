@@ -14,14 +14,14 @@ return function()
 	assert(Actos.puedeJugar(p, "level_1", "infinito") ~= nil, "Infinito cerrado")
 	assert(Actos.puedeJugar(p, "level_1", 7) == "Acto inválido", "acto fuera de rango")
 
-	-- Primera victoria: 50 × acto gemas + 1 núcleo; repetir: 10 gemas.
+	-- Primera victoria: 50 × acto gemas + 50 (antes 1 núcleo); repetir: 10 gemas.
 	local g0 = p.gems
 	local premio = Actos.ganar(p, "level_1", 1)
-	assert(premio.primera and premio.gemas == 50 and p.gems == g0 + 50 and p.cores == 1, "primera vez")
+	assert(premio.primera and premio.gemas == 100 and p.gems == g0 + 100 and p.cores == nil, "primera vez")
 	assert(Actos.ganar(p, "level_1", 1).gemas == 10, "repetir")
 	assert(Actos.puedeJugar(p, "level_1", 2) == nil and Actos.puedeJugar(p, "level_1", 1, true) == nil, "abre el acto 2 y la Pesadilla del 1")
 	local pes = Actos.ganar(p, "level_1", 1, true)
-	assert(pes.gemas == 100 and pes.nucleos == 2, "Pesadilla ×2")
+	assert(pes.gemas == 200 and pes.nucleos == nil, "Pesadilla ×2")
 	for a = 2, 5 do
 		Actos.ganar(p, "level_1", a)
 	end

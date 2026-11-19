@@ -89,10 +89,10 @@ function Estilo.elegirMontura(perfil, id: string): string?
 		return "Montura inválida"
 	end
 	if not table.find(e.monturas, id) then
-		if perfil.gems < m.precio then
-			return `Faltan {m.precio - perfil.gems} gemas`
+		if perfil.oro < m.precio then
+			return `Faltan {m.precio - perfil.oro} de oro`
 		end
-		perfil.gems -= m.precio
+		perfil.oro -= m.precio
 		table.insert(e.monturas, id)
 	end
 	e.montura = id
@@ -107,10 +107,10 @@ function Estilo.elegirBaile(perfil, id: string): string?
 		return "Baile inválido"
 	end
 	if not table.find(e.bailes, id) then
-		if perfil.gems < b.precio then
-			return `Faltan {b.precio - perfil.gems} gemas`
+		if perfil.oro < b.precio then
+			return `Faltan {b.precio - perfil.oro} de oro`
 		end
-		perfil.gems -= b.precio
+		perfil.oro -= b.precio
 		table.insert(e.bailes, id)
 		if #e.rueda < Estilo.RUEDA then
 			table.insert(e.rueda, id)

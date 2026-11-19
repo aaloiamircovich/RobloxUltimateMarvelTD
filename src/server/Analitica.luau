@@ -36,7 +36,7 @@ end
 --------------------------------------------------------------------------------
 local MONEDAS = {
 	{ campo = "gems", nombre = "Gemas" },
-	{ campo = "cores", nombre = "Nucleos" },
+	{ campo = "oro", nombre = "Oro" },
 	{ campo = "fichasRasgo", nombre = "FichasRasgo" },
 	{ campo = "cristales", nombre = "Cristales" },
 	{ campo = "fichasRaid", nombre = "FichasRaid" },

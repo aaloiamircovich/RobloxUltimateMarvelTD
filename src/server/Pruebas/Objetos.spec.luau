@@ -16,7 +16,7 @@ return function()
 	end
 
 	-- La vitrina sigue el orden de sortItemsWeakestFirst del 2D: comprar siempre el primero recorre los 82.
-	local p = Perfiles.normalizar({ credits = 1e9, unlockedHeroIds = { "hawkeye", "korg" } })
+	local p = Perfiles.normalizar({ gems = 1e9, unlockedHeroIds = { "hawkeye", "korg" } })
 	for i, esperado in ref.orden do
 		local v = Objetos.vitrina(p)
 		assert(v[1] and v[1].id == esperado, `vitrina #{i}: {v[1] and v[1].id} ≠ {esperado}`)
@@ -25,10 +25,11 @@ return function()
 	end
 	assert(#Objetos.vitrina(p) == 0 and #p.ownedItemIds == 82, "se compran todos")
 
-	local q = Perfiles.normalizar({ credits = 300, unlockedHeroIds = { "hawkeye", "korg" } })
+	local q = Perfiles.normalizar({ gems = 300, unlockedHeroIds = { "hawkeye", "korg" } })
 	local primero = Objetos.vitrina(q)[1]
 	assert(Objetos.comprar(q, ref.orden[10]) == "Objeto no disponible", "sólo lo que está en la vitrina")
-	assert(Objetos.comprar(q, primero.id) == nil and q.credits == 300 - primero.price, "descuenta el precio")
+	assert(Objetos.precio(primero) == math.floor(primero.price / 40 + 0.5), "precio del 2D / 40")
+	assert(Objetos.comprar(q, primero.id) == nil and q.gems == 300 - Objetos.precio(primero), "descuenta el precio en gemas")
 	assert(Objetos.comprar(q, primero.id) == "Objeto no disponible", "no se compra dos veces")
 
 	-- Equipar: desde el inventario, pasar a otro héroe, reemplazar y quitar.
@@ -36,7 +37,7 @@ return function()
 	assert(Objetos.equipar(q, "hawkeye", primero.id) == nil and #q.ownedItemIds == 0, "equipa desde el inventario")
 	assert(Objetos.de(q, "hawkeye").id == primero.id, "equipado en Hawkeye")
 	assert(Objetos.equipar(q, "korg", primero.id) == nil and Objetos.de(q, "hawkeye") == nil and Objetos.de(q, "korg").id == primero.id, "pasa de héroe")
-	q.credits = 1e6
+	q.gems = 1e6
 	local segundo = Objetos.vitrina(q)[1]
 	Objetos.comprar(q, segundo.id)
 	assert(Objetos.equipar(q, "korg", segundo.id) == nil and table.find(q.ownedItemIds, primero.id), "el anterior vuelve al inventario")

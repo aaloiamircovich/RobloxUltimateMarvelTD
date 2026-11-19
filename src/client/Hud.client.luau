@@ -190,7 +190,7 @@ do
 			"• HUB de islas flotantes: Torre Vengadores, Asgard, Wakanda, Nueva York, Torre Baxter y Sanctum.",
 			"• Banner por hora con 1 estrella y 2 destacados. Invocá con gemas (x1 y x10).",
 			"• Unidades repetibles con nivel y experiencia; evolucioná 3 copias en un personaje nuevo.",
-			"• Dinero de partida y 5 mejoras por personaje; la habilidad se desbloquea en la mejora 2.",
+			"• Créditos de partida y 5 mejoras por personaje; la habilidad se desbloquea en la mejora 2.",
 			"• Nivel de cuenta: abrí más casillas del escuadrón en los niveles 10, 25 y 40.",
 			"• 4 mapas de Historia y modo Infinito.",
 		}, "\n"),
@@ -281,8 +281,6 @@ end
 local function textoPremio(pr): string
 	if pr.tipo == "gemas" then
 		return `💎\n{pr.cantidad}`
-	elseif pr.tipo == "nucleos" then
-		return `🔷\n{pr.cantidad} núcleo{if pr.cantidad > 1 then "s" else ""}`
 	elseif pr.tipo == "objeto" then
 		return `🎁\n{items[pr.id] and items[pr.id].name or pr.id}`
 	elseif pr.tipo == "fichas" then
@@ -391,7 +389,7 @@ function armarRaid(res, sala)
 		Comic.texto({ Text = "JEFE DE LA SEMANA", Position = UDim2.fromOffset(12, 8), Size = UDim2.new(1, -24, 0, 26), TextSize = 22, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Left }, jefe)
 		Comic.texto({ Text = Comic.mayus(res.nombreJefe), Position = UDim2.fromOffset(12, 36), Size = UDim2.new(1, -24, 0, 60), TextSize = 50, TextXAlignment = Enum.TextXAlignment.Left }, jefe)
 		Comic.texto({
-			Text = `En {res.nombreMapa}. 5 oleadas de esbirros y después el jefe, que al 66 % y al 33 % de vida llama refuerzos y se enfurece.\nVictoria: 💎 {res.premio.gemas} · 🔷 {res.premio.nucleos} · 🔸 {res.premio.fichasRaid} fichas de raid · {res.premio.fragmentos} fragmentos y chance de objeto Legendario o Mítico.`,
+			Text = `En {res.nombreMapa}. 5 oleadas de esbirros y después el jefe, que al 66 % y al 33 % de vida llama refuerzos y se enfurece.\nVictoria: 💎 {res.premio.gemas} · 🔸 {res.premio.fichasRaid} fichas de raid · {res.premio.fragmentos} fragmentos y chance de objeto Legendario o Mítico.`,
 			Position = UDim2.fromOffset(12, 100),
 			Size = UDim2.new(1, -24, 0, 140),
 			TextSize = 17,
@@ -605,7 +603,7 @@ function armarMascotas(res)
 		return
 	end
 	local b = res.bonos
-	Comic.texto({ Text = `💎 {res.gemas}   ·   bonos equipados: +{math.floor(b.dinero * 100 + 0.5)}% dinero · +{math.floor(b.xp * 100 + 0.5)}% XP · +{math.floor(b.gemas * 100 + 0.5)}% gemas · +{math.floor(b.dano * 100 + 0.5)}% daño`, Size = UDim2.new(1, 0, 0, 26), TextSize = 20, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Left }, cuerpoMascotas)
+	Comic.texto({ Text = `💎 {res.gemas}   ·   bonos equipados: +{math.floor(b.dinero * 100 + 0.5)}% créditos · +{math.floor(b.xp * 100 + 0.5)}% XP · +{math.floor(b.gemas * 100 + 0.5)}% gemas · +{math.floor(b.dano * 100 + 0.5)}% daño`, Size = UDim2.new(1, 0, 0, 26), TextSize = 20, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Left }, cuerpoMascotas)
 	local nuevaTxt = ""
 	if res.nueva then
 		local d = Mascotas.de(res.nueva.id)
@@ -711,7 +709,7 @@ function armarEstilo(res)
 			armarEstilo(res)
 		end)
 	end
-	Comic.texto({ Text = `💎 {res.gemas}   ·   G: montar   ·   B: rueda de bailes`, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 6), Size = UDim2.fromOffset(460, 30), TextSize = 22, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Right }, cuerpoEstilo)
+	Comic.texto({ Text = `🪙 {res.oro} de oro   ·   G: montar   ·   B: rueda de bailes`, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 6), Size = UDim2.fromOffset(460, 30), TextSize = 22, TextColor3 = Comic.AMARILLO, TextXAlignment = Enum.TextXAlignment.Right }, cuerpoEstilo)
 	Comic.texto({ Text = res.error or "", Position = UDim2.new(0, 0, 1, -24), Size = UDim2.new(1, 0, 0, 22), TextSize = 16, Font = Comic.TEXTO, TextColor3 = Comic.AMARILLO }, cuerpoEstilo)
 	local area = Comic.crear("Frame", { Position = UDim2.fromOffset(0, 54), Size = UDim2.new(1, 0, 1, -84), BackgroundTransparency = 1 }, cuerpoEstilo)
 	Comic.crear("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 10), HorizontalAlignment = Enum.HorizontalAlignment.Center }, area)
@@ -727,7 +725,7 @@ function armarEstilo(res)
 		Comic.texto({ Text = if x.velocidad then `Velocidad ×{x.velocidad}` else (if activo then "En la rueda" else ""), Position = UDim2.fromOffset(6, 100), Size = UDim2.new(1, -12, 0, 40), TextSize = 18, Font = Comic.TEXTO, TextWrapped = true }, f)
 		local txt, color
 		if not tiene then
-			txt, color = if x.precio == 0 then "GRATIS" else `💎 {x.precio}`, if res.gemas >= x.precio then Comic.VERDE else Comic.GRIS
+			txt, color = if x.precio == 0 then "GRATIS" else `🪙 {x.precio}`, if res.oro >= x.precio then Comic.VERDE else Comic.GRIS
 		elseif pestanaEstilo == "monturas" then
 			txt, color = if activo then "EQUIPADA" else "EQUIPAR", if activo then Comic.GRIS else Comic.VERDE
 		else
@@ -957,7 +955,7 @@ local LADO = 84
 local escalar = Comic.escalar
 
 -- Columna izquierda justo debajo de la tarjeta de jugador (78 de alto, arriba a 12), con las monedas al final.
-local grilla = Comic.crear("Frame", { Size = UDim2.fromOffset(128, 4 * LADO + 4 * 8 + 3 * 30 + 2 * 6), BackgroundTransparency = 1 }, gui)
+local grilla = Comic.crear("Frame", { Size = UDim2.fromOffset(128, 4 * LADO + 4 * 8 + 2 * 30 + 6), BackgroundTransparency = 1 }, gui)
 Comic.crear("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }, grilla)
 escalar(grilla, function(s)
 	grilla.Position = UDim2.fromOffset(12, 12 + (78 + 12) * s)
@@ -1434,7 +1432,7 @@ end)
 --------------------------------------------------------------------------------
 -- Monedas: columna chica debajo de TIENDA, arriba de los botones G/B (Estilo.client.luau).
 -- Va dentro de la columna izquierda (misma escala, nunca se encima con TIENDA).
-local monedas = Comic.crear("Frame", { LayoutOrder = 99, Size = UDim2.fromOffset(128, 3 * 30 + 2 * 6), BackgroundTransparency = 1 }, grilla)
+local monedas = Comic.crear("Frame", { LayoutOrder = 99, Size = UDim2.fromOffset(128, 2 * 30 + 6), BackgroundTransparency = 1 }, grilla)
 Comic.crear("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }, monedas)
 -- Ícono 3D de cada moneda (modelos generados con la IA de Roblox en ReplicatedStorage.IconosMonedas), que se
 -- balancea despacio. Si el modelo no está, queda el emoji de antes.
@@ -1468,9 +1466,8 @@ end)
 
 -- Cartel al pasar el mouse: qué es, para qué sirve y dónde se consigue.
 local AYUDA_MONEDAS = {
-	Gemas = { "GEMAS", "Sirven para invocar héroes y comprar monturas, bailes y huevos de mascota.", "Se ganan en actos, raids, el modo Infinito, misiones, eventos y premios." },
-	Creditos = { "CRÉDITOS", "Sirven para comprar objetos en la tienda.", "Empezás con un saldo inicial." },
-	Nucleos = { "NÚCLEOS", "Sirven para evolucionar unidades, juntando copias del mismo héroe.", "Se ganan en actos, raids, eventos y cada tantas oleadas del modo Infinito." },
+	Gemas = { "GEMAS", "Sirven para invocar héroes, evolucionar unidades y comprar objetos y huevos de mascota.", "Se ganan en actos, raids, el modo Infinito, misiones, eventos y premios." },
+	Oro = { "ORO", "Sirve para comprar monturas y bailes.", "Se gana al terminar cada partida y vendiendo unidades." },
 }
 local function cartelMoneda(nombre: string, color: Color3, f: GuiObject)
 	local d = AYUDA_MONEDAS[nombre]
@@ -1492,7 +1489,7 @@ local function cartelMoneda(nombre: string, color: Color3, f: GuiObject)
 	end)
 end
 local etiquetas = {}
-for i, m in { { "Gemas", "💎", Color3.fromRGB(185, 110, 255) }, { "Creditos", "💰", Color3.fromRGB(255, 196, 64) }, { "Nucleos", "🔷", Color3.fromRGB(70, 170, 255) } } do
+for i, m in { { "Gemas", "💎", Color3.fromRGB(185, 110, 255) }, { "Oro", "🪙", Color3.fromRGB(255, 196, 64) } } do
 	local f = Comic.crear("Frame", { LayoutOrder = i, Size = UDim2.fromOffset(128, 30), BackgroundColor3 = Comic.FONDO, BackgroundTransparency = Comic.TRANSPARENCIA }, monedas)
 	Comic.borde(f)
 	local franja = Comic.crear("Frame", { Position = UDim2.fromOffset(0, 7), Size = UDim2.new(0, 3, 1, -14), BackgroundColor3 = m[3], BorderSizePixel = 0 }, f)
@@ -1621,7 +1618,7 @@ local function refrescar()
 			`Nivel de cuenta {nivel} ({xp}/{meta} XP)`,
 			`Casillas del escuadrón: {e.casillas}/6`,
 			`Unidades: {#e.unidades}/100`,
-			`💎 {e.gemas}   💰 {e.creditos}   🔷 {e.nucleos}`,
+			`💎 {e.gemas}   🪙 {e.oro}`,
 		}, "\n")
 	end
 end
@@ -1650,7 +1647,7 @@ jugador:GetAttributeChangedSignal("Partida"):Connect(function()
 		pedirEstado()
 	end
 end)
-for _, a in { "Gemas", "Creditos", "Nucleos", "Nivel", "XP" } do
+for _, a in { "Gemas", "Oro", "Nivel", "XP" } do
 	jugador:GetAttributeChangedSignal(a):Connect(refrescar)
 end
 -- Al cerrar el panel de colección (escuadrón, invocaciones), refrescar las casillas.

@@ -45,4 +45,12 @@ function Cuenta.ganarXP(perfil, xp: number): number
 	return subidos
 end
 
+-- Oro al terminar una partida (19/11/2026): 10 por oleada superada, ×1,5 si se gana, ×1,5 en Difícil y ×2 en
+-- Pesadilla (no se suman: vale el mayor).
+Cuenta.ORO_OLEADA = 10
+function Cuenta.oroPartida(superadas: number, gano: boolean, dificil: boolean, pesadilla: boolean): number
+	local mult = (if gano then 1.5 else 1) * (if pesadilla then 2 elseif dificil then 1.5 else 1)
+	return math.floor(math.max(0, superadas) * Cuenta.ORO_OLEADA * mult + 0.5)
+end
+
 return Cuenta

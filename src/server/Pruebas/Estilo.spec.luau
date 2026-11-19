@@ -13,17 +13,17 @@ return function()
 		assert(b.animacion:match("^rbxassetid://%d+$"), "animación de " .. b.id)
 	end
 
-	-- Monturas: comprar con gemas y equipar.
-	p.gems = 500
-	assert(Estilo.elegirMontura(p, "dragon") ~= nil and p.gems == 500, "dragón muy caro")
-	assert(Estilo.elegirMontura(p, "moto") == nil and p.gems == 200 and e.montura == "moto", "compra y equipa la moto")
-	assert(Estilo.elegirMontura(p, "patineta") == nil and p.gems == 200 and e.montura == "patineta", "volver a una que ya tiene no cobra")
+	-- Monturas: comprar con oro (19/11/2026) y equipar.
+	p.oro = 500
+	assert(Estilo.elegirMontura(p, "dragon") ~= nil and p.oro == 500, "dragón muy caro")
+	assert(Estilo.elegirMontura(p, "moto") == nil and p.oro == 200 and e.montura == "moto", "compra y equipa la moto")
+	assert(Estilo.elegirMontura(p, "patineta") == nil and p.oro == 200 and e.montura == "patineta", "volver a una que ya tiene no cobra")
 
 	-- Bailes: comprar entra en la rueda; la rueda tiene 4 lugares.
-	p.gems = 1000
-	assert(Estilo.elegirBaile(p, "robot") == nil and p.gems == 900 and #e.rueda == 3, "robot comprado y en la rueda")
+	p.oro = 1000
+	assert(Estilo.elegirBaile(p, "robot") == nil and p.oro == 900 and #e.rueda == 3, "robot comprado y en la rueda")
 	assert(Estilo.elegirBaile(p, "victoria") == nil and #e.rueda == 4, "rueda llena")
-	assert(Estilo.elegirBaile(p, "poder") == nil and p.gems == 400 and #e.rueda == 4 and not table.find(e.rueda, "poder"), "comprado pero sin lugar")
+	assert(Estilo.elegirBaile(p, "poder") == nil and p.oro == 400 and #e.rueda == 4 and not table.find(e.rueda, "poder"), "comprado pero sin lugar")
 	assert(Estilo.elegirBaile(p, "poder") ~= nil, "sacá uno primero")
 	assert(Estilo.elegirBaile(p, "saludo") == nil and #e.rueda == 3, "sacar de la rueda")
 	assert(Estilo.elegirBaile(p, "poder") == nil and table.find(e.rueda, "poder"), "poner en la rueda")

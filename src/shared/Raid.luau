@@ -24,7 +24,8 @@ Raid.DINERO = 3000 -- dinero inicial de la raid (una partida normal empieza con 
 Raid.VELOCIDAD_JEFE = 0.45
 Raid.FASES = { 0.66, 0.33 } -- al bajar de cada umbral: refuerzos y furia
 Raid.REFUERZOS, Raid.FURIA = 6, 1.3
-Raid.PREMIO = { gemas = 150, nucleos = 2, fragmentos = 10, fichasRasgo = 2, cristales = 3, fichasRaid = 20 } -- fichas de rasgo y cristales: docs/RASGOS.md; fichas de raid: Banner 2
+Raid.PREMIO = { gemas = 250, -- 150 + 2 núcleos de antes (1 núcleo = 50 gemas)
+	 fragmentos = 10, fichasRasgo = 2, cristales = 3, fichasRaid = 20 } -- fichas de rasgo y cristales: docs/RASGOS.md; fichas de raid: Banner 2
 Raid.FRAGMENTOS_DERROTA = 2
 Raid.FICHAS_DERROTA = 5 -- fichas de raid de consuelo
 Raid.PROB_OBJETO = { { "Mythic", 0.05 }, { "Legendary", 0.20 } } -- se tira de la más rara a la más común
@@ -136,10 +137,10 @@ function Raid.terminar(perfil, gano: boolean, dano: number, t: number, azar: () 
 	r.usadas = math.min(Raid.LLAVES_DIA, r.usadas + 1)
 	avanzar(r, "jugar", 1)
 	avanzar(r, "dano", math.floor(dano))
-	local premio = { gemas = 0, nucleos = 0, fragmentos = Raid.FRAGMENTOS_DERROTA, fichasRaid = Raid.FICHAS_DERROTA }
+	local premio = { gemas = 0, fragmentos = Raid.FRAGMENTOS_DERROTA, fichasRaid = Raid.FICHAS_DERROTA }
 	if gano then
 		avanzar(r, "ganar", 1)
-		premio.gemas, premio.nucleos, premio.fragmentos, premio.fichasRaid = Raid.PREMIO.gemas, Raid.PREMIO.nucleos, Raid.PREMIO.fragmentos, Raid.PREMIO.fichasRaid
+		premio.gemas, premio.fragmentos, premio.fichasRaid = Raid.PREMIO.gemas, Raid.PREMIO.fragmentos, Raid.PREMIO.fichasRaid
 		-- Objeto raro que todavía no tenés.
 		for _, par in Raid.PROB_OBJETO do
 			if azar() < par[2] then
@@ -164,7 +165,6 @@ function Raid.terminar(perfil, gano: boolean, dano: number, t: number, azar: () 
 		perfil.cristales = (perfil.cristales or 0) + premio.cristales
 	end
 	perfil.gems += premio.gemas
-	perfil.cores += premio.nucleos
 	perfil.fichasRaid = (perfil.fichasRaid or 0) + premio.fichasRaid
 	r.fragmentos += premio.fragmentos
 	return premio
